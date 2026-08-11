@@ -1,0 +1,33 @@
+// Table 9 — CoachDecisions
+// Every extracted coaching decision with full context.
+model CoachDecisions {
+  id                   Int      @id @default(autoincrement())
+  gameId               Int // FK → Games
+  coachId              Int // FK → Coaches
+  sportId              Int // FK → Sports
+  decisionType         String // "4th_down" / "timeout" / "2pt_conversion" / "intentional_walk"
+  period               Int // When in game this happened
+  clock                String? // Time remaining when decision made
+  gameTimeSeconds      Float? // Seconds elapsed at decision point
+  scoreDiff            Int // Score difference at decision point
+  winProbabilityBefore Float? // Win probability before decision
+  gameContext          Json // Full situation stored as JSON
+  chosenAction         String // What the coach actually did
+  evChosen             Float // Expected value of chosen action
+  evBest               Float // Expected value of best available action
+  evDifference         Float // How much EV was left on the table
+  isOptimal            Boolean // Was this the highest EV choice
+  alternativeActions   Json // All options and their EVs
+  outcome              String? // What actually happened after
+  outcomeSuccess       Boolean? // Did the play work out
+  createdAt            DateTime @default(now())
+
+  game  Games   @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  coach Coaches @relation(fields: [coachId], references: [id], onDelete: Restrict)
+  sport Sports  @relation(fields: [sportId], references: [id], onDelete: Restrict)
+
+  // (Decision rows are immutable — no updatedAt, per spec)
+  @@index([coachId]) // coach scorecard queries
+  @@index([sportId, decisionType]) // filtered analysis
+  @@index([isOptimal]) // leaderboard calculations
+}
