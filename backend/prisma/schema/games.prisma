@@ -29,8 +29,9 @@ model Games {
 
   playerGameLogs PlayerGameLogs[]
   playByPlay     PlayByPlay[]
+  coachDecisions CoachDecisions[]
 
-  // (CoachDecisions, MomentumGameData arrive with their tables)
+  // (MomentumGameData arrives with its table)
 
   @@unique([externalId, sportId])
   @@index([sportId])
