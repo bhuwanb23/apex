@@ -462,7 +462,14 @@ export async function writePlayByPlay(plays: PlayByPlayRecord[], gameId: number)
 /**
  * Writes extracted coaching decisions.
  * Resolves gameExternalId → gameId and teamExternalId → the team's head coach,
- * then upserts by [gameId, coachId, decisionType, period].
+ * then deletes the game's existing decisions and inserts fresh ones.
+ *
+ * Decisions are immutable rows (no updatedAt, per spec) and a game can hold
+ * several decisions of the same type in one period (e.g. two 4th-down calls in
+ * the 4th quarter), so a keyed upsert would silently drop real decisions.
+ * Delete+insert keeps re-syncs idempotent without losing data — the same
+ * strategy writePlayByPlay uses.
+ *
  * Decisions without a resolvable game or head coach are skipped.
  * EV fields are zero-filled until the Python EV/win-probability model fills them.
  */
@@ -488,51 +495,61 @@ export async function writeCoachDecisions(decisions: CoachDecisionRecord[]): Pro
     if (coach) coachByTeam.set(teamId, coach.id);
   }
 
+  // Replace per game in ONE transaction each, so a crash can't leave a game
+  // with its old decisions deleted but the new ones half-inserted.
+  const byGame = new Map<number, typeof decisions>();
+  for (const d of decisions) {
+    const gameId = gameIds.get(d.gameExternalId);
+    const teamId = d.teamExternalId ? teamIds.get(d.teamExternalId) : undefined;
+    const coachId = teamId !== undefined ? coachByTeam.get(teamId) : undefined;
+    if (gameId === undefined || coachId === undefined) continue; // skip, logged below
+    byGame.set(gameId, [...(byGame.get(gameId) ?? []), d]);
+  }
+
   const skipped: string[] = [];
-  const written = await runChunked(
-    decisions,
-    d => {
-      const gameId = gameIds.get(d.gameExternalId);
-      const teamId = d.teamExternalId ? teamIds.get(d.teamExternalId) : undefined;
-      const coachId = teamId !== undefined ? coachByTeam.get(teamId) : undefined;
-      if (gameId === undefined || coachId === undefined) {
-        skipped.push(`${d.gameExternalId}:${d.teamExternalId ?? '?'}`);
-        return null;
-      }
-      const payload = {
-        period: d.period,
-        clock: d.clock,
-        gameTimeSeconds: d.gameTimeSeconds,
-        scoreDiff: d.scoreDiff,
-        gameContext: d.gameContext as Prisma.InputJsonValue,
-        chosenAction: d.chosenAction,
-        // Zero-filled until the Python EV model fills real expected values.
-        evChosen: 0,
-        evBest: 0,
-        evDifference: 0,
-        isOptimal: false,
-        alternativeActions: {} as Prisma.InputJsonValue,
-        outcome: d.outcome,
-        outcomeSuccess: d.outcomeSuccess,
-      };
-      return prisma.coachDecisions.upsert({
-        where: {
-          gameId_coachId_decisionType_period: {
-            gameId,
-            coachId,
-            decisionType: d.decisionType,
-            period: d.period,
-          },
-        },
-        create: { ...payload, gameId, coachId, sportId, decisionType: d.decisionType },
-        update: { ...payload, decisionType: d.decisionType },
-      });
-    },
-    'coachDecisions'
-  );
+  let written = 0;
+  for (const [gameId, gameDecisions] of byGame) {
+    const rows = gameDecisions
+      .map(d => {
+        const teamId = d.teamExternalId ? teamIds.get(d.teamExternalId) : undefined;
+        const coachId = teamId !== undefined ? coachByTeam.get(teamId) : undefined;
+        if (coachId === undefined) {
+          skipped.push(`${d.gameExternalId}:${d.teamExternalId ?? '?'}`);
+          return null;
+        }
+        return {
+          gameId,
+          coachId,
+          sportId,
+          decisionType: d.decisionType,
+          period: d.period,
+          clock: d.clock,
+          gameTimeSeconds: d.gameTimeSeconds,
+          scoreDiff: d.scoreDiff,
+          gameContext: d.gameContext as Prisma.InputJsonValue,
+          chosenAction: d.chosenAction,
+          // Zero-filled until the Python EV model fills real expected values.
+          evChosen: 0,
+          evBest: 0,
+          evDifference: 0,
+          isOptimal: false,
+          alternativeActions: {} as Prisma.InputJsonValue,
+          outcome: d.outcome,
+          outcomeSuccess: d.outcomeSuccess,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row != null);
+    if (rows.length === 0) continue;
+    await prisma.$transaction([
+      prisma.coachDecisions.deleteMany({ where: { gameId } }),
+      ...rows.map(row => prisma.coachDecisions.create({ data: row })),
+    ]);
+    written += rows.length;
+  }
   if (skipped.length > 0) {
     logger.warn({ sportId, skipped }, 'writeCoachDecisions skipped rows without game/coach');
   }
+  logger.debug({ sportId, written }, 'writeCoachDecisions complete');
   return written;
 }
 
