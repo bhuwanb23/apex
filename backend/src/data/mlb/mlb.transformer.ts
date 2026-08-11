@@ -35,8 +35,12 @@ export function transformTeam(raw: MlbTeam): TeamRecord {
   };
 }
 
-/** Roster entry → PlayerRecord (externalTeamId is filled by the caller). */
-export function transformPlayer(raw: MlbRosterEntry): PlayerRecord {
+/**
+ * Roster entry → PlayerRecord. `externalTeamId` (the MLB team id the roster
+ * was fetched for) is passed by the sync coordinator — roster payloads don't
+ * carry the team themselves.
+ */
+export function transformPlayer(raw: MlbRosterEntry, externalTeamId?: string | null): PlayerRecord {
   const fullName = raw.person?.fullName ?? '';
   const nameParts = fullName.trim().split(/\s+/);
   const firstName = nameParts[0] ?? '';
@@ -52,7 +56,7 @@ export function transformPlayer(raw: MlbRosterEntry): PlayerRecord {
     heightInches: null,
     weightLbs: null,
     externalId: raw.person?.id != null ? String(raw.person.id) : '',
-    externalTeamId: null,
+    externalTeamId: externalTeamId ?? null,
   };
 }
 
