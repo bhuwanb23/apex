@@ -5,11 +5,21 @@ dist/
 *.log
 *.tsbuildinfo
 
+# Logs (keep .gitkeep)
+logs/*
+!logs/.gitkeep
+
+# Cache (keep .gitkeep)
+cache/*
+!cache/.gitkeep
+
 # SQLite database files
+prisma/aqx.db
+prisma/aqx.db-journal
+prisma/aqx.db-wal
+prisma/aqx.db-shm
 prisma/dev.db
 prisma/dev.db-journal
-prisma/dev.db-wal
-prisma/dev.db-shm
 
 # Prisma generated client (regenerated via `npm run db:generate`)
 src/generated/
