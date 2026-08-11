@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
-import type { SportFetcher } from '../fetcher.manager.js';
-import type { MlbBoxscoreResponse, MlbPlay, MlbScheduleGame, MlbTeam } from './mlb.types.js';
+import type { DateRange, SportFetcher } from '../fetcher.manager.js';
+import type { MlbPlay, MlbScheduleGame, MlbTeam } from './mlb.types.js';
 
 const MLB_API_BASE = 'https://statsapi.mlb.com/api/v1';
 
@@ -9,6 +9,7 @@ const MLB_API_BASE = 'https://statsapi.mlb.com/api/v1';
  */
 export class MlbFetcher implements SportFetcher {
   readonly sport = 'mlb';
+  readonly apiName = 'mlb';
 
   private readonly client: AxiosInstance;
 
@@ -21,28 +22,28 @@ export class MlbFetcher implements SportFetcher {
     throw new Error('Not implemented: MlbFetcher.fetchTeams');
   }
 
-  // TODO(phase-3): roster players from /teams/{id}/roster
-  async fetchPlayers(): Promise<unknown> {
+  // TODO(phase-3): GET /teams/{teamId}/roster — active roster
+  async fetchPlayers(_teamId?: string): Promise<unknown> {
     throw new Error('Not implemented: MlbFetcher.fetchPlayers');
   }
 
-  // TODO(phase-3): GET /schedule — games for a season/date range
-  async fetchGames(): Promise<MlbScheduleGame[]> {
+  // TODO(phase-3): GET /schedule?sportId=1&season=&startDate=&endDate=
+  async fetchGames(_season: string, _dateRange?: DateRange): Promise<MlbScheduleGame[]> {
     throw new Error('Not implemented: MlbFetcher.fetchGames');
   }
 
-  // TODO(phase-3): box scores feed player game logs
-  async fetchStats(): Promise<unknown> {
-    throw new Error('Not implemented: MlbFetcher.fetchStats');
-  }
-
-  // TODO(phase-3): GET /game/{gamePk}/boxscore — per-player box scores
-  async fetchBoxscore(_gamePk: number): Promise<MlbBoxscoreResponse> {
-    throw new Error('Not implemented: MlbFetcher.fetchBoxscore');
+  // TODO(phase-3): box scores feed per-player game logs (GET /game/{gamePk}/boxscore)
+  async fetchPlayerGameLogs(_playerId: string, _season: string): Promise<unknown> {
+    throw new Error('Not implemented: MlbFetcher.fetchPlayerGameLogs');
   }
 
   // TODO(phase-3): GET /game/{gamePk}/feed/live — full play-by-play
-  async fetchPlays(_gamePk: number): Promise<MlbPlay[]> {
-    throw new Error('Not implemented: MlbFetcher.fetchPlays');
+  async fetchPlayByPlay(_gameId: string): Promise<MlbPlay[]> {
+    throw new Error('Not implemented: MlbFetcher.fetchPlayByPlay');
+  }
+
+  // TODO(phase-3): GET /teams/{teamId}/roster — active roster
+  async fetchRosters(_teamId: string): Promise<unknown> {
+    throw new Error('Not implemented: MlbFetcher.fetchRosters');
   }
 }
