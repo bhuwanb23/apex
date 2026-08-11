@@ -1,0 +1,15 @@
+// AQX Sports Intelligence — Prisma schema (multi-file layout)
+// ============================================================
+// One .prisma file per table in this folder. The generator + datasource
+// live here; models live in their own files (sports.prisma, teams.prisma, ...).
+//
+// NOTE: The connection URL lives in `prisma.config.ts` (Prisma 7 style), not here.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}

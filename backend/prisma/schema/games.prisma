@@ -1,0 +1,37 @@
+// Table 5 — Games
+// All game records across all sports.
+model Games {
+  id          Int       @id @default(autoincrement())
+  sportId     Int // FK → Sports
+  homeTeamId  Int // FK → Teams
+  awayTeamId  Int // FK → Teams
+  homeCoachId Int? // FK → Coaches
+  awayCoachId Int? // FK → Coaches
+  date        DateTime // Game date and time
+  season      String // Season identifier — "2024-25"
+  gameType    String // "regular" / "playoff" / "preseason"
+  week        Int? // NFL week number
+  homeScore   Int? // Final home team score
+  awayScore   Int? // Final away team score
+  winner      String? // "home" / "away" / "tie"
+  status      String    @default("scheduled") // "scheduled" / "live" / "final"
+  externalId  String // ID from sports API
+  venue       String?
+  attendance  Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sport     Sports   @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  homeTeam  Teams    @relation("HomeGames", fields: [homeTeamId], references: [id], onDelete: Restrict)
+  awayTeam  Teams    @relation("AwayGames", fields: [awayTeamId], references: [id], onDelete: Restrict)
+  homeCoach Coaches? @relation("HomeCoach", fields: [homeCoachId], references: [id], onDelete: SetNull)
+  awayCoach Coaches? @relation("AwayCoach", fields: [awayCoachId], references: [id], onDelete: SetNull)
+
+  // (PlayByPlay, PlayerGameLogs, CoachDecisions, MomentumGameData arrive with their tables)
+
+  @@unique([externalId, sportId])
+  @@index([date])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+  @@index([season])
+}

@@ -7,9 +7,11 @@ import { defineConfig, env } from 'prisma/config'
  * here instead of in the schema file. Paths resolve relative to this file.
  */
 export default defineConfig({
-  schema: 'prisma/schema.prisma',
+  // Multi-file schema: one .prisma file per table in prisma/schema/
+  schema: 'prisma/schema',
+  // Migrations live next to the datasource file (prisma/schema/schema.prisma)
   migrations: {
-    path: 'prisma/migrations',
+    path: 'prisma/schema/migrations',
   },
   datasource: {
     url: env('DATABASE_URL'),

@@ -1,0 +1,26 @@
+// Table 1 — Sports
+// Master reference table for all supported sports.
+model Sports {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique // Full name — "NBA", "NFL", "MLB", "NHL"
+  abbreviation String   @unique // Short code — "nba", "nfl"
+  isActive     Boolean  @default(true) // Whether this sport is enabled in app
+  season       String // Current active season — "2024-25"
+  // Sport-specific settings. Shape:
+  // {
+  //   decisionTypes:   string[]  — list of decision categories for that sport
+  //   dataSource:      string    — which API fetcher to use
+  //   momentumMetric:  string    — what counts as a scoring event
+  //   workloadMetrics: string[]  — which workload fields to track
+  // }
+  config      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teams   Teams[]
+  players Players[]
+  coaches Coaches[]
+  games   Games[]
+
+  @@index([isActive])
+}

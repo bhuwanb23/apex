@@ -1,0 +1,30 @@
+// Table 3 — Players
+// All players across all sports.
+model Players {
+  id           Int      @id @default(autoincrement())
+  teamId       Int // FK → Teams
+  sportId      Int // FK → Sports
+  name         String // Full player name
+  firstName    String // First name for search
+  lastName     String // Last name for search
+  position     String // Position abbreviation — "PG", "QB", "SP"
+  jerseyNumber String?
+  age          Int?
+  heightInches Int?
+  weightLbs    Int?
+  externalId   String // ID from sports API
+  isActive     Boolean  @default(true) // Currently on active roster
+  injuryStatus String? // "healthy" / "questionable" / "out"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  team  Teams  @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  sport Sports @relation(fields: [sportId], references: [id], onDelete: Restrict)
+
+  // (PlayerGameLogs, InjuryRiskScores arrive with their tables)
+
+  @@unique([externalId, sportId])
+  @@index([lastName])
+  @@index([teamId])
+  @@index([sportId])
+}

@@ -1,0 +1,26 @@
+// Table 2 — Teams
+// All teams across all sports.
+model Teams {
+  id           Int      @id @default(autoincrement())
+  sportId      Int // FK → Sports
+  name         String // Full team name — "Los Angeles Lakers"
+  abbreviation String // Short code — "LAL"
+  city         String // City name — "Los Angeles"
+  conference   String? // "Eastern" / "Western" / "NFC" / "AFC"
+  division     String?
+  externalId   String // ID used by the sports API for this team
+  logoUrl      String?
+  isActive     Boolean  @default(true) // Is team currently active in league
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sport     Sports   @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  players   Players[]
+  coaches   Coaches[]
+  homeGames Games[]  @relation("HomeGames")
+  awayGames Games[]  @relation("AwayGames")
+
+  @@unique([externalId, sportId])
+  @@unique([abbreviation, sportId])
+  @@index([sportId])
+}
