@@ -3,12 +3,15 @@
 # HTTP for all heavy statistical work: injury risk, decision EV, momentum Cox,
 # timeout recommendations and story generation.
 
+import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.data.model_cache import model_cache
+from app.data.nfl_bridge import is_available as nfl_data_available
 from app.routers import decisions, injury, momentum, nfl_data, story, timeout
 from app.utils.logger import get_logger
 
@@ -84,12 +87,35 @@ app.include_router(story.router)  # /story
 app.include_router(nfl_data.router)  # /nfl
 
 
+def _model_status(cache_prefix: str | None = None, cache_key: str | None = None) -> str:
+    """"loaded" when the model's trained artifact is in the model cache.
+    Without it the model degrades to heuristic/rule mode — the endpoints still
+    work, but /health lets the Node side know."""
+    if cache_key is not None:
+        return "loaded" if model_cache.has(cache_key) else "not loaded"
+    if cache_prefix is not None:
+        return "loaded" if any(k.startswith(cache_prefix) for k in model_cache.keys()) else "not loaded"
+    return "not loaded"
+
+
 @app.get("/health", tags=["system"], summary="Service health check")
 async def health() -> dict:
-    """Simple liveness check — Node's health endpoint pings this."""
+    """Liveness + model readiness — Node's health endpoint pings this and
+    uses the model flags to decide what to serve or recompute."""
     return {
         "status": "ok",
         "service": APP_TITLE,
         "version": APP_VERSION,
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "models": {
+            "wpModel": _model_status(cache_key="wp_model"),
+            # The decision EV model embeds its lookup tables in code (no
+            # artifact needed) — it is always fully loaded.
+            "decisionModel": "loaded",
+            "momentumModel": _model_status(cache_prefix="momentum_cox:"),
+            "timeoutModel": _model_status(cache_key="timeout_tree"),
+        },
+        "nflDataAvailable": nfl_data_available(),
         "modelCacheSize": model_cache.size(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

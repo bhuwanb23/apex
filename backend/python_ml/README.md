@@ -55,8 +55,21 @@ tests/               pytest suites
 | ----------- | -------------------------------------------- |
 | `/injury`   | Z-score injury risk (POST /compute-risk)     |
 | `/decisions`| Decision EV / win probability (POST /compute-ev) |
-| `/momentum` | Cox hazard + game timelines (POST /game, /season) |
-| `/timeout`  | Timeout optimizer (POST /recommend)          |
+| `/momentum` | Cox hazard + game timelines (POST /compute-season, /compute-game) |
+| `/timeout`  | Timeout optimizer (POST /recommend, /precompute) |
 | `/story`    | Story mode text (POST /generate)             |
-| `/nfl`      | nfl_data_py bridge (POST /plays, /schedule)  |
-| `/health`   | Liveness check                               |
+| `/nfl`      | nfl_data_py bridge (GET /plays, /rosters, /schedules + POST /plays, /schedule) |
+| `/health`   | Liveness + model readiness (see below)       |
+
+## Health endpoint
+
+`GET /health` reports `status`, `environment`, a `models` map with
+`loaded` / `not loaded` flags per model, `nflDataAvailable`, and a `timestamp`.
+
+- `wpModel` / `momentumModel` / `timeoutModel` report `loaded` when a trained
+  artifact is in the model cache (otherwise the endpoint still works via
+  heuristic / rule fallbacks).
+- `decisionModel` is always `loaded` — its lookup tables are embedded in code,
+  no artifact required.
+- `nflDataAvailable` is `false` when `nfl_data_py` is not installed
+  (the /nfl routes then return clean `503`s; see below).

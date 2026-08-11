@@ -19,6 +19,8 @@ def test_all_routers_registered():
         "/timeout/precompute",
         "/story/generate",
         "/nfl/plays",
+        "/nfl/rosters",
+        "/nfl/schedules",
         "/nfl/schedule",
     ]:
         assert expected in paths, f"missing route {expected}"
