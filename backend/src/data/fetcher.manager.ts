@@ -1,28 +1,141 @@
+import axios from 'axios';
+import { logger } from '../config/logger.js';
+import { prisma } from '../db/client.js';
+import { updateCacheMetadata } from './db.writer.js';
 import { MlbFetcher } from './mlb/mlb.fetcher.js';
 import { NbaFetcher } from './nba/nba.fetcher.js';
 import { NflFetcher } from './nfl/nfl.fetcher.js';
 
-/**
- * Common fetcher contract. Each sport fetcher implements these raw-data
- * pullers; return types narrow to the sport-specific raw types.
- */
-export interface SportFetcher {
-  readonly sport: string; // "nba" / "nfl" / "mlb"
-  fetchTeams(): Promise<unknown>;
-  fetchPlayers(): Promise<unknown>;
-  fetchGames(): Promise<unknown>;
-  fetchStats(): Promise<unknown>;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface DateRange {
+  startDate: Date;
+  endDate: Date;
 }
 
 /**
- * Master coordinator: resolves the right fetcher per sport abbreviation and
- * is responsible for pacing (rate limits), retries and logging fetches.
+ * Result of a manager fetch. When `cached` is true the data was already fresh
+ * in the DB (CacheMetadata says so) and `data` is null — callers read SQLite
+ * instead of re-hitting the external API.
+ */
+export interface FetchResult<T = unknown> {
+  data: T | null;
+  cached: boolean;
+  cacheKey: string;
+  durationMs: number;
+}
+
+export interface SyncStageResult {
+  cached: boolean;
+  recordCount: number;
+  durationMs: number;
+}
+
+export interface SyncAllResult {
+  sport: string;
+  season: string;
+  stages: {
+    teams: SyncStageResult;
+    players: SyncStageResult;
+    games: SyncStageResult;
+  };
+  durationMs: number;
+}
+
+/**
+ * Common fetcher contract. Each sport fetcher implements the raw-data pullers;
+ * the manager is the ONLY entry point the rest of the app calls.
+ */
+export interface SportFetcher {
+  /** Sport abbreviation: 'nba' | 'nfl' | 'mlb' */
+  readonly sport: string;
+  /** Rate-limit bucket for the underlying API ('balldontlie' | 'espn' | 'mlb') */
+  readonly apiName: string;
+  fetchTeams(): Promise<unknown>;
+  fetchPlayers(teamId?: string): Promise<unknown>;
+  fetchGames(season: string, dateRange?: DateRange): Promise<unknown>;
+  fetchPlayerGameLogs(playerId: string, season: string): Promise<unknown>;
+  fetchPlayByPlay(gameId: string): Promise<unknown>;
+  fetchRosters(teamId: string): Promise<unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// Rate limiting — per-API sliding window
+// ---------------------------------------------------------------------------
+
+interface RateLimitConfig {
+  maxRequests: number;
+  windowMs: number;
+}
+
+/** Requests per minute per API. BallDontLie free tier is 30/min — pace under it. */
+const RATE_LIMITS: Record<string, RateLimitConfig> = {
+  balldontlie: { maxRequests: 25, windowMs: 60_000 },
+  espn: { maxRequests: 60, windowMs: 60_000 },
+  mlb: { maxRequests: 120, windowMs: 60_000 },
+  python_ml: { maxRequests: 60, windowMs: 60_000 },
+};
+
+const DEFAULT_RATE_LIMIT: RateLimitConfig = { maxRequests: 60, windowMs: 60_000 };
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/** Sliding-window pace keeper. Waits (queues) when the window is full. */
+export class RateLimiter {
+  private readonly windows = new Map<string, number[]>();
+
+  constructor(private readonly limits: Record<string, RateLimitConfig> = RATE_LIMITS) {}
+
+  async acquire(apiName: string): Promise<void> {
+    const limit = this.limits[apiName] ?? DEFAULT_RATE_LIMIT;
+    for (;;) {
+      const now = Date.now();
+      const active = (this.windows.get(apiName) ?? []).filter(t => now - t < limit.windowMs);
+      if (active.length < limit.maxRequests) {
+        active.push(now);
+        this.windows.set(apiName, active);
+        return;
+      }
+      const oldest = active[0] ?? now; // window is non-empty here, but TS can't prove it
+      const waitMs = oldest + limit.windowMs - now + 25;
+      logger.debug({ apiName, waitMs }, 'Rate limit reached — queuing request');
+      await sleep(waitMs);
+    }
+  }
+}
+
+/** Whether a fetch error is worth retrying. 4xx (except 429) and local programming errors are permanent. */
+function isRetryableError(err: unknown): boolean {
+  if (axios.isAxiosError(err)) {
+    const status = err.response?.status;
+    if (status === undefined) return true; // network/connect failure — retry
+    return status === 429 || status >= 500; // rate-limited or server error — retry
+  }
+  return false; // e.g. "Not implemented" shells — fail fast
+}
+
+/**
+ * Master coordinator — the single entry point for all data fetching.
+ * Responsibilities:
+ *   1. Cache-first: checks CacheMetadata, skips fresh fetches (returns cached flag)
+ *   2. Routing: resolves the right sport fetcher
+ *   3. Pacing: per-API rate limiting with queueing
+ *   4. Retries: up to 3 attempts, exponential backoff (1s → 2s → 4s)
+ *   5. Logging: what was fetched, duration, success/failure, record count
+ *   6. Cache metadata: refreshes CacheMetadata after every fetch
  */
 export class FetcherManager {
-  private readonly registry: Map<string, SportFetcher>;
+  private readonly registry = new Map<string, SportFetcher>();
+  private readonly rateLimiter = new RateLimiter();
+  private readonly sportIdCache = new Map<string, number | null>();
 
   constructor() {
-    this.registry = new Map<string, SportFetcher>();
     this.register(new NbaFetcher());
     this.register(new NflFetcher());
     this.register(new MlbFetcher());
@@ -43,6 +156,237 @@ export class FetcherManager {
 
   getSupportedSports(): string[] {
     return [...this.registry.keys()];
+  }
+
+  // -- Cache helpers ---------------------------------------------------------
+
+  /** True when a fresh CacheMetadata entry exists (data is in SQLite, skip fetch). */
+  async checkCacheValid(cacheKey: string): Promise<boolean> {
+    const entry = await prisma.cacheMetadata.findUnique({ where: { cacheKey } });
+    if (!entry || !entry.isValid) return false;
+    return entry.expiresAt.getTime() > Date.now();
+  }
+
+  private async resolveSportId(sport: string): Promise<number | null> {
+    const cached = this.sportIdCache.get(sport);
+    if (cached !== undefined) return cached;
+    const row = await prisma.sports.findUnique({
+      where: { abbreviation: sport },
+      select: { id: true },
+    });
+    // Only cache resolved ids — never the null miss, so a late-seeded Sports
+    // table is picked up instead of being cached as missing forever.
+    if (row) this.sportIdCache.set(sport, row.id);
+    return row?.id ?? null;
+  }
+
+  private async resolveSportSeason(sport: string): Promise<string> {
+    const row = await prisma.sports.findUnique({
+      where: { abbreviation: sport },
+      select: { season: true },
+    });
+    // Fallback until the Sports table is seeded with the current season.
+    return row?.season ?? 'current';
+  }
+
+  // -- Core fetch pipeline ---------------------------------------------------
+
+  private async withFetch<T>(opts: {
+    sport: string;
+    apiName: string;
+    dataType: string;
+    cacheKey: string;
+    entityId?: string;
+    season?: string;
+    fetchFn: () => Promise<T>;
+  }): Promise<FetchResult<T>> {
+    const started = Date.now();
+
+    // 1. Cache check — fresh data already in SQLite? Skip the external API.
+    if (await this.checkCacheValid(opts.cacheKey)) {
+      logger.debug({ cacheKey: opts.cacheKey }, 'Cache hit — skipping external fetch');
+      return {
+        data: null,
+        cached: true,
+        cacheKey: opts.cacheKey,
+        durationMs: Date.now() - started,
+      };
+    }
+
+    // 2. Pace the external API, then fetch (with retries)
+    await this.rateLimiter.acquire(opts.apiName);
+    try {
+      const data = await this.retryWithBackoff(opts.fetchFn, opts.cacheKey);
+      const durationMs = Date.now() - started;
+      const recordCount = Array.isArray(data) ? data.length : 1;
+      await updateCacheMetadata({
+        cacheKey: opts.cacheKey,
+        dataType: opts.dataType,
+        sportId: await this.resolveSportId(opts.sport),
+        entityId: opts.entityId ?? null,
+        season: opts.season ?? null,
+        recordCount,
+        fetchDurationMs: durationMs,
+      });
+      logger.info(
+        { sport: opts.sport, cacheKey: opts.cacheKey, recordCount, durationMs },
+        'Fetch completed'
+      );
+      return { data, cached: false, cacheKey: opts.cacheKey, durationMs };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      try {
+        await updateCacheMetadata({
+          cacheKey: opts.cacheKey,
+          dataType: opts.dataType,
+          sportId: null,
+          entityId: opts.entityId ?? null,
+          season: opts.season ?? null,
+          recordCount: 0,
+          fetchDurationMs: Date.now() - started,
+          lastError: message,
+        });
+      } catch {
+        // Metadata write failed (e.g. DB down) — never mask the original fetch error.
+      }
+      logger.error({ sport: opts.sport, cacheKey: opts.cacheKey, error: message }, 'Fetch failed');
+      throw err;
+    }
+  }
+
+  /** Retry wrapper — up to `maxRetries` attempts with 1s → 2s → 4s backoff. */
+  async retryWithBackoff<T>(
+    fetchFn: () => Promise<T>,
+    context: string,
+    maxRetries = 3
+  ): Promise<T> {
+    let attempt = 0;
+    for (;;) {
+      try {
+        return await fetchFn();
+      } catch (err) {
+        attempt += 1;
+        if (attempt > maxRetries || !isRetryableError(err)) {
+          logger.error({ context, attempt }, 'Fetch failed permanently');
+          throw err;
+        }
+        const delayMs = 1_000 * 2 ** (attempt - 1);
+        logger.warn({ context, attempt, delayMs }, 'Fetch failed — retrying with backoff');
+        await sleep(delayMs);
+      }
+    }
+  }
+
+  // -- Public fetch API -------------------------------------------------------
+
+  async fetchTeams(sport: string): Promise<FetchResult<unknown>> {
+    const fetcher = this.getFetcher(sport);
+    return this.withFetch({
+      sport,
+      apiName: fetcher.apiName,
+      dataType: 'teams',
+      cacheKey: `teams:${sport}`,
+      fetchFn: () => fetcher.fetchTeams(),
+    });
+  }
+
+  async fetchPlayers(sport: string, teamId?: string): Promise<FetchResult<unknown>> {
+    const fetcher = this.getFetcher(sport);
+    return this.withFetch({
+      sport,
+      apiName: fetcher.apiName,
+      dataType: 'players',
+      cacheKey: teamId ? `players:${sport}:${teamId}` : `players:${sport}`,
+      entityId: teamId,
+      fetchFn: () => fetcher.fetchPlayers(teamId),
+    });
+  }
+
+  async fetchGames(
+    sport: string,
+    season: string,
+    dateRange?: DateRange
+  ): Promise<FetchResult<unknown>> {
+    const fetcher = this.getFetcher(sport);
+    // A date range changes the payload, so it must be part of the cache key.
+    const rangeKey = dateRange
+      ? `:${dateRange.startDate.toISOString().slice(0, 10)}:${dateRange.endDate.toISOString().slice(0, 10)}`
+      : '';
+    return this.withFetch({
+      sport,
+      apiName: fetcher.apiName,
+      dataType: 'games',
+      cacheKey: `games:${sport}:${season}${rangeKey}`,
+      season,
+      fetchFn: () => fetcher.fetchGames(season, dateRange),
+    });
+  }
+
+  async fetchPlayerGameLogs(
+    sport: string,
+    playerId: string,
+    season: string
+  ): Promise<FetchResult<unknown>> {
+    const fetcher = this.getFetcher(sport);
+    return this.withFetch({
+      sport,
+      apiName: fetcher.apiName,
+      dataType: 'player_logs',
+      cacheKey: `player_logs:${sport}:${playerId}:${season}`,
+      entityId: playerId,
+      season,
+      fetchFn: () => fetcher.fetchPlayerGameLogs(playerId, season),
+    });
+  }
+
+  async fetchPlayByPlay(sport: string, gameId: string): Promise<FetchResult<unknown>> {
+    const fetcher = this.getFetcher(sport);
+    return this.withFetch({
+      sport,
+      apiName: fetcher.apiName,
+      dataType: 'play_by_play',
+      cacheKey: `play_by_play:${sport}:${gameId}`,
+      entityId: gameId,
+      fetchFn: () => fetcher.fetchPlayByPlay(gameId),
+    });
+  }
+
+  async fetchRosters(sport: string, teamId: string): Promise<FetchResult<unknown>> {
+    // Rosters and player fetches hit the same underlying data — share one cache
+    // entry so the API isn't called twice for the same payload.
+    return this.fetchPlayers(sport, teamId);
+  }
+
+  // -- Full sync -------------------------------------------------------------
+
+  /**
+   * Runs a full sync for a sport in order: teams → players → games.
+   * Each stage is cache-aware (fresh stages skip the external API).
+   * NOTE: the transform + SQLite write stages land with the transformers in later steps.
+   */
+  async syncAllData(sport: string, season?: string): Promise<SyncAllResult> {
+    const started = Date.now();
+    logger.info({ sport }, 'Starting full data sync');
+
+    const resolvedSeason = season ?? (await this.resolveSportSeason(sport));
+    const teams = await this.fetchTeams(sport);
+    const players = await this.fetchPlayers(sport);
+    const games = await this.fetchGames(sport, resolvedSeason);
+
+    const toStage = (r: FetchResult<unknown>): SyncStageResult => ({
+      cached: r.cached,
+      recordCount: Array.isArray(r.data) ? r.data.length : 0,
+      durationMs: r.durationMs,
+    });
+
+    const durationMs = Date.now() - started;
+    logger.info({ sport, durationMs }, 'Full sync finished');
+    return {
+      sport,
+      season: resolvedSeason,
+      stages: { teams: toStage(teams), players: toStage(players), games: toStage(games) },
+      durationMs,
+    };
   }
 }
 
