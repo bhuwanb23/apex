@@ -1,0 +1,18 @@
+// Table 15 — StoryLogs
+// Caches generated story mode text so we don't regenerate every time.
+model StoryLogs {
+  id          Int      @id @default(autoincrement())
+  storyKey    String   @unique // Hash of the inputs used to generate
+  module      String // "injury" / "decisions" / "momentum"
+  sport       String // Which sport
+  role        String // Which role mode
+  entityId    String? // Player or coach the story is about
+  storyText   String // The full generated paragraph
+  keyMetrics  Json // The data points used in generation
+  generatedBy String // "template" / "openai"
+  expiresAt   DateTime // When to regenerate
+  createdAt   DateTime @default(now())
+
+  // (Story snapshots are immutable — no updatedAt, per spec)
+  @@index([expiresAt]) // stale-story regeneration sweeps
+}
