@@ -1,9 +1,9 @@
 # AQX Sports Intelligence — Backend Development Phases
- 
+
 ---
- 
+
 ## Tech Stack Correction — Node.js Backend
- 
+
 ```
 Backend Runtime     → Node.js
 Framework           → Express.js
@@ -15,7 +15,7 @@ Job Queue           → Bull (background data processing)
 Caching             → Node-cache (in memory) + SQLite
 API Docs            → Swagger UI (auto generated)
 ```
- 
+
 ### Why This Split
 ```
 Node.js handles
@@ -25,24 +25,24 @@ Node.js handles
 ├── Caching logic
 ├── Request/response handling
 └── Serving frontend
- 
+
 Python Microservice handles
 ├── Z-score injury calculations
 ├── Cox hazard momentum model
 ├── EV and win probability models
 ├── Story mode text generation
 └── All heavy statistical work
- 
+
 Node calls Python microservice via HTTP
 Clean separation, both run independently
 ```
- 
+
 ---
- 
+
 ## Database Schema — SQLite via Prisma
- 
+
 ### All Tables Planned
- 
+
 ```
 Tables
 │
@@ -60,21 +60,21 @@ Tables
 ├── cache_metadata          → Track what data is cached and when
 └── story_logs              → Generated story mode text cached
 ```
- 
+
 ---
- 
+
 ## Full Phase Breakdown
- 
+
 ---
- 
+
 # PHASE 1 — Project Foundation
- 
+
 ### What This Phase Does
 Sets up the entire Node.js project skeleton
 Every other phase builds on top of this
- 
+
 ### Tasks
- 
+
 **1.1 — Project Initialization**
 ```
 Initialize Node.js project
@@ -84,7 +84,7 @@ Setup folder structure
 Setup environment variable handling with dotenv
 Setup nodemon for development auto-restart
 ```
- 
+
 **1.2 — Folder Structure**
 ```
 backend/
@@ -166,7 +166,7 @@ backend/
 ├── tsconfig.json
 └── nodemon.json
 ```
- 
+
 **1.3 — Express App Setup**
 ```
 Setup Express with TypeScript
@@ -180,7 +180,7 @@ Setup Swagger documentation
 Setup health check route
 Connect Prisma to SQLite
 ```
- 
+
 **1.4 — Environment Variables**
 ```
 PORT
@@ -192,26 +192,26 @@ CACHE_TTL_LONG           → 7 days
 NODE_ENV
 LOG_LEVEL
 ```
- 
+
 ---
- 
+
 # PHASE 2 — Database Setup
- 
+
 ### What This Phase Does
 Designs and creates all SQLite tables via Prisma
 Seeds initial reference data
- 
+
 ### Tasks
- 
+
 **2.1 — Prisma Schema Design**
- 
+
 ```
 Sports Table
 ├── id
 ├── name           → "NBA" / "NFL" / "MLB" / "NHL"
 ├── active         → boolean
 └── config         → JSON (sport specific settings)
- 
+
 Teams Table
 ├── id
 ├── sportId        → references Sports
@@ -219,7 +219,7 @@ Teams Table
 ├── abbreviation
 ├── city
 └── externalId     → ID from sports API
- 
+
 Players Table
 ├── id
 ├── teamId         → references Teams
@@ -228,7 +228,7 @@ Players Table
 ├── age
 ├── externalId     → ID from sports API
 └── active         → boolean
- 
+
 PlayerGameLogs Table
 ├── id
 ├── playerId       → references Players
@@ -239,7 +239,7 @@ PlayerGameLogs Table
 ├── highIntensityEvents
 ├── backToBack     → boolean
 └── rawData        → JSON (full box score stored)
- 
+
 InjuryRiskScores Table
 ├── id
 ├── playerId       → references Players
@@ -249,7 +249,7 @@ InjuryRiskScores Table
 ├── triggerMetric  → what caused the flag
 ├── explanation    → plain English text
 └── windowData     → JSON (the 7 day data used)
- 
+
 Games Table
 ├── id
 ├── sportId        → references Sports
@@ -261,7 +261,7 @@ Games Table
 ├── homeScore
 ├── awayScore
 └── externalId
- 
+
 PlayByPlay Table
 ├── id
 ├── gameId         → references Games
@@ -274,7 +274,7 @@ PlayByPlay Table
 ├── awayScore
 ├── scoreDiff
 └── rawEvent       → JSON
- 
+
 CoachDecisions Table
 ├── id
 ├── gameId         → references Games
@@ -287,7 +287,7 @@ CoachDecisions Table
 ├── evBest
 ├── isOptimal      → boolean
 └── outcome        → what actually happened
- 
+
 DecisionEVScores Table
 ├── id
 ├── coachId
@@ -298,7 +298,7 @@ DecisionEVScores Table
 ├── optimalDecisions
 ├── evRate         → percentage correct
 └── computedAt
- 
+
 MomentumAnalysis Table
 ├── id
 ├── sport
@@ -310,13 +310,13 @@ MomentumAnalysis Table
 ├── isSignificant  → boolean
 ├── plainExplanation
 └── computedAt
- 
+
 MomentumGameData Table
 ├── id
 ├── gameId         → references Games
 ├── timelineData   → JSON (momentum score at each moment)
 └── computedAt
- 
+
 CacheMetadata Table
 ├── id
 ├── cacheKey
@@ -324,7 +324,7 @@ CacheMetadata Table
 ├── cachedAt
 ├── expiresAt
 └── isValid
- 
+
 Coaches Table
 ├── id
 ├── teamId
@@ -332,68 +332,68 @@ Coaches Table
 ├── externalId
 └── active
 ```
- 
+
 **2.2 — Seed Data**
 ```
 Seed all sports records
 Seed all team records for NBA and NFL first
 Setup initial cache metadata
 ```
- 
+
 ---
- 
+
 # PHASE 3 — Data Fetching Layer
- 
+
 ### What This Phase Does
 Builds all the sports API connectors
 Pulls real data and stores in SQLite
- 
+
 ### Tasks
- 
+
 **3.1 — NBA Data Fetcher**
 ```
 Source → balldontlie API (free, no key for basic)
          OR nba_api Python wrapper called via microservice
- 
+
 Fetch
 ├── All NBA teams
 ├── All NBA players per team
 ├── Player game logs (full season)
 ├── Play by play per game
 └── Schedule and game results
- 
+
 Store everything in SQLite tables
 Log fetch time in CacheMetadata
 ```
- 
+
 **3.2 — NFL Data Fetcher**
 ```
 Source → nfl-data-py via Python microservice
          OR ESPN public API
- 
+
 Fetch
 ├── All NFL teams
 ├── All NFL coaches
 ├── Play by play data
 ├── Game logs
 └── 4th down decisions extracted from plays
- 
+
 Store in SQLite
 ```
- 
+
 **3.3 — MLB Data Fetcher**
 ```
 Source → pybaseball via Python microservice
          Statcast data
- 
+
 Fetch
 ├── Teams and players
 ├── Game logs
 └── Play by play
- 
+
 Store in SQLite
 ```
- 
+
 **3.4 — Fetcher Manager**
 ```
 Master coordinator that
@@ -403,17 +403,17 @@ Master coordinator that
 ├── Retries on failure
 └── Logs all fetch operations
 ```
- 
+
 ---
- 
+
 # PHASE 4 — Python ML Microservice
- 
+
 ### What This Phase Does
 Builds the entire AI and statistical layer
 Node.js calls this service for all heavy computation
- 
+
 ### Tasks
- 
+
 **4.1 — FastAPI Setup**
 ```
 Simple FastAPI app
@@ -421,13 +421,13 @@ All routes return JSON
 Runs on port 8001
 Node.js calls it internally
 ```
- 
+
 **4.2 — Injury Risk Model**
 ```
 Input
 ├── Player's last 21 days of game logs
 └── Most recent 7 day window
- 
+
 Processing
 ├── Compute personal baseline per metric
 │   ├── Mean minutes over 21 days
@@ -438,7 +438,7 @@ Processing
 ├── Flag if z-score > 1.5 on any metric
 ├── Compute composite risk score 0 to 100
 └── Generate plain English explanation
- 
+
 Output
 ├── riskScore
 ├── zone (green/yellow/red)
@@ -446,14 +446,14 @@ Output
 ├── zScores per metric
 └── explanation text
 ```
- 
+
 **4.3 — Decision EV Model**
 ```
 Input
 ├── Game context (score, time, down, field position)
 ├── Decision type
 └── Historical outcomes for similar contexts
- 
+
 Processing
 ├── Logistic regression win probability model
 │   └── Trained on historical game data
@@ -461,7 +461,7 @@ Processing
 │   └── EV = probability of winning × value
 ├── Compare chosen option to best option
 └── Label optimal or not optimal
- 
+
 Output
 ├── evChosen
 ├── evBest
@@ -469,18 +469,18 @@ Output
 ├── winProbabilityBefore
 ├── winProbabilityAfter
 └── alternativeOptions with their EVs
- 
+
 AI Enhancement
 └── Fine tuned on last 5 seasons of data
     per sport for better accuracy
 ```
- 
+
 **4.4 — Momentum Cox Model**
 ```
 Input
 ├── Full play by play for a game or season
 └── Scoring event sequence
- 
+
 Processing
 ├── Cox proportional hazard model via lifelines
 │   └── Predicts hazard rate of opponent scoring
@@ -492,10 +492,286 @@ Processing
 ├── Compute hazard coefficient
 ├── Run statistical significance test
 └── Generate confidence intervals
- 
+
 Output
 ├── hazardCoefficient
 ├── pValue
 ├── isSignificant
 ├── effectSize
-├── plain
+├── plainExplanation
+└── gameTimeline (momentum score per moment)
+```
+
+**4.5 — Story Mode Generator**
+```
+Input
+├── Current module data
+├── Sport and role selected
+└── Key metrics
+
+Processing
+├── Template based text generation
+├── Rule based narrative builder
+└── Optional → OpenAI API call for richer text
+    (only if API key provided, not required)
+
+Output
+└── Plain English paragraph summarizing the screen
+```
+
+**4.6 — Timeout Optimizer**
+```
+Input
+├── Sport
+├── Current momentum score
+└── Game situation
+
+Processing
+├── Decision tree trained on historical timeout data
+├── Calculates stop probability with/without timeout
+└── Recommends optimal timeout moment
+
+Output
+├── shouldCallTimeout boolean
+├── stopProbabilityWithTimeout
+├── stopProbabilityWithout
+└── recommendation text
+```
+
+---
+
+# PHASE 5 — Core API Routes
+
+### What This Phase Does
+Builds all Express routes and controllers
+Everything the frontend will call
+
+### Tasks
+
+**5.1 — Injury Routes**
+```
+GET /api/injury/player/:playerId
+├── Calls injury service
+├── Service checks DB for recent risk score
+├── If stale → calls Python ML for recompute
+└── Returns full risk profile
+
+GET /api/injury/team/:teamId
+├── Gets all players on team
+├── Returns risk score for each
+└── Sorted by risk level
+
+GET /api/injury/alerts/:sport
+├── Returns all players currently in red zone
+└── Across entire sport/league
+```
+
+**5.2 — Decision Routes**
+```
+GET /api/decisions/coaches/:sport
+├── Returns full coach leaderboard
+├── Sorted by EV rate
+└── With filter options (season, decision type)
+
+GET /api/decisions/coach/:coachId
+├── Returns all decisions for one coach
+├── Color coded optimal vs not
+└── With game context for each
+
+GET /api/decisions/game/:gameId
+└── All decisions made in one specific game
+```
+
+**5.3 — Momentum Routes**
+```
+GET /api/momentum/analysis/:sport
+├── Returns statistical findings for sport
+└── Hazard coefficient, p-value, explanation
+
+GET /api/momentum/game/:gameId
+├── Returns full momentum timeline for game
+└── Score at each moment in the game
+
+GET /api/momentum/comparison
+└── All sports side by side comparison data
+
+GET /api/momentum/timeout/:sport
+└── Timeout optimizer recommendations
+```
+
+**5.4 — Shared Routes**
+```
+GET /api/search/players?q=
+└── Player autocomplete search
+
+GET /api/search/teams?q=
+└── Team autocomplete search
+
+GET /api/story/:module/:sport
+└── Story mode text for current view
+
+GET /api/health
+└── Server status check
+
+GET /api/sports
+└── All supported sports and their configs
+```
+
+---
+
+# PHASE 6 — Background Jobs
+
+### What This Phase Does
+Runs data sync and computation automatically
+Keeps everything fresh without manual triggers
+
+### Tasks
+
+**6.1 — Data Sync Job**
+```
+Runs every 6 hours
+├── Fetches latest game logs for all players
+├── Fetches latest play by play data
+├── Updates SQLite tables
+└── Marks cache as refreshed
+```
+
+**6.2 — Risk Compute Job**
+```
+Runs every 6 hours after data sync
+├── Loops through all active players
+├── Sends workload data to Python ML service
+├── Stores new risk scores in DB
+└── Flags any new red zone players
+```
+
+**6.3 — Momentum Compute Job**
+```
+Runs daily
+├── Pulls all games from last 24 hours
+├── Sends play by play to Python ML
+├── Stores momentum timeline in DB
+└── Updates season level analysis
+```
+
+---
+
+# PHASE 7 — Caching Layer
+
+### What This Phase Does
+Makes the app feel instant
+Prevents hammering sports APIs
+
+### Tasks
+
+**7.1 — In Memory Cache**
+```
+Node-cache setup
+├── Player search results     → 1 hour TTL
+├── Team lists                → 24 hour TTL
+└── Active alerts             → 30 minute TTL
+```
+
+**7.2 — SQLite Cache**
+```
+Stored computation results
+├── Risk scores               → 6 hour TTL
+├── Coach leaderboard         → 24 hour TTL
+├── Momentum analysis         → 24 hour TTL
+└── Story mode text           → 1 hour TTL
+```
+
+**7.3 — Cache Middleware**
+```
+Every route checks cache first
+├── Hit → return immediately
+├── Miss → compute, store, return
+└── Stale → return stale, recompute in background
+```
+
+---
+
+# PHASE 8 — Error Handling and Logging
+
+### What This Phase Does
+Makes the backend robust and debuggable
+
+### Tasks
+
+**8.1 — Error Handling**
+```
+Global error middleware catches all errors
+├── API fetch failures → return cached data or graceful message
+├── ML service down → return last computed score from DB
+├── DB errors → log and return safe error response
+└── Unknown errors → log, return 500 with safe message
+```
+
+**8.2 — Logging**
+```
+Winston logger
+├── All API requests logged
+├── All data fetch operations logged
+├── All ML calls logged with response time
+├── All errors logged with full stack
+└── Log files saved locally, displayed in console
+```
+
+---
+
+# PHASE 9 — Testing and Docs
+
+### What This Phase Does
+Makes sure everything works
+Documents every endpoint
+
+### Tasks
+
+**9.1 — API Documentation**
+```
+Swagger UI auto generated
+Available at /api/docs
+Every route documented with
+├── Parameters
+├── Response schema
+└── Example response
+```
+
+**9.2 — Basic Testing**
+```
+Test each route returns correct shape
+Test cache is working
+Test ML service integration
+Test error cases return safe responses
+```
+
+---
+
+## Full Phase Summary
+
+| Phase | What It Builds | Priority |
+|---|---|---|
+| Phase 1 | Project foundation and structure | Must do first |
+| Phase 2 | SQLite database and all tables | Must do second |
+| Phase 3 | Sports data fetching layer | Core feature |
+| Phase 4 | Python ML microservice | Core feature |
+| Phase 5 | All API routes and controllers | Core feature |
+| Phase 6 | Background jobs for data sync | Important |
+| Phase 7 | Caching layer | Important |
+| Phase 8 | Error handling and logging | Important |
+| Phase 9 | Testing and documentation | Final polish |
+
+---
+
+## Build Order for Speed
+
+```
+Phase 1 → Phase 2 → Phase 4 → Phase 3 → Phase 5 → Phase 7 → Phase 6 → Phase 8 → Phase 9
+```
+
+**Why this order:**
+- Get ML working before data fetching so you can test models with mock data
+- Get routes working before jobs so you can test manually
+- Caching before jobs so jobs use the cache system properly
+
+This is the complete backend plan. Every phase, every function, every table, every route. Ready to start building when you say go.
