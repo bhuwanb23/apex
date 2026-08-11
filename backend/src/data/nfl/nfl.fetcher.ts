@@ -138,6 +138,8 @@ export class NflFetcher implements SportFetcher {
       posteam: sp.team?.id ?? null,
       defteam: null,
       score_differential: (sp.homeScore ?? 0) - (sp.awayScore ?? 0),
+      home_score: sp.homeScore ?? null,
+      away_score: sp.awayScore ?? null,
       game_seconds_remaining: null,
       qtr: sp.period?.number ?? null,
       fourth_down_converted: null,
