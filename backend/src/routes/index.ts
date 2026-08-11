@@ -1,8 +1,10 @@
-import { Router } from 'express'
-import { healthRouter } from './health.js'
-import pkg from '../../package.json' with { type: 'json' }
+import { Router } from 'express';
+import pkg from '../../package.json' with { type: 'json' };
+import { env } from '../config/env.js';
+import { sendSuccess } from '../utils/response.util.js';
+import { healthRouter } from './health.routes.js';
 
-export const routes = Router()
+export const routes = Router();
 
 /**
  * @openapi
@@ -16,15 +18,15 @@ export const routes = Router()
  *         description: Service metadata
  */
 routes.get('/', (_req, res) => {
-  res.json({
-    name: 'AQX Sports Intelligence API',
+  sendSuccess(res, {
+    name: env.APP_NAME,
     version: pkg.version,
     docs: '/api-docs',
-    health: '/health',
-  })
-})
+    health: '/api/health',
+  });
+});
 
 // Feature routes get mounted here as they are built, e.g.:
-// routes.use('/leagues', leaguesRouter)
-// routes.use('/matches', matchesRouter)
-routes.use('/health', healthRouter)
+// routes.use('/api/sports', sportsRoutes)
+// routes.use('/api/teams', teamsRoutes)
+routes.use('/api/health', healthRouter);
