@@ -1,0 +1,24 @@
+// Table 13 — TimeoutRecommendations
+// Pre-computed timeout optimizer results.
+model TimeoutRecommendations {
+  id                     Int      @id @default(autoincrement())
+  sportId                Int // FK → Sports
+  scenarioKey            String // Hash of the game situation parameters
+  consecutiveScores      Int // Opponent consecutive scoring events
+  scoreDiff              Int // Current score difference
+  timeRemaining          Float // Seconds remaining in game
+  period                 Int // Current period
+  shouldCallTimeout      Boolean // Recommendation
+  stopProbabilityWith    Float // Stop probability if timeout called
+  stopProbabilityWithout Float // Stop probability if no timeout
+  probabilityDiff        Float // Difference between the two
+  recommendationText     String // Plain English advice
+  confidenceLevel        String // "high" / "medium" / "low"
+  computedAt             DateTime // When calculated
+  createdAt              DateTime @default(now())
+
+  sport Sports @relation(fields: [sportId], references: [id], onDelete: Restrict)
+
+  // One recommendation per scenario per sport
+  @@unique([sportId, scenarioKey])
+}
