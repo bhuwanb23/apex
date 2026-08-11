@@ -11,7 +11,7 @@ def test_all_routers_registered():
     paths = set(client.get("/openapi.json").json()["paths"])
     for expected in [
         "/health",
-        "/injury/score",
+        "/injury/compute-risk",
         "/decisions/ev",
         "/momentum/game",
         "/momentum/season",

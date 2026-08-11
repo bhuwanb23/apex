@@ -14,8 +14,9 @@ scipy>=1.13
 scikit-learn>=1.4
 lifelines>=0.29
 
-# NFL data (Step 10) — latest release is 0.x; newer major versions don't exist
-nfl-data-py>=0.3.3
+# NFL data (Step 10) — nfl-data-py 0.3.3 pins pandas<2.0, incompatible with
+# Python 3.13 / modern pandas; installed separately in Step 10 if viable.
+# nfl-data-py>=0.3.3
 
 # Testing
 pytest>=8.2
