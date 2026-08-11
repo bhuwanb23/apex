@@ -1,0 +1,33 @@
+// Table 8 — PlayByPlay
+// Every single play or event in every game.
+model PlayByPlay {
+  id                Int      @id @default(autoincrement())
+  gameId            Int // FK → Games
+  sportId           Int // FK → Sports
+  eventNumber       Int // Sequential event number in game
+  period            Int // Quarter, period, inning number
+  clock             String? // Time remaining in period
+  eventTimeSeconds  Float? // Seconds elapsed in game
+  teamId            Int? // FK → Teams — team that generated this event
+  playerId          Int? // FK → Players — player involved
+  eventType         String // "score" / "turnover" / "foul" / "timeout" etc
+  eventSubtype      String? // More specific event classification
+  description       String // Text description of the play
+  homeScore         Int // Home score at this moment
+  awayScore         Int // Away score at this moment
+  scoreDiff         Int // Score differential at this moment
+  isScoring         Boolean // Did this event change the score
+  homeWinProbability Float? // Win probability for home team at this moment
+  rawEvent          Json // Full raw event data from API
+  createdAt         DateTime @default(now())
+
+  game   Games    @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  sport  Sports   @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  team   Teams?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  player Players? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  // (Event rows are immutable — no updatedAt, per spec)
+  @@index([gameId]) // game replay queries
+  @@index([gameId, isScoring]) // momentum calculations
+  @@index([eventType]) // decision extraction
+}

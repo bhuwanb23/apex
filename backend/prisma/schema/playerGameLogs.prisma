@@ -1,0 +1,32 @@
+// Table 6 — PlayerGameLogs
+// Every player's stats and workload for every game they played.
+model PlayerGameLogs {
+  id                Int      @id @default(autoincrement())
+  playerId          Int // FK → Players
+  gameId            Int // FK → Games
+  teamId            Int // FK → Teams
+  date              DateTime // Game date
+  minutesPlayed     Float? // Total minutes on court/field
+  distanceCovered   Float? // Miles or km covered if available
+  highIntensityEvents Int? // Sprints, jumps, hard cuts counted
+  backToBack        Boolean // Was this a back to back game
+  daysRestBefore    Int? // Days since last game
+  gamesLast7Days    Int? // How many games in last 7 days
+  gamesLast14Days   Int? // How many games in last 14 days
+  gamesLast21Days   Int? // How many games in last 21 days
+  points            Int?
+  assists           Int?
+  rebounds          Int?
+  rawBoxScore       Json // Full box score stored as JSON
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  player Players @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  game   Games   @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  team   Teams   @relation(fields: [teamId], references: [id], onDelete: Restrict)
+
+  // One log per player per game
+  @@unique([playerId, gameId])
+  @@index([playerId, date]) // baseline calculations
+  @@index([date]) // recent window queries
+}
