@@ -19,6 +19,7 @@ export interface PlayerRiskProfile {
   playerName: string | null;
   teamId?: number | null; // DB team id (added by the Node service)
   teamName?: string | null;
+  position?: string | null; // position abbreviation, for roster displays
   sport?: SportAbbreviation | null;
   riskScore: number | null; // 0-100 composite; null = insufficient data
   zone: RiskZone;
@@ -32,8 +33,34 @@ export interface PlayerRiskProfile {
   explanation: string;
   windowStart: string | null;
   windowEnd: string | null;
-  dataPointsUsed: number; // games in the baseline window
+  /** Games in the baseline window. Only present on fresh Python results
+   * (the column isn't stored in SQLite, so cached rows omit it). */
+  dataPointsUsed?: number;
   computedAt: string; // ISO timestamp
+  /** Set when a stale cached score is served because the ML service is down. */
+  warning?: string | null;
+}
+
+/** One risk-score snapshot for the trend chart. */
+export interface RiskHistoryEntry {
+  computedAt: string; // ISO timestamp
+  riskScore: number;
+  zone: string;
+  triggerMetric: string | null;
+}
+
+/** Workload summary shown alongside a player's risk profile. */
+export interface GameLogSummary {
+  gamesLast7Days: number;
+  gamesLast21Days: number;
+  avgMinutesLast21Days: number | null;
+}
+
+/** GET /api/injury/player/:id — the full single-player view. */
+export interface PlayerRiskResponse extends PlayerRiskProfile {
+  gameLogSummary: GameLogSummary;
+  /** Last 10 computed scores, oldest first, for the trend chart. */
+  history: RiskHistoryEntry[];
 }
 
 /** Roster-wide risk summary for a team (the trainer dashboard view). */
@@ -41,11 +68,14 @@ export interface TeamRiskSummary {
   teamId: number;
   teamName: string;
   sport: SportAbbreviation;
+  /** Zone counts across the roster (players without a score are not counted). */
+  summary: {
+    redCount: number;
+    yellowCount: number;
+    greenCount: number;
+  };
   /** Players sorted by riskScore descending (red zone first). */
   players: PlayerRiskProfile[];
-  redCount: number;
-  yellowCount: number;
-  greenCount: number;
   lastUpdated: string; // ISO timestamp
 }
 
