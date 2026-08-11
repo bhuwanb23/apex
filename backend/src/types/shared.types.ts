@@ -91,3 +91,43 @@ export interface ApiDateRange {
   startDate: string;
   endDate: string;
 }
+
+// ---------------------------------------------------------------------------
+// Reference-data DTOs (shared routes)
+// ---------------------------------------------------------------------------
+
+/** Sport row as returned by GET /api/sports. */
+export interface SportInfo {
+  id: number;
+  name: SportAbbreviation;
+  abbreviation: SportCode;
+  isActive: boolean;
+  season: string;
+  config: Record<string, unknown>;
+}
+
+/** Team row as returned by GET /api/sports/:sport/teams. */
+export interface TeamInfo {
+  id: number;
+  name: string;
+  abbreviation: string;
+  city: string;
+  conference: string | null;
+  division: string | null;
+  logoUrl: string | null;
+}
+
+/** Player row (with team context) as returned by GET /api/sports/:sport/players. */
+export interface PlayerInfo {
+  id: number;
+  name: string;
+  firstName: string;
+  lastName: string;
+  position: string;
+  jerseyNumber: string | null;
+  age: number | null;
+  teamId: number;
+  teamName: string;
+  teamAbbreviation: string;
+  injuryStatus: string | null;
+}
