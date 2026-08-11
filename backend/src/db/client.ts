@@ -1,7 +1,7 @@
-import path from 'node:path'
-import { PrismaClient } from '../generated/prisma/client.js'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
-import { env } from '../config/env.js'
+import path from 'node:path';
+import { PrismaClient } from '../generated/prisma/client.js';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { env } from '../config/env.js';
 
 /**
  * Resolve the SQLite file URL to an absolute path anchored at the backend root,
@@ -11,17 +11,17 @@ import { env } from '../config/env.js'
  */
 function resolveSqliteUrl(url: string): string {
   if (url.startsWith('file:./')) {
-    const relativePath = url.slice('file:./'.length)
-    const absolute = path.resolve(import.meta.dirname, '..', '..', relativePath)
-    return `file:${absolute.replaceAll('\\', '/')}`
+    const relativePath = url.slice('file:./'.length);
+    const absolute = path.resolve(import.meta.dirname, '..', '..', relativePath);
+    return `file:${absolute.replaceAll('\\', '/')}`;
   }
-  return url
+  return url;
 }
 
 /**
  * Prisma Client wired to SQLite through the better-sqlite3 driver adapter.
  * Single shared instance for the whole app (import this, don't construct your own).
  */
-const adapter = new PrismaBetterSqlite3({ url: resolveSqliteUrl(env.DATABASE_URL) })
+const adapter = new PrismaBetterSqlite3({ url: resolveSqliteUrl(env.DATABASE_URL) });
 
-export const prisma = new PrismaClient({ adapter })
+export const prisma = new PrismaClient({ adapter });
