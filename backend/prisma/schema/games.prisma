@@ -27,7 +27,10 @@ model Games {
   homeCoach Coaches? @relation("HomeCoach", fields: [homeCoachId], references: [id], onDelete: SetNull)
   awayCoach Coaches? @relation("AwayCoach", fields: [awayCoachId], references: [id], onDelete: SetNull)
 
-  // (PlayByPlay, PlayerGameLogs, CoachDecisions, MomentumGameData arrive with their tables)
+  playerGameLogs PlayerGameLogs[]
+  playByPlay     PlayByPlay[]
+
+  // (CoachDecisions, MomentumGameData arrive with their tables)
 
   @@unique([externalId, sportId])
   @@index([sportId])

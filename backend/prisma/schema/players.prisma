@@ -21,7 +21,9 @@ model Players {
   team  Teams  @relation(fields: [teamId], references: [id], onDelete: Restrict)
   sport Sports @relation(fields: [sportId], references: [id], onDelete: Restrict)
 
-  // (PlayerGameLogs, InjuryRiskScores arrive with their tables)
+  playerGameLogs  PlayerGameLogs[]
+  injuryRiskScores InjuryRiskScores[]
+  playByPlay      PlayByPlay[]
 
   @@unique([externalId, sportId])
   @@index([lastName])

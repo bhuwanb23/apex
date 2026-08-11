@@ -17,10 +17,11 @@ model Sports {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  teams   Teams[]
-  players Players[]
-  coaches Coaches[]
-  games   Games[]
+  teams      Teams[]
+  players    Players[]
+  coaches    Coaches[]
+  games      Games[]
+  playByPlay PlayByPlay[]
 
   @@index([isActive])
 }
