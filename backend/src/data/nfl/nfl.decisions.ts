@@ -25,10 +25,11 @@ export interface NflCoachDecision {
   outcomeSuccess: boolean | null;
 }
 
-/** Play types that count as "going for it" on 4th down. */
+/** Play types that count as "going for it" on 4th down (nfl_data_py emits uppercase). */
 const GO_FOR_IT_TYPES = new Set(['run', 'pass', 'qb_kneel', 'qb_spike', 'sack']);
 
-function formatClock(seconds: number | null): string | null {
+/** "MM:SS" from seconds remaining (e.g. 402 → "6:42"). Shared by decisions + transformer. */
+export function formatClock(seconds: number | null): string | null {
   if (seconds === null || seconds < 0) return null;
   const total = Math.floor(seconds);
   const mins = Math.floor(total / 60);
@@ -68,10 +69,11 @@ export function extractCoachDecisions(plays: NflPlay[]): NflCoachDecision[] {
 
     if (play.down === 4) {
       const { outcome, outcomeSuccess } = fourthDownOutcome(play);
+      const playType = (play.play_type ?? '').toLowerCase();
       let chosenAction = 'unknown';
-      if (GO_FOR_IT_TYPES.has(play.play_type ?? '')) chosenAction = 'go_for_it';
-      else if (play.play_type === 'punt') chosenAction = 'punt';
-      else if (play.play_type === 'field_goal') chosenAction = 'field_goal';
+      if (GO_FOR_IT_TYPES.has(playType)) chosenAction = 'go_for_it';
+      else if (playType === 'punt') chosenAction = 'punt';
+      else if (playType === 'field_goal') chosenAction = 'field_goal';
 
       decisions.push({
         ...base,
