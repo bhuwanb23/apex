@@ -30,6 +30,7 @@ model Games {
   // (PlayByPlay, PlayerGameLogs, CoachDecisions, MomentumGameData arrive with their tables)
 
   @@unique([externalId, sportId])
+  @@index([sportId])
   @@index([date])
   @@index([homeTeamId])
   @@index([awayTeamId])

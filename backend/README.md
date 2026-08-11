@@ -46,7 +46,14 @@ npm run dev        # starts dev server with hot reload
 ```
 backend/
 ├── prisma/
-│   └── schema.prisma        # DB schema (models added phase by phase)
+│   ├── schema/               # multi-file schema — one .prisma file per table
+│   │   ├── schema.prisma     #   generator + datasource blocks
+│   │   ├── sports.prisma     #   Sports
+│   │   ├── teams.prisma      #   Teams
+│   │   ├── players.prisma    #   Players
+│   │   ├── coaches.prisma    #   Coaches
+│   │   └── games.prisma      #   Games
+│   └── dev.db                # SQLite database
 ├── src/
 │   ├── index.ts             # Entry point — boot, graceful shutdown
 │   ├── app.ts               # Express app factory
