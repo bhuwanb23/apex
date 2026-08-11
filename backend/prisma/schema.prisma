@@ -1,0 +1,16 @@
+// AQX Sports Intelligence — Prisma schema
+// =========================================
+// SQLite via the better-sqlite3 driver adapter (Prisma 7 uses driver adapters natively).
+//
+// Domain models (leagues, teams, players, matches, injury models, EV models, ...)
+// are added phase by phase. See the datasource/generator blocks below.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
