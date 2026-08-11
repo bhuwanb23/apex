@@ -35,6 +35,8 @@ const MAX_CONNECT_RETRIES = 2; // retry connect failures twice (doc: 2 retries)
 
 export interface MLClient {
   post<TResponse, TBody = unknown>(path: string, body: TBody): Promise<TResponse>;
+  /** GET /health — true when the Python service answers 200. */
+  checkHealth(): Promise<boolean>;
 }
 
 /**
@@ -50,6 +52,15 @@ export function createMLClient(
     timeout: timeoutMs,
     headers: { 'Content-Type': 'application/json' },
   });
+
+  async function checkHealth(): Promise<boolean> {
+    try {
+      await http.get('/health', { timeout: 1500 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   async function post<TResponse, TBody = unknown>(path: string, body: TBody): Promise<TResponse> {
     let attempt = 0;
@@ -70,7 +81,7 @@ export function createMLClient(
     }
   }
 
-  return { post };
+  return { post, checkHealth };
 }
 
 function toMLError(err: unknown, path: string): MLServiceError {

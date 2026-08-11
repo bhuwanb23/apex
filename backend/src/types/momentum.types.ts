@@ -77,6 +77,8 @@ export interface MomentumAnalysisResponse {
     confidenceIntervalLow: number | null;
     confidenceIntervalHigh: number | null;
     effectSize: number | null;
+    /** % change in opponent hazard per consecutive score (for story narration). */
+    hazardRateChange: number | null;
   };
   context: {
     gamesAnalyzed: number;

@@ -226,6 +226,7 @@ function toAnalysisResponse(
     confidenceIntervalHigh: number | null;
     isSignificant: boolean;
     effectSize: number | null;
+    hazardRateChange?: number | null;
     gamesAnalyzed: number;
     /** Only present on fresh Python results — the column isn't stored in SQLite. */
     playsAnalyzed?: number;
@@ -253,6 +254,7 @@ function toAnalysisResponse(
       confidenceIntervalLow: r.confidenceIntervalLow,
       confidenceIntervalHigh: r.confidenceIntervalHigh,
       effectSize: r.effectSize,
+      hazardRateChange: r.hazardRateChange ?? null,
     },
     context: {
       gamesAnalyzed: r.gamesAnalyzed,

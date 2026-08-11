@@ -24,3 +24,20 @@ export interface StoryResponse {
   generatedBy: string; // 'template' | 'openai'
   keyMetrics: Record<string, unknown>;
 }
+
+/** GET /api/story/:module/:sport — the view the frontend renders. */
+export interface StoryViewResponse {
+  module: string; // 'injury' | 'decisions' | 'momentum'
+  sport: SportAbbreviation;
+  role: UserRole;
+  entityId: string | null;
+  entityName: string | null;
+  storyText: string;
+  headlineText: string;
+  toneLabel: string; // 'warning' | 'positive' | 'neutral'
+  generatedBy: string; // 'template' | 'openai'
+  keyMetrics: Record<string, unknown>;
+  generatedAt: string; // ISO timestamp
+  /** Set when an expired cached story is served because the ML service is down. */
+  warning?: string | null;
+}
