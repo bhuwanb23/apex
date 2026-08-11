@@ -150,7 +150,8 @@ export class FetcherManager {
     this.register(new MlbFetcher());
   }
 
-  private register(fetcher: SportFetcher): void {
+  /** Protected so tests can subclass and swap in mock fetchers. */
+  protected register(fetcher: SportFetcher): void {
     this.registry.set(fetcher.sport, fetcher);
   }
 
@@ -369,6 +370,33 @@ export class FetcherManager {
     // Rosters and player fetches hit the same underlying data — share one cache
     // entry so the API isn't called twice for the same payload.
     return this.fetchPlayers(sport, teamId);
+  }
+
+  /**
+   * Season-scoped play-by-play (NFL only, via the Python microservice) — the
+   * feed for coach-decision extraction. Other sports fail fast (unsupported).
+   */
+  async fetchSeasonPlays(
+    sport: string,
+    season: string,
+    week?: number,
+    team?: string
+  ): Promise<FetchResult<unknown>> {
+    const fetcher = this.getFetcher(sport);
+    // Narrow contract for the one fetcher that supports season-scoped plays.
+    const seasonPlaysFetcher = fetcher as Partial<NflFetcher>;
+    if (typeof seasonPlaysFetcher.fetchSeasonPlays !== 'function') {
+      throw new Error(`fetchSeasonPlays is not supported for sport: ${sport}`);
+    }
+    const key = `season_plays:${sport}:${season}${week != null ? `:w${week}` : ''}${team ? `:${team}` : ''}`;
+    return this.withFetch({
+      sport,
+      apiName: fetcher.apiName,
+      dataType: 'play_by_play',
+      cacheKey: key,
+      season,
+      fetchFn: () => seasonPlaysFetcher.fetchSeasonPlays!(season, week, team),
+    });
   }
 
   // -- Full sync -------------------------------------------------------------
