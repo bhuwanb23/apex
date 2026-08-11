@@ -27,9 +27,10 @@ model CoachDecisions {
   sport Sports  @relation(fields: [sportId], references: [id], onDelete: Restrict)
 
   // (Decision rows are immutable — no updatedAt, per spec)
-  // Upsert key used by db.writer (writeCoachDecisions) — one decision per
-  // coach, game, category and period.
-  @@unique([gameId, coachId, decisionType, period])
+  // NOTE: no unique on [gameId, coachId, decisionType, period] — a game can
+  // legitimately hold several decisions of one type in a single period (e.g.
+  // two 4th-down calls in the 4th quarter). writeCoachDecisions uses
+  // delete-then-insert per game, so re-syncs stay idempotent without a key.
   @@index([coachId]) // coach scorecard queries
   @@index([sportId, decisionType]) // filtered analysis
   @@index([isOptimal]) // leaderboard calculations
