@@ -1,6 +1,6 @@
-import swaggerJsdoc from 'swagger-jsdoc'
-import { env } from '../config/env.js'
-import pkg from '../../package.json' with { type: 'json' }
+import swaggerJsdoc from 'swagger-jsdoc';
+import { env } from '../config/env.js';
+import pkg from '../../package.json' with { type: 'json' };
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -16,6 +16,6 @@ const options: swaggerJsdoc.Options = {
   },
   // JSDoc @openapi annotations live in the route files
   apis: ['./src/routes/**/*.ts'],
-}
+};
 
-export const swaggerSpec = swaggerJsdoc(options)
+export const swaggerSpec = swaggerJsdoc(options);
