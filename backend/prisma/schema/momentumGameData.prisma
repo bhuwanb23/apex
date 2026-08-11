@@ -1,0 +1,19 @@
+// Table 12 — MomentumGameData
+// Per game momentum score timeline for the replay feature (1:1 with Games).
+model MomentumGameData {
+  id               Int      @id @default(autoincrement())
+  gameId           Int // FK → Games (unique — one timeline per game)
+  homeTeamMomentum Json // Array of momentum scores for home team over time
+  awayTeamMomentum Json // Array of momentum scores for away team over time
+  timelineEvents   Json // Full event by event momentum data
+  peakHomeMomentum Float? // Highest home momentum in game
+  peakAwayMomentum Float? // Highest away momentum in game
+  momentumShifts   Int? // How many times momentum changed hands
+  computedAt       DateTime // When this was calculated
+  createdAt        DateTime @default(now())
+
+  game Games @relation(fields: [gameId], references: [id], onDelete: Restrict)
+
+  // (Timeline is a computed snapshot — no updatedAt, per spec)
+  @@unique([gameId])
+}
