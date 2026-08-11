@@ -101,6 +101,11 @@ export interface NflPlay {
   defteam: string | null;
   // nfl_data_py perspective: posteam score − defteam score (ESPN fallback: home − away)
   score_differential: number | null;
+  // Absolute game scores at this play (nfl_data_py provides them; the ESPN
+  // fallback maps scoring-plays homeScore/awayScore). Used for isScoring
+  // detection and home/away score tracking.
+  home_score?: number | null;
+  away_score?: number | null;
   game_seconds_remaining: number | null;
   qtr: number | null; // quarter / period
   // nfl_data_py emits these as 0/1 integers; the ESPN fallback emits booleans
