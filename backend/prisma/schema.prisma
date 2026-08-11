@@ -2,9 +2,7 @@
 // =========================================
 // SQLite via the better-sqlite3 driver adapter (Prisma 7 uses driver adapters natively).
 //
-// Domain models (leagues, teams, players, matches, injury models, EV models, ...)
-// are added phase by phase.
-//
+// Tables are added phase by phase. Current: Sports, Teams.
 // NOTE: The connection URL lives in `prisma.config.ts` (Prisma 7 style), not here.
 
 generator client {
@@ -14,4 +12,57 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+}
+
+// ---------------------------------------------------------------------------
+// Table 1 — Sports
+// Master reference table for all supported sports.
+// ---------------------------------------------------------------------------
+model Sports {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique // Full name — "NBA", "NFL", "MLB", "NHL"
+  abbreviation String   @unique // Short code — "nba", "nfl"
+  isActive     Boolean  @default(true) // Whether this sport is enabled in app
+  season       String // Current active season — "2024-25"
+  // Sport-specific settings. Shape:
+  // {
+  //   decisionTypes:   string[]  — list of decision categories for that sport
+  //   dataSource:      string    — which API fetcher to use
+  //   momentumMetric:  string    — what counts as a scoring event
+  //   workloadMetrics: string[]  — which workload fields to track
+  // }
+  config      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teams Teams[]
+
+  @@index([isActive])
+}
+
+// ---------------------------------------------------------------------------
+// Table 2 — Teams
+// All teams across all sports.
+// ---------------------------------------------------------------------------
+model Teams {
+  id           Int      @id @default(autoincrement())
+  sportId      Int // FK → Sports
+  name         String // Full team name — "Los Angeles Lakers"
+  abbreviation String // Short code — "LAL"
+  city         String // City name — "Los Angeles"
+  conference   String? // "Eastern" / "Western" / "NFC" / "AFC"
+  division     String?
+  externalId   String // ID used by the sports API for this team
+  logoUrl      String?
+  isActive     Boolean  @default(true) // Is team currently active in league
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sport Sports @relation(fields: [sportId], references: [id], onDelete: Restrict)
+
+  // (Relations to Players, Coaches and Games arrive with their tables)
+
+  @@unique([externalId, sportId])
+  @@unique([abbreviation, sportId])
+  @@index([sportId])
 }
