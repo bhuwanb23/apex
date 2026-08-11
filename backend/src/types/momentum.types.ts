@@ -57,8 +57,86 @@ export interface SportMomentumSummary {
   verdictLabel: MomentumVerdict;
   hazardCoefficient: number | null;
   pValue: number | null;
+  effectSize: number | null;
   isSignificant: boolean;
   shortExplanation: string;
+}
+
+/** GET /api/momentum/analysis/:sport — nested statistical view. */
+export interface MomentumAnalysisResponse {
+  sport: SportAbbreviation;
+  season: string;
+  verdict: {
+    verdictLabel: MomentumVerdict;
+    isSignificant: boolean;
+    shortExplanation: string;
+  };
+  statistics: {
+    hazardCoefficient: number | null;
+    pValue: number | null;
+    confidenceIntervalLow: number | null;
+    confidenceIntervalHigh: number | null;
+    effectSize: number | null;
+  };
+  context: {
+    gamesAnalyzed: number;
+    /** Only accurate on fresh computations — the column isn't persisted, so cached rows report 0. */
+    playsAnalyzed: number;
+    streakThreshold: number | null;
+  };
+  plainExplanation: string;
+  computedAt: string; // ISO timestamp
+  /** Set when a stale cached analysis is served because the ML service is down. */
+  warning?: string | null;
+}
+
+/** GET /api/momentum/game/:gameId — timeline with game context. */
+export interface GameMomentumResponse {
+  game: {
+    gameId: number;
+    date: string; // ISO timestamp
+    homeTeam: string;
+    awayTeam: string;
+    finalScore: string | null; // "112-98" once both scores are final
+  };
+  timeline: {
+    homeTeamMomentum: number[];
+    awayTeamMomentum: number[];
+    events: MomentumTimelineEvent[];
+  };
+  summary: {
+    peakHomeMomentum: number;
+    peakAwayMomentum: number;
+    momentumShifts: number;
+    longestStreak: {
+      length: number;
+      teamName: string | null;
+      startTime: string | null; // game clock of the streak's first score
+    };
+  };
+  computedAt: string; // ISO timestamp
+  warning?: string | null;
+}
+
+/** GET /api/momentum/timeout/:sport — optimizer result with context. */
+export interface TimeoutRecommendationResponse {
+  situation: {
+    consecutiveScores: number;
+    scoreDiff: number;
+    timeRemaining: number;
+    period: number;
+    timeoutsAvailable: number;
+  };
+  recommendation: {
+    shouldCallTimeout: boolean;
+    stopProbabilityWith: number;
+    stopProbabilityWithout: number;
+    probabilityDiff: number;
+    confidenceLevel: string; // 'high' | 'medium' | 'low'
+    recommendationText: string;
+  };
+  /** Precomputed scenarios the recommendation engine is based on for this sport. */
+  basedOnSampleSize: number;
 }
 
 /** All sports side by side, sorted by effect size. */
