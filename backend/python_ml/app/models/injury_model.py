@@ -54,9 +54,12 @@ def _std(values: list[float]) -> float | None:
 
 
 def _zscore(value: float | None, baseline_mean: float | None, baseline_std: float | None) -> float | None:
-    """(recent avg - baseline mean) / baseline std; 0 when there is no spread."""
-    if value is None or baseline_mean is None or baseline_std is None or baseline_std == 0:
+    """(recent avg - baseline mean) / baseline std; 0 when there is no spread
+    (Step 12 spec: identical minutes every game must yield z = 0, not None)."""
+    if value is None or baseline_mean is None or baseline_std is None:
         return None
+    if baseline_std == 0:
+        return 0.0
     return (value - baseline_mean) / baseline_std
 
 
@@ -130,9 +133,6 @@ class InjuryRiskModel:
         intensity_mean, intensity_std = _mean(baseline_intensity), _std(baseline_intensity)
 
         # --- 5.3 z-scores on the recent window ---------------------------------
-        # NOTE: uses the model-local _zscore (None when the baseline has no
-        # spread) rather than stats_helpers.z_score (which would return 0.0) —
-        # None keeps "no reliable signal" distinct from "z = 0".
         minutes_z = _zscore(_mean(_metric_values(recent, "minutesPlayed")), minutes_mean, minutes_std)
         distance_z = _zscore(_mean(_metric_values(recent, "distanceCovered")), distance_mean, distance_std)
         intensity_z = _zscore(

@@ -52,7 +52,12 @@ FG_RATES: list[tuple[int, float]] = [
     (50, 0.63),  # spec: 50-54 yards → 63%
     (55, 0.55),
     (60, 0.45),
+    (65, 0.25),
 ]
+
+# Beyond this the kick is essentially impossible — prevents the model from
+# recommending a 95-yard field goal from a team's own 5-yard line.
+MAX_FG_DISTANCE = 70
 
 PUNT_NET_YARDS = 44  # expected net punt distance
 GO_GAIN_YARDS = 4  # expected gain when a 4th-down conversion succeeds
@@ -86,6 +91,20 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
+# WP heuristic calibration (tuned so late-game analytics match known results,
+# e.g. 4th-and-1 in the red zone favors going for it while 4th-and-long in
+# your own half favors punting):
+PER_POINT_BASE = 0.03  # per-point weight at the start of the game
+PER_POINT_GAIN = 0.04  # max per-point weight = base + gain (end of game)
+FIELD_BONUS_SCALE = 0.06  # value of being closer to the opponent goal line
+
+# Bonus added to the win probability of a SUCCESSFULLY CONVERTED 4th down:
+# a fresh set of downs deep in opponent territory is materially more valuable
+# than the raw possession value the WP heuristic assigns. Scaled by how far
+# into opponent territory the conversion happens (zero on your own half).
+FIRST_DOWN_BONUS_SCALE = 0.15
+
+
 def heuristic_win_prob(
     score_diff: float,
     time_remaining: float,
@@ -101,10 +120,10 @@ def heuristic_win_prob(
     """
     total_seconds = 3600.0  # NFL regulation; close enough for all sports at MVP level
     time_factor = _clamp(time_remaining / total_seconds, 0.0, 1.0)
-    per_point = 0.03 + 0.15 * (1.0 - time_factor)
+    per_point = PER_POINT_BASE + PER_POINT_GAIN * (1.0 - time_factor)
     # fieldPosition = yards to the opponent's goal line: LOWER = closer to
     # scoring = better, so closer to midfield scores 0 and the red zone is +.
-    field_bonus = ((50.0 - field_position) / 50.0) * 0.04 if field_position is not None else 0.0
+    field_bonus = ((50.0 - field_position) / 50.0) * FIELD_BONUS_SCALE if field_position is not None else 0.0
     z = (
         score_diff * per_point
         + (0.05 if has_ball else -0.05)
@@ -253,6 +272,8 @@ def _load_training_data(path: str) -> list[dict]:
 
 def _fg_success(distance: float) -> float:
     """Field-goal success probability from a kick distance (bucketed table)."""
+    if distance > MAX_FG_DISTANCE:
+        return 0.02  # 70+ yards: effectively never
     best = FG_RATES[-1][1]
     for threshold, rate in FG_RATES:
         if distance < threshold:
@@ -454,6 +475,8 @@ class DecisionEVModel:
             success_state = {**state, "field_position": float(max(fp - GO_GAIN_YARDS, 1)), "down": 1}
             failure_state = self._opponent_state(state, score_diff, 100.0 - fp)
             wp_success = self._wp(success_state)
+            if fp < 50:  # conversion inside opponent territory earns a first down
+                wp_success = min(wp_success + ((50.0 - fp) / 50.0) * FIRST_DOWN_BONUS_SCALE, 0.98)
             wp_failure = 1.0 - self._wp(failure_state)
         elif action == "punt":
             p = 1.0  # punt always executes; "success" = field position after net punt
