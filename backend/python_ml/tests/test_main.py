@@ -12,7 +12,7 @@ def test_all_routers_registered():
     for expected in [
         "/health",
         "/injury/compute-risk",
-        "/decisions/ev",
+        "/decisions/compute-ev",
         "/momentum/game",
         "/momentum/season",
         "/timeout/recommend",

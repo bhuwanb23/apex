@@ -53,8 +53,8 @@ tests/               pytest suites
 
 | Prefix      | Purpose                                      |
 | ----------- | -------------------------------------------- |
-| `/injury`   | Z-score injury risk (POST /score)            |
-| `/decisions`| Decision EV / win probability (POST /ev)     |
+| `/injury`   | Z-score injury risk (POST /compute-risk)     |
+| `/decisions`| Decision EV / win probability (POST /compute-ev) |
 | `/momentum` | Cox hazard + game timelines (POST /game, /season) |
 | `/timeout`  | Timeout optimizer (POST /recommend)          |
 | `/story`    | Story mode text (POST /generate)             |
