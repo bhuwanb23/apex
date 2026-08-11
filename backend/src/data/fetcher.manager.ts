@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { prisma } from '../db/client.js';
 import { updateCacheMetadata } from './db.writer.js';
@@ -10,6 +11,10 @@ import { NflFetcher } from './nfl/nfl.fetcher.js';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Inclusive game date range. Construct the Dates from UTC (e.g. `new Date('2025-01-01T00:00:00Z')`)
+ * so the API's YYYY-MM-DD date isn't shifted by the server's timezone offset.
+ */
 export interface DateRange {
   startDate: Date;
   endDate: Date;
@@ -70,9 +75,13 @@ interface RateLimitConfig {
   windowMs: number;
 }
 
-/** Requests per minute per API. BallDontLie free tier is 30/min — pace under it. */
+/**
+ * Requests per minute per API. BallDontLie's current free tier allows 5
+ * requests/minute (docs.balldontlie.io); paid tiers are 60/600 — tune via
+ * BALLDONTLIE_RATE_LIMIT if your key is a higher tier.
+ */
 const RATE_LIMITS: Record<string, RateLimitConfig> = {
-  balldontlie: { maxRequests: 25, windowMs: 60_000 },
+  balldontlie: { maxRequests: env.BALLDONTLIE_RATE_LIMIT, windowMs: 60_000 },
   espn: { maxRequests: 60, windowMs: 60_000 },
   mlb: { maxRequests: 120, windowMs: 60_000 },
   python_ml: { maxRequests: 60, windowMs: 60_000 },
@@ -270,8 +279,13 @@ export class FetcherManager {
           logger.error({ context, attempt }, 'Fetch failed permanently');
           throw err;
         }
-        const delayMs = 1_000 * 2 ** (attempt - 1);
-        logger.warn({ context, attempt, delayMs }, 'Fetch failed — retrying with backoff');
+        const isRateLimited = axios.isAxiosError(err) && err.response?.status === 429;
+        // 429 → wait out the full rate-limit window; otherwise exponential backoff.
+        const delayMs = isRateLimited ? 60_000 : 1_000 * 2 ** (attempt - 1);
+        logger.warn(
+          { context, attempt, delayMs, isRateLimited },
+          'Fetch failed — retrying with backoff'
+        );
         await sleep(delayMs);
       }
     }
