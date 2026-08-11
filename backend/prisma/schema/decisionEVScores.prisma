@@ -1,0 +1,25 @@
+// Table 10 — DecisionEVScores
+// Aggregated season level scorecard per coach.
+model DecisionEVScores {
+  id               Int      @id @default(autoincrement())
+  coachId          Int // FK → Coaches
+  sportId          Int // FK → Sports
+  season           String // Season identifier
+  gameType         String // "regular" / "playoff" / "all"
+  decisionType     String // Which category of decision
+  totalDecisions   Int // Total decisions made
+  optimalDecisions Int // How many were optimal
+  evRate           Float // Percentage of optimal decisions
+  avgEvDifference  Float? // Average EV left on table per decision
+  totalEvLeft      Float? // Total EV left on table all season
+  rank             Int? // Rank among all coaches in sport
+  computedAt       DateTime // When this was calculated
+  createdAt        DateTime @default(now())
+
+  coach Coaches @relation(fields: [coachId], references: [id], onDelete: Restrict)
+  sport Sports  @relation(fields: [sportId], references: [id], onDelete: Restrict)
+
+  // (Scorecards are computed snapshots — no updatedAt, per spec)
+  @@unique([coachId, season, decisionType, gameType])
+  @@index([sportId])
+}
