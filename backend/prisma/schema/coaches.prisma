@@ -17,10 +17,11 @@ model Coaches {
   team  Teams  @relation(fields: [teamId], references: [id], onDelete: Restrict)
   sport Sports @relation(fields: [sportId], references: [id], onDelete: Restrict)
 
-  homeGames Games[] @relation("HomeCoach")
-  awayGames Games[] @relation("AwayCoach")
+  homeGames        Games[]            @relation("HomeCoach")
+  awayGames        Games[]            @relation("AwayCoach")
+  coachDecisions   CoachDecisions[]
+  decisionEVScores DecisionEVScores[]
 
-  // (CoachDecisions, DecisionEVScores arrive with their tables)
   // Unique on externalId per sport (data integrity for API ingestion — mirrors Players/Games)
   @@unique([externalId, sportId])
   @@index([teamId])
