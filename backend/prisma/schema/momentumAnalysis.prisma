@@ -1,0 +1,25 @@
+// Table 11 — MomentumAnalysis
+// Season level statistical momentum findings per sport (Python model output).
+model MomentumAnalysis {
+  id                     Int      @id @default(autoincrement())
+  sportId                Int // FK → Sports
+  season                 String // Season analyzed
+  gamesAnalyzed          Int // How many games used in model
+  hazardCoefficient      Float // Cox model main output
+  pValue                 Float // Statistical significance
+  confidenceIntervalLow  Float // Lower CI bound
+  confidenceIntervalHigh Float // Upper CI bound
+  isSignificant          Boolean // p-value below 0.05
+  effectSize             Float? // Practical size of the effect
+  streakThreshold        Int? // How many consecutive scores trigger momentum
+  hazardRateChange       Float? // Percentage change in opponent hazard rate
+  plainExplanation       String // Full plain English summary
+  shortExplanation       String // One sentence summary
+  computedAt             DateTime // When model was run
+  createdAt              DateTime @default(now())
+
+  sport Sports @relation(fields: [sportId], references: [id], onDelete: Restrict)
+
+  // One analysis per sport per season
+  @@unique([sportId, season])
+}
