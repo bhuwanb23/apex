@@ -1,18 +1,18 @@
 // Table 4 — Coaches
 // All coaches across all sports.
 model Coaches {
-  id           Int       @id @default(autoincrement())
-  teamId       Int // FK → Teams
-  sportId      Int // FK → Sports
-  name         String // Full coach name
-  firstName    String
-  lastName     String
-  role         String // "head_coach" / "offensive_coordinator"
-  externalId   String // ID from sports API
-  isActive     Boolean   @default(true) // Currently coaching this team
-  hireDate     DateTime? // When they joined this team
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id         Int       @id @default(autoincrement())
+  teamId     Int // FK → Teams
+  sportId    Int // FK → Sports
+  name       String // Full coach name
+  firstName  String
+  lastName   String
+  role       String // "head_coach" / "offensive_coordinator"
+  externalId String // ID from sports API
+  isActive   Boolean   @default(true) // Currently coaching this team
+  hireDate   DateTime? // When they joined this team
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   team  Teams  @relation(fields: [teamId], references: [id], onDelete: Restrict)
   sport Sports @relation(fields: [sportId], references: [id], onDelete: Restrict)

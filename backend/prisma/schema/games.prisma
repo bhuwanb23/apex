@@ -1,7 +1,7 @@
 // Table 5 — Games
 // All game records across all sports.
 model Games {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   sportId     Int // FK → Sports
   homeTeamId  Int // FK → Teams
   awayTeamId  Int // FK → Teams
@@ -14,12 +14,12 @@ model Games {
   homeScore   Int? // Final home team score
   awayScore   Int? // Final away team score
   winner      String? // "home" / "away" / "tie"
-  status      String    @default("scheduled") // "scheduled" / "live" / "final"
+  status      String   @default("scheduled") // "scheduled" / "live" / "final"
   externalId  String // ID from sports API
   venue       String?
   attendance  Int?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   sport     Sports   @relation(fields: [sportId], references: [id], onDelete: Restrict)
   homeTeam  Teams    @relation("HomeGames", fields: [homeTeamId], references: [id], onDelete: Restrict)

@@ -1,23 +1,25 @@
 // Table 7 — InjuryRiskScores
 // Computed injury risk results for every player (Python microservice writes these).
 model InjuryRiskScores {
-  id                    Int      @id @default(autoincrement())
-  playerId              Int // FK → Players
-  computedAt            DateTime // When this score was calculated
-  windowStart           DateTime // Start of the 7 day analysis window
-  windowEnd             DateTime // End of the 7 day analysis window
-  riskScore             Float // 0 to 100 composite score
-  zone                  String // "green" / "yellow" / "red"
-  minutesZScore         Float? // Z-score for minutes metric
-  distanceZScore        Float? // Z-score for distance metric
-  intensityZScore       Float? // Z-score for intensity metric
-  backToBackFlag        Boolean // Back to back flagged
-  triggerMetric         String? // Which metric caused the flag
-  baselineMeanMinutes   Float? // Player's personal 21 day mean
-  baselineStdMinutes    Float? // Player's personal 21 day std dev
-  explanation           String // Plain English explanation
-  isLatest              Boolean // Is this the most recent score
-  createdAt             DateTime @default(now())
+  id                  Int      @id @default(autoincrement())
+  playerId            Int // FK → Players
+  computedAt          DateTime // When this score was calculated
+  windowStart         DateTime // Start of the 7 day analysis window
+  windowEnd           DateTime // End of the 7 day analysis window
+  riskScore           Float // 0 to 100 composite score
+  zone                String // "green" / "yellow" / "red"
+  minutesZScore       Float? // Z-score for minutes metric
+  distanceZScore      Float? // Z-score for distance metric
+  intensityZScore     Float? // Z-score for intensity metric
+  backToBackFlag      Boolean // Back to back flagged
+  triggerMetric       String? // Which metric caused the flag
+  baselineMeanMinutes Float? // Player's personal 21 day mean
+  baselineStdMinutes  Float? // Player's personal 21 day std dev
+  explanation         String // Plain English explanation
+  // Contract: the writer (Python service) must set isLatest = false on prior
+  // rows for this player in the same transaction, keeping exactly one latest.
+  isLatest            Boolean // Is this the most recent score
+  createdAt           DateTime @default(now())
 
   player Players @relation(fields: [playerId], references: [id], onDelete: Restrict)
 

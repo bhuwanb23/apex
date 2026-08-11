@@ -14,11 +14,11 @@ model Teams {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  sport          Sports          @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  sport          Sports           @relation(fields: [sportId], references: [id], onDelete: Restrict)
   players        Players[]
   coaches        Coaches[]
-  homeGames      Games[]         @relation("HomeGames")
-  awayGames      Games[]         @relation("AwayGames")
+  homeGames      Games[]          @relation("HomeGames")
+  awayGames      Games[]          @relation("AwayGames")
   playerGameLogs PlayerGameLogs[]
   playByPlay     PlayByPlay[]
 
