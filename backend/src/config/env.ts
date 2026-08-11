@@ -14,6 +14,9 @@ const envSchema = z.object({
   // Python ML microservice
   PYTHON_ML_URL: z.string().url().default('http://localhost:8001'),
 
+  // NBA data source (BallDontLie, free tier — https://balldontlie.io)
+  BALLDONTLIE_API_KEY: z.string().optional(),
+
   // Cache TTL tiers (seconds): short 6h, medium 24h, long 7 days
   CACHE_TTL_SHORT: z.coerce.number().int().positive().default(21600),
   CACHE_TTL_MEDIUM: z.coerce.number().int().positive().default(86400),
