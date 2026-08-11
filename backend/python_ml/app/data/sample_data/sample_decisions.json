@@ -1,0 +1,78 @@
+[
+  {
+    "gameId": "401671760",
+    "coachId": "CIN",
+    "decisionType": "4th_down",
+    "period": 3,
+    "clock": "33:50",
+    "gameTimeSeconds": 2030,
+    "scoreDiff": -7,
+    "gameContext": {
+      "yardsToGo": 7,
+      "yardLine": 78,
+      "down": 4,
+      "quarter": 3
+    },
+    "chosenAction": "go",
+    "outcome": "converted",
+    "outcomeSuccess": true,
+    "alternativeActions": ["punt", "field_goal", "go"]
+  },
+  {
+    "gameId": "401671760",
+    "coachId": "CIN",
+    "decisionType": "4th_down",
+    "period": 3,
+    "clock": "24:10",
+    "gameTimeSeconds": 1450,
+    "scoreDiff": -7,
+    "gameContext": {
+      "yardsToGo": 9,
+      "yardLine": 32,
+      "down": 4,
+      "quarter": 3
+    },
+    "chosenAction": "punt",
+    "outcome": "punt",
+    "outcomeSuccess": true,
+    "alternativeActions": ["punt", "field_goal", "go"]
+  },
+  {
+    "gameId": "401671760",
+    "coachId": "BUF",
+    "decisionType": "2pt_conversion",
+    "period": 4,
+    "clock": "10:20",
+    "gameTimeSeconds": 620,
+    "scoreDiff": 8,
+    "gameContext": {
+      "yardsToGo": 0,
+      "yardLine": 100,
+      "down": 0,
+      "quarter": 4
+    },
+    "chosenAction": "two_point_attempt",
+    "outcome": "success",
+    "outcomeSuccess": true,
+    "alternativeActions": ["extra_point", "two_point_attempt"]
+  },
+  {
+    "gameId": "401671760",
+    "coachId": "BUF",
+    "decisionType": "timeout",
+    "period": 4,
+    "clock": "02:11",
+    "gameTimeSeconds": 131,
+    "scoreDiff": 8,
+    "gameContext": {
+      "yardsToGo": 4,
+      "yardLine": 88,
+      "down": 3,
+      "quarter": 4
+    },
+    "chosenAction": "timeout",
+    "outcome": null,
+    "outcomeSuccess": null,
+    "alternativeActions": ["timeout", "let_clock_run"]
+  }
+]
