@@ -29,3 +29,10 @@ src/generated/
 Thumbs.db
 .vscode/
 .idea/
+
+# Python ML microservice (venv only, no global packages)
+python_ml/.venv/
+__pycache__/
+*.pyc
+python_ml/logs/*
+!python_ml/logs/.gitkeep
