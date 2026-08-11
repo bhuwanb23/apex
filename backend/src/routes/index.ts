@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pkg from '../../package.json' with { type: 'json' };
 import { env } from '../config/env.js';
 import { sendSuccess } from '../utils/response.util.js';
+import { decisionsRouter } from './decisions.routes.js';
 import { healthRouter } from './health.routes.js';
 import { injuryRouter } from './injury.routes.js';
 import { sharedRouter } from './shared.routes.js';
@@ -33,9 +34,9 @@ routes.get('/', (_req, res) => {
 routes.use('/api/health', healthRouter);
 routes.use('/api/sports', sharedRouter); // Step 4
 routes.use('/api/injury', injuryRouter); // Step 5
+routes.use('/api/decisions', decisionsRouter); // Step 6
 
 // Remaining Phase 5 routers mount here as their steps land:
-// routes.use('/api/decisions', decisionsRouter); // Step 6
 // routes.use('/api/momentum', momentumRouter);   // Step 7
 // routes.use('/api/search', searchRouter);       // Step 8
 // routes.use('/api/story', storyRouter);         // Step 9
