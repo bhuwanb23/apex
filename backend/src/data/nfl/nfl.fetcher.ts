@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
-import type { SportFetcher } from '../fetcher.manager.js';
-import type { EspnScoreboardResponse, EspnTeam, NflPlay, NflSchedule } from './nfl.types.js';
+import type { DateRange, SportFetcher } from '../fetcher.manager.js';
+import type { EspnScoreboardResponse, EspnTeam, NflPlay } from './nfl.types.js';
 
 const ESPN_NFL_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 
@@ -11,6 +11,7 @@ const ESPN_NFL_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nf
  */
 export class NflFetcher implements SportFetcher {
   readonly sport = 'nfl';
+  readonly apiName = 'espn';
 
   private readonly espn: AxiosInstance;
 
@@ -23,28 +24,31 @@ export class NflFetcher implements SportFetcher {
     throw new Error('Not implemented: NflFetcher.fetchTeams');
   }
 
-  // TODO(phase-3): NFL rosters arrive later via the Python microservice
-  async fetchPlayers(): Promise<unknown> {
+  // TODO(phase-3): rosters via the Python microservice (nfl-data-py)
+  async fetchPlayers(_teamId?: string): Promise<unknown> {
     throw new Error('Not implemented: NflFetcher.fetchPlayers');
   }
 
-  // TODO(phase-3): GET /scoreboard (schedules + results) via ESPN
-  async fetchGames(): Promise<EspnScoreboardResponse['events']> {
+  // TODO(phase-3): GET /scoreboard?dates= via ESPN — schedules + results
+  async fetchGames(
+    _season: string,
+    _dateRange?: DateRange
+  ): Promise<EspnScoreboardResponse['events']> {
     throw new Error('Not implemented: NflFetcher.fetchGames');
   }
 
-  // TODO(phase-3): GET {PYTHON_ML_URL}/nfl/playbyplay via the microservice
-  async fetchStats(): Promise<unknown> {
-    throw new Error('Not implemented: NflFetcher.fetchStats');
+  // TODO(phase-3): per-player game logs via the Python microservice (nfl-data-py)
+  async fetchPlayerGameLogs(_playerId: string, _season: string): Promise<unknown> {
+    throw new Error('Not implemented: NflFetcher.fetchPlayerGameLogs');
   }
 
-  // TODO(phase-3): detailed play-by-play via the microservice (nfl-data-py)
-  async fetchPlayByPlay(_season: number, _week: number): Promise<NflPlay[]> {
+  // TODO(phase-3): GET {PYTHON_ML_URL}/nfl/playbyplay via the microservice
+  async fetchPlayByPlay(_gameId: string): Promise<NflPlay[]> {
     throw new Error('Not implemented: NflFetcher.fetchPlayByPlay');
   }
 
-  // TODO(phase-3): full season schedule via the microservice (nfl-data-py)
-  async fetchScheduleFull(_season: number): Promise<NflSchedule[]> {
-    throw new Error('Not implemented: NflFetcher.fetchScheduleFull');
+  // TODO(phase-3): roster data via the Python microservice (nfl-data-py)
+  async fetchRosters(_teamId: string): Promise<unknown> {
+    throw new Error('Not implemented: NflFetcher.fetchRosters');
   }
 }
