@@ -1,0 +1,20 @@
+// Table 14 — CacheMetadata
+// Tracks all cached data so we know what is fresh and what needs refresh.
+model CacheMetadata {
+  id              Int      @id @default(autoincrement())
+  cacheKey        String   @unique // Unique identifier for this cache entry
+  dataType        String // "player_logs" / "risk_scores" / "coach_decisions" etc
+  sportId         Int? // Which sport this cache is for
+  entityId        String? // Player ID or team ID this belongs to
+  season          String? // Season this data covers
+  cachedAt        DateTime // When data was last fetched
+  expiresAt       DateTime // When this cache entry becomes stale
+  recordCount     Int? // How many records were cached
+  isValid         Boolean // Whether cache is still good
+  lastError       String? // Last fetch error if any
+  fetchDurationMs Int? // How long the fetch took
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([expiresAt]) // stale-cache sweeps
+}
