@@ -14,6 +14,10 @@ scipy>=1.13
 scikit-learn>=1.4
 lifelines>=0.29
 
+# Optional: OpenAI story enhancement (Step 9). The service falls back to
+# templates when this is absent, so it is only needed for the richer path.
+# openai>=1.0
+
 # NFL data (Step 10) — nfl-data-py 0.3.3 pins pandas<2.0, incompatible with
 # Python 3.13 / modern pandas; installed separately in Step 10 if viable.
 # nfl-data-py>=0.3.3

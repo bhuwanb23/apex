@@ -16,6 +16,7 @@ def test_all_routers_registered():
         "/momentum/compute-game",
         "/momentum/compute-season",
         "/timeout/recommend",
+        "/timeout/precompute",
         "/story/generate",
         "/nfl/plays",
         "/nfl/schedule",

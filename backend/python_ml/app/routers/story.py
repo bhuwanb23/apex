@@ -1,4 +1,4 @@
-# Story mode routes (Step 9 wires the model).
+# Story mode routes (Step 9) — narrative generation per module/role.
 
 from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
@@ -12,20 +12,22 @@ router = APIRouter(prefix="/story", tags=["story"])
 @router.post(
     "/generate",
     response_model=StoryResponse,
-    summary="Generate story mode text",
+    summary="Generate story mode text for a module view",
 )
 async def generate_story(request: StoryRequest) -> StoryResponse:
-    """Plain-English paragraph summarizing the current module view."""
+    """Plain-English paragraph summarizing the current module view.
+
+    Body: {module, sport, role, entityId?, entityName?, metrics: {...}}
+    """
     try:
         result = StoryModel().generate(
             module=request.module,
             sport=request.sport,
             role=request.role,
             entity_id=request.entityId,
-            key_metrics=request.keyMetrics,
+            entity_name=request.entityName,
+            key_metrics=request.metrics,
         )
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
     except (ValueError, ValidationError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return StoryResponse(**result)
