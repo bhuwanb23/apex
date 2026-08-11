@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance } from 'axios';
 import { env } from '../../config/env.js';
 import type { DateRange, SportFetcher } from '../fetcher.manager.js';
+import { toSeasonYear } from '../season.util.js';
 import type { NBAGame, NBAPaginatedResponse, NBAPlayer, NBAStats, NBATeam } from './nba.types.js';
 
 const NBA_API_BASE = 'https://api.balldontlie.io/v1';
@@ -21,17 +22,6 @@ function createDefaultClient(): AxiosInstance {
     },
     timeout: REQUEST_TIMEOUT_MS,
   });
-}
-
-/**
- * Maps a season ("2024-25" or "2024") to the API's season year (2024).
- * Throws for unresolvable values (e.g. the manager's 'current' placeholder)
- * instead of sending a NaN query param that the API rejects with a 400.
- */
-function toApiSeason(season: string): string {
-  const startYear = season.split('-')[0];
-  if (startYear !== undefined && /^\d{4}$/.test(startYear)) return startYear;
-  throw new Error(`Cannot map season "${season}" to a BallDontLie season year`);
 }
 
 /**
@@ -70,7 +60,7 @@ export class NbaFetcher implements SportFetcher {
   /** GET /games — schedule + results for a season, optionally a date range. */
   async fetchGames(season: string, dateRange?: DateRange): Promise<NBAGame[]> {
     const params: Record<string, unknown> = {
-      'seasons[]': [Number(toApiSeason(season))],
+      'seasons[]': [Number(toSeasonYear(season))],
     };
     if (dateRange) {
       params.start_date = dateRange.startDate.toISOString().slice(0, 10);
@@ -83,7 +73,7 @@ export class NbaFetcher implements SportFetcher {
   async fetchPlayerGameLogs(playerId: string, season: string): Promise<NBAStats[]> {
     const params: Record<string, unknown> = {
       'player_ids[]': [Number(playerId)],
-      'seasons[]': [Number(toApiSeason(season))],
+      'seasons[]': [Number(toSeasonYear(season))],
     };
     return this.fetchAllPages<NBAStats>('/stats', params);
   }
