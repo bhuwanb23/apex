@@ -15,6 +15,12 @@ async function main(): Promise<void> {
     logger.info(`📚 Swagger docs at http://localhost:${env.PORT}/api-docs`)
   })
 
+  // Boot failures (e.g. port already in use) fire asynchronously on the server
+  server.on('error', (err) => {
+    logger.error({ err }, 'Server failed to start')
+    process.exit(1)
+  })
+
   // Graceful shutdown
   const shutdown = (signal: string): void => {
     logger.info(`${signal} received — shutting down gracefully`)
