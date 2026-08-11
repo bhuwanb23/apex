@@ -1,43 +1,189 @@
 import type {
-  CoachRecord,
+  CoachDecisionRecord,
   GameRecord,
-  PlayerGameLogRecord,
-  PlayerRecord,
+  PlayByPlayRecord,
   TeamRecord,
 } from '../db.writer.js';
-import type { EspnTeam, NflPlay, NflSchedule } from './nfl.types.js';
+import type { NflCoachDecision } from './nfl.decisions.js';
+import { formatClock } from './nfl.decisions.js';
+import type { EspnEvent, EspnTeam, NflPlay, NflSchedule } from './nfl.types.js';
 
 /**
  * Cleans and normalizes raw NFL payloads (ESPN + nfl-data-py) into the
  * DB-ready records defined in db.writer.ts (sportId: 2 = NFL).
  */
 
-// TODO(phase-3): map ESPN team → TeamRecord (externalId = ESPN id)
-export function transformTeam(_raw: EspnTeam): TeamRecord {
-  throw new Error('Not implemented: transformTeam');
+const NFL_SPORT_ID = 2;
+
+/** ESPN team → TeamRecord. */
+export function transformTeam(raw: EspnTeam): TeamRecord {
+  return {
+    sportId: NFL_SPORT_ID,
+    name: raw.displayName,
+    abbreviation: raw.abbreviation,
+    city: raw.location ?? '',
+    conference: raw.conference?.name ?? null,
+    division: raw.division?.name ?? null,
+    externalId: raw.id,
+    logoUrl: raw.logo ?? null,
+  };
 }
 
-// TODO(phase-3): NFL rosters arrive later via the Python microservice
-export function transformPlayer(_raw: unknown): PlayerRecord {
-  throw new Error('Not implemented: transformPlayer');
+// NFL rosters arrive later via the Python microservice (nfl_data_py) — the
+// ESPN roster endpoint returns players but the full player pipeline is wired
+// once the Python service is ready. Reserved for parity.
+export function transformPlayer(_raw: unknown): never {
+  throw new Error('Not implemented: NFL player transformation (Python microservice planned)');
 }
 
-// TODO(phase-3): NFL head coaches arrive later via the Python microservice
-export function transformCoach(_raw: unknown): CoachRecord {
-  throw new Error('Not implemented: transformCoach');
+// NFL head coaches arrive later via the Python microservice (nfl_data_py).
+export function transformCoach(_raw: unknown): never {
+  throw new Error('Not implemented: NFL coach transformation (Python microservice planned)');
 }
 
-// TODO(phase-3): map schedule payload → GameRecord (week, gameType)
-export function transformGame(_raw: NflSchedule): GameRecord {
-  throw new Error('Not implemented: transformGame');
+/** ESPN scoreboard event → GameRecord (week arrives with the Python schedule). */
+export function transformGame(raw: EspnEvent): GameRecord {
+  const competition = raw.competitions?.[0];
+  const home = competition?.competitors.find(c => c.homeAway === 'home');
+  const away = competition?.competitors.find(c => c.homeAway === 'away');
+  const homeScore = home?.score != null ? Number(home.score) : null;
+  const awayScore = away?.score != null ? Number(away.score) : null;
+  const state = raw.status?.type?.state; // "pre" | "in" | "post"
+  const status = state === 'post' ? 'final' : state === 'in' ? 'live' : 'scheduled';
+  let winner: string | null = null;
+  if (status === 'final' && homeScore != null && awayScore != null) {
+    winner = homeScore > awayScore ? 'home' : awayScore > homeScore ? 'away' : 'tie';
+  }
+  return {
+    sportId: NFL_SPORT_ID,
+    date: new Date(raw.date),
+    season: raw.season?.year != null ? String(raw.season.year) : '',
+    gameType: raw.season?.type === 3 ? 'playoff' : 'regular',
+    week: null,
+    homeScore,
+    awayScore,
+    winner,
+    status,
+    externalId: raw.id,
+    venue: competition?.venue?.fullName ?? null,
+    homeTeamExternalId: home?.team.id ?? '',
+    awayTeamExternalId: away?.team.id ?? '',
+  };
 }
 
-// TODO(phase-3): NFL box-score style logs arrive later (limited on ESPN)
-export function transformPlayerGameLog(_raw: unknown): PlayerGameLogRecord {
-  throw new Error('Not implemented: transformPlayerGameLog');
+/** nfl_data_py schedule row → GameRecord (has the week the ESPN path lacks). */
+export function transformScheduleGame(raw: NflSchedule): GameRecord {
+  const date = new Date(raw.game_date);
+  return {
+    sportId: NFL_SPORT_ID,
+    date,
+    season: String(date.getUTCFullYear()),
+    gameType: 'regular',
+    week: raw.week,
+    homeScore: null,
+    awayScore: null,
+    winner: null,
+    status: raw.finished ? 'final' : 'scheduled',
+    externalId: raw.game_id,
+    venue: null,
+    homeTeamExternalId: raw.home_team,
+    awayTeamExternalId: raw.away_team,
+  };
 }
 
-// TODO(phase-3): play-by-play rows feed PlayByPlay + CoachDecisions (4th down)
-export function transformPlay(_raw: NflPlay): unknown {
-  throw new Error('Not implemented: transformPlay');
+/** Play types that are always scoring events. */
+const SCORING_PLAY_TYPES = new Set([
+  'FIELD_GOAL',
+  'EXTRA_POINT',
+  'XP_KICK',
+  'TWO_POINT_CONVERSION',
+]);
+
+/** True when the play description shows a touchdown or safety. */
+function descShowsScore(desc: string): boolean {
+  return /TOUCHDOWN|FIELD GOAL|EXTRA POINT|SAFETY/i.test(desc);
+}
+
+/**
+ * nfl_data_py play → PlayByPlayRecord.
+ * `prevScores` (optional) lets a batch caller compute isScoring from the
+ * actual score change when absolute scores are available; without it, the
+ * play type + description heuristics are used.
+ */
+export function transformPlay(
+  raw: NflPlay,
+  prevScores?: { home: number; away: number }
+): PlayByPlayRecord {
+  const hasScores = raw.home_score != null && raw.away_score != null;
+  const homeScore = hasScores ? (raw.home_score ?? 0) : 0;
+  const awayScore = hasScores ? (raw.away_score ?? 0) : 0;
+  let isScoring = SCORING_PLAY_TYPES.has(raw.play_type ?? '') || descShowsScore(raw.desc);
+  if (hasScores && prevScores) {
+    isScoring = homeScore !== prevScores.home || awayScore !== prevScores.away;
+  }
+  return {
+    sportId: NFL_SPORT_ID,
+    eventNumber: raw.play_id,
+    period: raw.qtr ?? 0,
+    clock: formatClock(raw.game_seconds_remaining),
+    eventTimeSeconds: raw.game_seconds_remaining,
+    teamExternalId: raw.posteam,
+    playerExternalId: null,
+    eventType: raw.play_type ?? 'unknown',
+    eventSubtype: null,
+    description: raw.desc,
+    homeScore,
+    awayScore,
+    // nfl_data_py's score_differential is posteam − defteam perspective;
+    // the ESPN fallback emits home − away (see nfl.types.ts).
+    scoreDiff: raw.score_differential ?? homeScore - awayScore,
+    isScoring,
+    rawEvent: raw as unknown as Record<string, unknown>,
+  };
+}
+
+/** Batch variant — tracks running scores to detect scoring plays precisely. */
+export function transformPlays(plays: NflPlay[]): PlayByPlayRecord[] {
+  let prev: { home: number; away: number } | undefined;
+  return plays.map(play => {
+    const record = transformPlay(play, prev);
+    if (play.home_score != null && play.away_score != null) {
+      prev = { home: play.home_score, away: play.away_score };
+    }
+    return record;
+  });
+}
+
+const DECISION_TYPE_MAP: Record<string, string> = {
+  fourth_down: '4th_down',
+  timeout: 'timeout',
+  two_point_conversion: '2pt_conversion',
+};
+
+// Spec vocabulary for the CoachDecisions.chosenAction column
+// ("go" / "punt" / "field_goal" / "timeout" / "two_point_attempt").
+const ACTION_MAP: Record<string, string> = {
+  go_for_it: 'go',
+  punt: 'punt',
+  field_goal: 'field_goal',
+  timeout: 'timeout',
+  two_point_attempt: 'two_point_attempt',
+};
+
+/** Coach decision observation → CoachDecisionRecord (EV fields filled by writer defaults). */
+export function transformDecision(raw: NflCoachDecision): CoachDecisionRecord {
+  return {
+    sportId: NFL_SPORT_ID,
+    gameExternalId: raw.gameId,
+    teamExternalId: raw.team,
+    decisionType: DECISION_TYPE_MAP[raw.decisionType] ?? raw.decisionType,
+    period: raw.qtr ?? 0,
+    clock: raw.clock,
+    gameTimeSeconds: raw.gameTimeSeconds,
+    scoreDiff: raw.scoreDiff ?? 0,
+    gameContext: raw.context,
+    chosenAction: ACTION_MAP[raw.chosenAction] ?? raw.chosenAction,
+    outcome: raw.outcome,
+    outcomeSuccess: raw.outcomeSuccess,
+  };
 }
