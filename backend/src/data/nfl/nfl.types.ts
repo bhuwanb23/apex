@@ -11,21 +11,35 @@ export interface EspnTeam {
   abbreviation: string;
   displayName: string;
   shortDisplayName?: string;
+  name?: string;
   location?: string;
-  conferenceId?: string;
-  logos?: { href: string }[];
+  color?: string;
+  logo?: string;
+  conference?: { id?: string; name?: string };
+  division?: { id?: string; name?: string };
+}
+
+export interface EspnTeamsResponse {
+  sports?: Array<{
+    leagues?: Array<{
+      teams?: Array<{ team: EspnTeam }>;
+    }>;
+  }>;
 }
 
 export interface EspnScoreboardResponse {
-  events: EspnEvent[];
+  events?: EspnEvent[];
 }
 
 export interface EspnEvent {
   id: string;
   date: string; // ISO timestamp
   name: string;
+  shortName?: string;
   season?: { year: number; type: number };
-  status?: { type?: { completed?: boolean } };
+  status?: {
+    type?: { detail?: string; state?: string; completed?: boolean };
+  };
   competitions?: EspnCompetition[];
 }
 
@@ -38,6 +52,36 @@ export interface EspnCompetitor {
   team: EspnTeam;
   score?: string;
   homeAway?: 'home' | 'away';
+  winner?: boolean;
+}
+
+export interface EspnSummaryResponse {
+  scoringPlays?: EspnScoringPlay[];
+}
+
+export interface EspnScoringPlay {
+  id?: string;
+  period?: { number?: number };
+  clock?: { displayValue?: string };
+  team?: { id?: string };
+  type?: { text?: string };
+  text?: string;
+  homeScore?: number;
+  awayScore?: number;
+}
+
+export interface EspnRosterResponse {
+  athletes?: EspnAthlete[];
+}
+
+export interface EspnAthlete {
+  id: string;
+  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  position?: { abbreviation?: string };
+  jersey?: string;
+  team?: { id?: string; abbreviation?: string };
 }
 
 // ---------------------------------------------------------------------------
@@ -55,11 +99,15 @@ export interface NflPlay {
   yards_gained: number | null;
   posteam: string | null;
   defteam: string | null;
+  // nfl_data_py perspective: posteam score − defteam score (ESPN fallback: home − away)
   score_differential: number | null;
   game_seconds_remaining: number | null;
-  fourth_down_converted: boolean | null;
-  fourth_down_failed: boolean | null;
-  timeout: boolean | null;
+  qtr: number | null; // quarter / period
+  // nfl_data_py emits these as 0/1 integers; the ESPN fallback emits booleans
+  fourth_down_converted: boolean | number | null;
+  fourth_down_failed: boolean | number | null;
+  timeout: boolean | number | null;
+  timeout_team: string | null; // team that called the timeout
   two_point_conv_result: string | null; // "success" / "failure" / null
 }
 
