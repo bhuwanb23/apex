@@ -97,14 +97,20 @@ def _injury_trainer(metrics: dict, sport: str, name: str) -> tuple[str, str, str
     zone_tone = _ZONE_TONE.get(zone, "neutral")
     metric = str(_metric(metrics, "triggerMetric", "workload")).capitalize()
     metric = _METRIC_LABELS.get(metric.lower(), metric)
-    pct = _metric(metrics, "percentageAbove", "a marked")
-    days = _metric(metrics, "windowDays", "recent")
+    pct = _metric(metrics, "percentageAbove", None)
+    days = _metric(metrics, "windowDays", None)
     rec = _RECOMMENDATIONS.get(zone, "Monitor closely over next 3 games")
+
+    # The spike sentence is only added when a real percentage is available —
+    # the default ('a marked') was previously rendered as 'marked% above'.
+    spike_part = ""
+    if pct is not None:
+        days_part = f" over the last {days} days" if days is not None else ""
+        spike_part = f" {metric} spiked {pct}% above their personal baseline{days_part}."
 
     story = (
         f"{name} is currently showing {zone_label} risk with a score of "
-        f"{_metric(metrics, 'riskScore', '--')}/100. {metric} spiked {pct}% above "
-        f"their personal baseline over the last {days} days. {rec}."
+        f"{_metric(metrics, 'riskScore', '--')}/100.{spike_part} {rec}."
     )
     if zone == "red":
         headline = f"High injury risk: {name}"
@@ -132,9 +138,20 @@ def _decisions_coach(metrics: dict, sport: str, name: str) -> tuple[str, str, st
     ev_rate = _metric(metrics, "evRate", 0)
     rank = _metric(metrics, "rank", "--")
     total = _metric(metrics, "totalCoaches", "--")
+    total_decisions = _metric(metrics, "totalDecisions", None)
     best_date = _metric(metrics, "bestGameDate", "a recent game")
     best_desc = _metric(metrics, "bestDecisionDesc", "aggressively going for it on fourth down")
     sport_label = sport.upper() if sport else "their sport"
+
+    # No tracked decisions yet (e.g. a sport whose decision feed isn't wired) —
+    # don't report a misleading 0% rate. Only an explicit 0 (the Node service
+    # passes totalDecisions) triggers this; an absent key keeps the old path.
+    if total_decisions == 0:
+        story = (
+            f"No coaching decisions have been tracked for {name} in {sport_label} "
+            f"this season yet — the leaderboard will fill in as decisions come in."
+        )
+        return story, f"Decision report: {name}", "neutral"
 
     story = (
         f"{name} has made the statistically optimal decision {ev_rate}% of the "
