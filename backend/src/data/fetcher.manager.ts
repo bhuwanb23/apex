@@ -64,6 +64,8 @@ export interface SportFetcher {
   fetchPlayerGameLogs(playerId: string, season: string): Promise<unknown>;
   fetchPlayByPlay(gameId: string): Promise<unknown>;
   fetchRosters(teamId: string): Promise<unknown>;
+  /** Coaching staff for a team (MLB: rosterType=coach). Unsupported sports throw. */
+  fetchCoaches(teamId?: string): Promise<unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -370,6 +372,18 @@ export class FetcherManager {
     // Rosters and player fetches hit the same underlying data — share one cache
     // entry so the API isn't called twice for the same payload.
     return this.fetchPlayers(sport, teamId);
+  }
+
+  async fetchCoaches(sport: string, teamId?: string): Promise<FetchResult<unknown>> {
+    const fetcher = this.getFetcher(sport);
+    return this.withFetch({
+      sport,
+      apiName: fetcher.apiName,
+      dataType: 'coaches',
+      cacheKey: teamId ? `coaches:${sport}:${teamId}` : `coaches:${sport}`,
+      entityId: teamId,
+      fetchFn: () => fetcher.fetchCoaches(teamId),
+    });
   }
 
   /**
