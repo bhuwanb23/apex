@@ -30,6 +30,9 @@ const envSchema = z.object({
 
   // Background jobs (Phase 6) — master switch + cron overrides
   JOBS_ENABLED: z.enum(['true', 'false']).default('true').transform(v => v === 'true'),
+  // Shared secret for POST /api/jobs/trigger (X-Admin-Key header must match).
+  // When unset, the trigger route is disabled (fail-closed).
+  JOB_CONTROL_ADMIN_KEY: z.string().min(1).optional(),
   // Run every job once immediately at boot (before their cron schedules)
   RUN_JOBS_ON_STARTUP: z
     .enum(['true', 'false'])
