@@ -89,6 +89,11 @@ export class NbaFetcher implements SportFetcher {
     return this.fetchPlayers(teamId);
   }
 
+  // BallDontLie has no coaching staff endpoint on any tier — fail fast.
+  async fetchCoaches(_teamId?: string): Promise<unknown> {
+    throw new Error('NBA coaches are not available via the BallDontLie API');
+  }
+
   /**
    * Follows meta.next_cursor until null, combining every page into one array.
    * Endpoints that return a single unpaginated response (e.g. /teams has no
