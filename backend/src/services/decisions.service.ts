@@ -551,7 +551,10 @@ export async function refreshCoachScorecard(
   const sportRow = await getSport(sport);
   const resolvedSeason = season ?? sportRow.season;
 
-  // 1. Evaluate unevaluated decisions.
+  // 1. Evaluate unevaluated decisions. `evBest: 0` alone is not a reliable
+  // sentinel (the model can legitimately compute 0 EV), so rows are only
+  // treated as unevaluated while alternativeActions is still the empty object
+  // the writer stores — a state evaluation always replaces.
   const pending = await prisma.coachDecisions.findMany({
     where: { evBest: 0, game: { sportId: sportRow.id, season: resolvedSeason } },
     include: {
@@ -559,9 +562,13 @@ export async function refreshCoachScorecard(
       coach: { select: { teamId: true } },
     },
   });
+  const unevaluated = pending.filter(d => {
+    const actions = d.alternativeActions;
+    return actions == null || Object.keys(actions as Record<string, unknown>).length === 0;
+  });
 
   let decisionsEvaluated = 0;
-  for (const d of pending) {
+  for (const d of unevaluated) {
     const gameCtx = (d.gameContext ?? {}) as Record<string, unknown>;
     try {
       const result = await decisionsML.computeDecisionEV({
@@ -642,6 +649,13 @@ export async function refreshCoachScorecard(
     coachAcc.evSum += d.evDifference;
     byCoach.set(d.coachId, coachAcc);
   }
+
+  // 2b. Drop any previously aggregated scorecard rows for this sport+season —
+  // a re-sync can remove decisions (writeCoachDecisions delete+inserts per
+  // game), so a full recompute must not leave stale totals behind.
+  await prisma.decisionEVScores.deleteMany({
+    where: { sportId: sportRow.id, season: resolvedSeason },
+  });
 
   const computedAt = new Date();
   const scorecards: Array<{
