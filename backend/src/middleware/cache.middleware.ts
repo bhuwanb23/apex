@@ -40,8 +40,12 @@ function isDegraded(body: unknown): boolean {
  * Uses the request URL as the cache key.
  */
 export const cacheMiddleware: RequestHandler = (req, res, next) => {
-  if (req.method !== 'GET' || req.originalUrl.startsWith('/api/health')) {
-    // Skip non-GET requests and health checks (must always be fresh)
+  if (
+    req.method !== 'GET' ||
+    req.originalUrl.startsWith('/api/health') ||
+    req.originalUrl.startsWith('/api/jobs')
+  ) {
+    // Skip non-GET requests, health checks and job control (always live)
     next();
     return;
   }
