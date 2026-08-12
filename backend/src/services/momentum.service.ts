@@ -24,6 +24,7 @@ import {
 } from '../ml/ml.client.js';
 import {
   momentumML,
+  type GameMomentumResult,
   type MomentumPlayInput,
   type SeasonMomentumResult,
 } from '../ml/momentum.ml.js';
@@ -338,32 +339,12 @@ export async function getMomentumAnalysis(
 // Game timeline
 // ---------------------------------------------------------------------------
 
-/**
- * Computes and stores the momentum timeline for one game (Step 7 Task A).
- *
- * Returns `true` when a timeline was written. Plays are filtered to scoring
- * events only (per spec — the momentum model only reacts to score changes).
- * Throws on ML failure so the job can log it and keep any existing data
- * (Step 7.4: never delete old data on failure).
- */
-export async function computeAndStoreGameTimeline(gameId: number): Promise<boolean> {
-  const game = await prisma.games.findUnique({
-    where: { id: gameId },
-    select: { externalId: true, sportId: true },
-  });
-  if (!game) return false;
-
-  const plays = await loadGamePlays(gameId);
-  const scoringPlays = plays.filter(p => p.isScoring);
-  if (scoringPlays.length === 0) return false;
-
-  const result = await momentumML.computeGameMomentum({
-    gameId: game.externalId,
-    plays: scoringPlays.map(toMomentumPlayInput),
-    sport: (await getSportName(game.sportId)) ?? undefined,
-  });
-  const computedAt = new Date();
-
+/** Persists a computed timeline into MomentumGameData (upsert by gameId). */
+async function storeGameTimeline(
+  gameId: number,
+  result: GameMomentumResult,
+  computedAt: Date
+): Promise<void> {
   await prisma.momentumGameData.upsert({
     where: { gameId },
     update: {
@@ -386,7 +367,34 @@ export async function computeAndStoreGameTimeline(gameId: number): Promise<boole
       computedAt,
     },
   });
+}
 
+/**
+ * Computes and stores the momentum timeline for one game (Step 7 Task A).
+ *
+ * Returns `true` when a timeline was written. Plays are filtered to scoring
+ * events only (per spec — the momentum model only reacts to score changes;
+ * chronological ORDER BY is handled inside the Python model, which sorts by
+ * eventTimeSeconds). Throws on ML failure so the job can log it and keep any
+ * existing data (Step 7.4: never delete old data on failure).
+ */
+export async function computeAndStoreGameTimeline(gameId: number): Promise<boolean> {
+  const game = await prisma.games.findUnique({
+    where: { id: gameId },
+    select: { externalId: true, sportId: true },
+  });
+  if (!game) return false;
+
+  const plays = await loadGamePlays(gameId);
+  const scoringPlays = plays.filter(p => p.isScoring);
+  if (scoringPlays.length === 0) return false;
+
+  const result = await momentumML.computeGameMomentum({
+    gameId: game.externalId,
+    plays: scoringPlays.map(toMomentumPlayInput),
+    sport: (await getSportName(game.sportId)) ?? undefined,
+  });
+  await storeGameTimeline(gameId, result, new Date());
   return true;
 }
 
@@ -443,29 +451,7 @@ export async function getGameMomentum(gameId: number): Promise<GameMomentumRespo
       sport: (await getSportName(game.sportId)) ?? undefined,
     });
     const computedAt = new Date();
-
-    await prisma.momentumGameData.upsert({
-      where: { gameId },
-      update: {
-        homeTeamMomentum: result.homeTeamMomentum,
-        awayTeamMomentum: result.awayTeamMomentum,
-        timelineEvents: result.timelineEvents as unknown as Prisma.InputJsonValue,
-        peakHomeMomentum: result.peakHomeMomentum,
-        peakAwayMomentum: result.peakAwayMomentum,
-        momentumShifts: result.momentumShifts,
-        computedAt,
-      },
-      create: {
-        gameId,
-        homeTeamMomentum: result.homeTeamMomentum,
-        awayTeamMomentum: result.awayTeamMomentum,
-        timelineEvents: result.timelineEvents as unknown as Prisma.InputJsonValue,
-        peakHomeMomentum: result.peakHomeMomentum,
-        peakAwayMomentum: result.peakAwayMomentum,
-        momentumShifts: result.momentumShifts,
-        computedAt,
-      },
-    });
+    await storeGameTimeline(gameId, result, computedAt);
 
     return {
       game: gameCtx,
