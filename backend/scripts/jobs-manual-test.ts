@@ -35,7 +35,27 @@ async function main(): Promise<void> {
   const failed = await runJob(failingJob, { triggeredBy: 'manual' });
   console.log('failing job ->', JSON.stringify({ status: failed.status, errors: failed.errors, summary: failed.summary }));
 
-  // 4. Verify the log history.
+  // 4. In-flight guard — a second run of a still-running job is skipped.
+  const slowJob: JobDefinition = {
+    name: 'synthetic_slow_test',
+    schedule: '',
+    run: async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 500);
+      });
+      return { status: 'completed', recordsProcessed: 1 };
+    },
+  };
+  const [first, second] = await Promise.all([
+    runJob(slowJob, { triggeredBy: 'manual' }),
+    runJob(slowJob, { triggeredBy: 'manual' }),
+  ]);
+  console.log(
+    'in-flight guard ->',
+    JSON.stringify({ first: first.status, second: second.status })
+  );
+
+  // 5. Verify the log history.
   const rows = await prisma.jobLogs.findMany({
     where: { triggeredBy: 'manual' },
     orderBy: { startedAt: 'desc' },
