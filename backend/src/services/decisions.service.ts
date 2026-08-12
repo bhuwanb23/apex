@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { CACHE_TTL, cacheGet, cacheSet } from '../cache/memoryCache.js';
 import { prisma } from '../db/client.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { decisionsML } from '../ml/decisions.ml.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import type {
   CoachDecisionEntry,
@@ -508,3 +509,227 @@ export async function getDecisionTypes(
     : [];
   return { sport, decisionTypes };
 }
+
+// ---------------------------------------------------------------------------
+// Scorecard refresh (Step 11) — EV computation + DecisionEVScores aggregation
+// ---------------------------------------------------------------------------
+
+/** The action set the Python EV model should consider per decision type. */
+function availableActionsFor(decisionType: string, chosenAction: string): string[] {
+  switch (decisionType) {
+    case '4th_down':
+      return ['go_for_it', 'punt', 'field_goal'];
+    case 'timeout':
+      return ['call_timeout', 'save_timeout'];
+    case '2pt_conversion':
+      return ['two_point_attempt', 'extra_point'];
+    default:
+      return [chosenAction];
+  }
+}
+
+/**
+ * Refreshes a sport's scorecards (Step 11):
+ *   1. Every CoachDecisions row that hasn't been evaluated yet (evBest === 0)
+ *      gets its EV computed via the Python model and persisted.
+ *   2. Scorecards are re-aggregated into DecisionEVScores per
+ *      (coach, season, decisionType, gameType) with ranks assigned per sport.
+ *
+ * Idempotent: already-evaluated decisions are skipped, so re-runs are cheap
+ * and only aggregate. One decision failing the EV model is logged and skipped
+ * — a partial refresh never aborts the whole sport.
+ */
+export async function refreshCoachScorecard(
+  sport: SportAbbreviation,
+  season?: string
+): Promise<{
+  sport: SportAbbreviation;
+  season: string;
+  decisionsEvaluated: number;
+  scorecardsWritten: number;
+}> {
+  const sportRow = await getSport(sport);
+  const resolvedSeason = season ?? sportRow.season;
+
+  // 1. Evaluate unevaluated decisions.
+  const pending = await prisma.coachDecisions.findMany({
+    where: { evBest: 0, game: { sportId: sportRow.id, season: resolvedSeason } },
+    include: {
+      game: { select: { homeTeamId: true, awayTeamId: true } },
+      coach: { select: { teamId: true } },
+    },
+  });
+
+  let decisionsEvaluated = 0;
+  for (const d of pending) {
+    const gameCtx = (d.gameContext ?? {}) as Record<string, unknown>;
+    try {
+      const result = await decisionsML.computeDecisionEV({
+        sport: sportRow.name,
+        decisionType: d.decisionType,
+        gameContext: {
+          sport: sportRow.name,
+          scoreDiff: d.scoreDiff,
+          timeRemainingSeconds: d.gameTimeSeconds ?? 0,
+          period: d.period,
+          down: typeof gameCtx.down === 'number' ? gameCtx.down : null,
+          yardsToGo: typeof gameCtx.yardsToGo === 'number' ? gameCtx.yardsToGo : null,
+          fieldPosition: typeof gameCtx.yardLine === 'number' ? gameCtx.yardLine : null,
+          timeoutsRemaining: null,
+          isHome: d.coach.teamId === d.game.homeTeamId,
+        },
+        chosenAction: d.chosenAction,
+        availableActions: availableActionsFor(d.decisionType, d.chosenAction),
+      });
+      await prisma.coachDecisions.update({
+        where: { id: d.id },
+        data: {
+          evChosen: result.evChosen,
+          evBest: result.evBest,
+          evDifference: result.evDifference,
+          isOptimal: result.isOptimal,
+          winProbabilityBefore: result.winProbBefore ?? result.winProbabilityBefore,
+          alternativeActions: result.allOptions as unknown as Prisma.InputJsonValue,
+        },
+      });
+      decisionsEvaluated += 1;
+    } catch (err) {
+      logger.warn(
+        { decisionId: d.id, sport, error: err instanceof Error ? err.message : String(err) },
+        'refreshCoachScorecard: decision EV failed — skipping'
+      );
+    }
+  }
+
+  // 2. Re-aggregate scorecards from the full decision set.
+  const rows = await prisma.coachDecisions.findMany({
+    where: { game: { sportId: sportRow.id, season: resolvedSeason } },
+    include: { game: { select: { gameType: true } } },
+  });
+
+  // Group per (coachId, decisionType, gameType) and per (coachId, decisionType)
+  // so both the type-filtered and collapsed leaderboard queries are covered.
+  interface Acc {
+    total: number;
+    optimal: number;
+    evSum: number;
+    computedAt: Date;
+  }
+  const byType = new Map<string, Acc>();
+  const byCoach = new Map<number, Acc>();
+  for (const d of rows) {
+    const gameType = d.game.gameType === 'playoff' ? 'playoff' : 'regular';
+    const typeKey = `${d.coachId}:${d.decisionType}:${gameType}`;
+    const typeAcc = byType.get(typeKey) ?? {
+      total: 0,
+      optimal: 0,
+      evSum: 0,
+      computedAt: d.createdAt,
+    };
+    typeAcc.total += 1;
+    if (d.isOptimal) typeAcc.optimal += 1;
+    typeAcc.evSum += d.evDifference;
+    byType.set(typeKey, typeAcc);
+
+    const coachAcc = byCoach.get(d.coachId) ?? {
+      total: 0,
+      optimal: 0,
+      evSum: 0,
+      computedAt: d.createdAt,
+    };
+    coachAcc.total += 1;
+    if (d.isOptimal) coachAcc.optimal += 1;
+    coachAcc.evSum += d.evDifference;
+    byCoach.set(d.coachId, coachAcc);
+  }
+
+  const computedAt = new Date();
+  const scorecards: Array<{
+    coachId: number;
+    decisionType: string;
+    gameType: string;
+    totalDecisions: number;
+    optimalDecisions: number;
+    evRate: number;
+    avgEvDifference: number | null;
+    totalEvLeft: number;
+  }> = [];
+  for (const [key, acc] of byType) {
+    const [coachIdStr, decisionType, gameType] = key.split(':');
+    scorecards.push(
+      toScorecardRow(Number(coachIdStr), decisionType ?? 'unknown', gameType ?? 'regular', acc)
+    );
+  }
+  for (const [coachId, acc] of byCoach) {
+    scorecards.push(toScorecardRow(coachId, 'all', 'all', acc));
+  }
+
+  let scorecardsWritten = 0;
+  for (const card of scorecards) {
+    await prisma.decisionEVScores.upsert({
+      where: {
+        coachId_season_decisionType_gameType: {
+          coachId: card.coachId,
+          season: resolvedSeason,
+          decisionType: card.decisionType,
+          gameType: card.gameType,
+        },
+      },
+      update: { ...card, computedAt },
+      create: { ...card, coachId: card.coachId, sportId: sportRow.id, season: resolvedSeason, computedAt },
+    });
+    scorecardsWritten += 1;
+  }
+
+  // 3. Assign ranks to each coach's 'all' aggregate within the sport.
+  const allRows = await prisma.decisionEVScores.findMany({
+    where: { sportId: sportRow.id, season: resolvedSeason, decisionType: 'all' },
+    orderBy: [{ evRate: 'desc' }, { totalDecisions: 'desc' }],
+    select: { id: true },
+  });
+  for (let i = 0; i < allRows.length; i += 1) {
+    const row = allRows[i];
+    if (row === undefined) continue; // noUncheckedIndexedAccess guard
+    await prisma.decisionEVScores.update({
+      where: { id: row.id },
+      data: { rank: i + 1 },
+    });
+  }
+
+  logger.info(
+    { sport, season: resolvedSeason, decisionsEvaluated, scorecardsWritten },
+    'refreshCoachScorecard complete'
+  );
+  return { sport, season: resolvedSeason, decisionsEvaluated, scorecardsWritten };
+}
+
+/** Decision accumulator → DecisionEVScores payload (rank filled by the caller). */
+function toScorecardRow(
+  coachId: number,
+  decisionType: string,
+  gameType: string,
+  acc: { total: number; optimal: number; evSum: number; computedAt: Date }
+): {
+  coachId: number;
+  decisionType: string;
+  gameType: string;
+  totalDecisions: number;
+  optimalDecisions: number;
+  evRate: number;
+  avgEvDifference: number | null;
+  totalEvLeft: number;
+} {
+  const total = acc.total;
+  return {
+    coachId,
+    decisionType,
+    gameType,
+    totalDecisions: total,
+    optimalDecisions: acc.optimal,
+    evRate: total > 0 ? (acc.optimal / total) * 100 : 0,
+    avgEvDifference: total > 0 ? acc.evSum / total : null,
+    totalEvLeft: acc.evSum,
+  };
+}
+
+

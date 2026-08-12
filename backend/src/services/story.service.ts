@@ -23,6 +23,7 @@ import type { StoryViewResponse } from '../types/story.types.js';
 import { logger } from '../utils/logger.util.js';
 import { getCoachDecisions, getCoachLeaderboard } from './decisions.service.js';
 import { getPlayerRisk } from './injury.service.js';
+import type { PlayerRiskProfile } from '../types/injury.types.js';
 import { getMomentumAnalysis } from './momentum.service.js';
 
 /** Cached stories expire after 1 hour (spec). */
@@ -110,6 +111,11 @@ async function loadEntityContext(
           baselineStdMinutes: profile.baselineStdMinutes,
           explanation: profile.explanation,
           computedAt: profile.computedAt,
+          // The narrative spike metric: how far the recent workload sits above
+          // the player's baseline (zScore × std / mean). Null when there is no
+          // positive spike — the template omits the sentence then.
+          windowDays: 21,
+          percentageAbove: computeSpikePercent(profile),
         },
       };
     }
@@ -137,6 +143,7 @@ async function loadEntityContext(
           evRate: drillDown.summary.evRate,
           rank: drillDown.summary.rank,
           totalCoaches: board.meta.total,
+          totalDecisions: drillDown.summary.totalDecisions,
           bestGameDate: recent?.gameDateFormatted ?? null,
           bestDecisionDesc: recent?.chosenAction ?? null,
         },
@@ -164,6 +171,26 @@ async function loadEntityContext(
     default:
       throw ApiError.badRequest(`Unsupported story module: ${module satisfies never}`);
   }
+}
+
+/**
+ * Recent-vs-baseline workload spike as a percent (positive only).
+ * zScore = (recentMean − baselineMean) / baselineStd, so the recent mean can
+ * be recovered and expressed relative to the baseline mean.
+ */
+function computeSpikePercent(profile: PlayerRiskProfile): number | null {
+  const { minutesZScore, baselineMeanMinutes, baselineStdMinutes } = profile;
+  if (
+    minutesZScore == null ||
+    baselineMeanMinutes == null ||
+    baselineStdMinutes == null ||
+    baselineMeanMinutes <= 0
+  ) {
+    return null;
+  }
+  const recentMean = baselineMeanMinutes + minutesZScore * baselineStdMinutes;
+  const pct = Math.round(((recentMean - baselineMeanMinutes) / baselineMeanMinutes) * 100);
+  return pct > 0 ? pct : null;
 }
 
 /** GET /api/story/:module/:sport — cached (1h) or freshly generated narrative. */
