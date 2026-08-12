@@ -18,6 +18,7 @@
 import { env } from '../config/env.js';
 import { prisma } from '../db/client.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { isMLServiceAvailable } from '../ml/availability.js';
 import { MLServiceUnavailableError } from '../ml/ml.client.js';
 import {
   injuryML,
@@ -158,6 +159,23 @@ const riskComputeJob: JobDefinition = {
   schedule: env.JOB_CRON_RISK_COMPUTE, // every 6h — 1:00/7:00/13:00/19:00
   description: 'Recomputes injury risk scores for every active player (25-player batches)',
   run: async () => {
+    // Spec 6.6 / Step 9: when the health check has confirmed Python is down,
+    // return immediately — old scores stay in the DB and the app keeps
+    // serving last-known values (nothing is ever wiped).
+    if (!isMLServiceAvailable()) {
+      logger.warn('risk_compute: ML service unavailable — skipping (old scores kept)');
+      return {
+        status: 'failed',
+        recordsProcessed: 0,
+        errors: ['ML service unavailable — risk computation skipped (old scores kept)'],
+        summary: {
+          skipped: 'ML service unavailable (health check flag)',
+          playersProcessed: 0,
+          errorsCount: 1,
+        },
+      };
+    }
+
     const sports = await prisma.sports.findMany({
       where: { isActive: true },
       select: { id: true, name: true },

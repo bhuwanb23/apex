@@ -33,6 +33,7 @@ async function main(): Promise<void> {
     if (shuttingDown) return; // a second signal during the drain is ignored
     shuttingDown = true;
     logger.info(`${signal} received — shutting down gracefully`);
+    logger.info('Waiting for running jobs to complete (bounded drain)…');
     // Safety net: the whole shutdown (drain + close) is bounded by one timer.
     const forceExit = setTimeout(() => process.exit(1), 10_000);
     forceExit.unref();
