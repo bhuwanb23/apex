@@ -111,6 +111,12 @@ export class NflFetcher implements SportFetcher {
     );
   }
 
+  // ESPN team pages don't expose coaching staff in the current API responses —
+  // NFL coaches remain pending nfl_data_py (the Python microservice).
+  async fetchCoaches(_teamId?: string): Promise<unknown> {
+    throw new Error('NFL coaches are not available via the ESPN public API');
+  }
+
   // -- Internal helpers ------------------------------------------------------
 
   private async fetchScoreboard(dates: string): Promise<EspnEvent[]> {
