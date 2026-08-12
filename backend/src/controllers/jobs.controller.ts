@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { prisma } from '../db/client.js';
 import { mlClient } from '../ml/ml.client.js';
+import { getMLServiceStatus } from '../ml/availability.js';
 import { queueManager } from '../jobs/queue.manager.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { sendSuccess } from '../utils/response.util.js';
@@ -79,18 +80,17 @@ function assertAdminKey(req: Request): void {
   }
 }
 
-/** ML availability + last check, read from the most recent health_check run. */
-async function latestMLHealth(): Promise<{
-  available: boolean | null;
-  lastChecked: Date | null;
-}> {
-  const row = await prisma.jobLogs.findFirst({
-    where: { jobName: 'health_check' },
-    orderBy: { startedAt: 'desc' },
-  });
-  if (!row) return { available: null, lastChecked: null };
-  const summary = (row.summary as { healthy?: boolean } | null) ?? {};
-  return { available: summary.healthy ?? null, lastChecked: row.startedAt };
+/**
+ * ML availability + last check from the in-memory flag (Phase 6, Step 9) —
+ * kept fresh by the health_check job. `available` is null only before the
+ * first probe of this process.
+ */
+function latestMLHealth(): { available: boolean | null; lastChecked: Date | null } {
+  const { available, lastCheckedAt } = getMLServiceStatus();
+  return {
+    available: lastCheckedAt === null ? null : available,
+    lastChecked: lastCheckedAt,
+  };
 }
 
 /** GET /api/jobs/status — every registered job + ML availability. */
@@ -101,7 +101,7 @@ export async function getJobsStatus(_req: Request, res: Response): Promise<void>
     const status = await queueManager.getJobStatus(job.name);
     if (status) statuses.push(status);
   }
-  const ml = await latestMLHealth();
+  const ml = latestMLHealth();
   sendSuccess(res, {
     jobs: statuses,
     mlService: ml,
@@ -155,28 +155,16 @@ export async function triggerJob(req: Request, res: Response): Promise<void> {
 /** GET /api/jobs/ml-health — live Python health + model readiness. */
 export async function getMLHealth(_req: Request, res: Response): Promise<void> {
   const payload = await mlClient.getHealth();
-  const last = await latestMLHealth();
-
-  // Consecutive unhealthy runs from the health_check job history.
-  const recent = await prisma.jobLogs.findMany({
-    where: { jobName: 'health_check' },
-    orderBy: { startedAt: 'desc' },
-    take: 50,
-    select: { summary: true },
-  });
-  let consecutiveFailures = 0;
-  for (const row of recent) {
-    const summary = (row.summary as { healthy?: boolean } | null) ?? {};
-    if (summary.healthy === true) break;
-    consecutiveFailures += 1;
-  }
+  const { available, lastCheckedAt, consecutiveFailures } = getMLServiceStatus();
 
   sendSuccess(res, {
+    // Live probe is the freshest signal; the flag carries the history.
     available: payload !== null,
-    lastChecked: payload?.timestamp ? new Date(payload.timestamp) : last.lastChecked,
+    lastChecked: payload?.timestamp ? new Date(payload.timestamp) : lastCheckedAt,
     consecutiveFailures,
     models: payload?.models ?? null,
     nflDataAvailable: payload?.nflDataAvailable ?? null,
     modelCacheSize: payload?.modelCacheSize ?? null,
+    flag: { available, lastCheckedAt },
   });
 }
