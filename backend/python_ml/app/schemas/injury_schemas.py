@@ -52,14 +52,3 @@ class InjuryRiskBatchResponse(BaseModel):
 
     results: list[InjuryRiskResponse] = Field(description="One result per input player")
 
-
-class InjuryRiskBatchFailure(BaseModel):
-    """Synthesized result for a player whose compute raised — the batch as a
-    whole still returns 200 so one bad player can't sink the other 24."""
-
-    playerId: str
-    zone: str = "insufficient_data"
-    riskScore: float | None = None
-    explanation: str
-    computedAt: str
-    dataPointsUsed: int = 0

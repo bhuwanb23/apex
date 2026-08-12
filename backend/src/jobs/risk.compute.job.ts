@@ -17,6 +17,7 @@
  */
 import { env } from '../config/env.js';
 import { prisma } from '../db/client.js';
+import type { Prisma } from '../generated/prisma/client.js';
 import { MLServiceUnavailableError } from '../ml/ml.client.js';
 import {
   injuryML,
@@ -44,12 +45,6 @@ const sleep = (ms: number): Promise<void> =>
   new Promise(resolve => {
     setTimeout(resolve, ms);
   });
-
-interface BatchPlayer {
-  id: number;
-  externalId: string;
-  name: string | null;
-}
 
 /** Game logs for the batch, grouped by player (most recent first). */
 async function loadBatchLogs(
@@ -85,23 +80,34 @@ async function loadBatchLogs(
   return byPlayer;
 }
 
+interface SaveResult {
+  written: number;
+  /** Eligible players whose write failed after the one retry (spec 6.6). */
+  failed: number;
+}
+
 /**
- * Writes a batch of scores: each player's old latest is de-listed and the
- * new score inserted in ONE transaction — a player can never have two
- * isLatest rows. Retries the whole batch once on failure, per spec.
+ * Writes a batch of scores: every eligible player's old latest is de-listed
+ * and the new score inserted in ONE transaction — a player can never have
+ * two isLatest rows, and SQLite gets 2 ops instead of ~50. Retries the whole
+ * batch once on failure (spec 6.6), then logs and continues — a failing
+ * batch never aborts the rest of the players in it.
  */
 async function saveBatchScores(
   scores: InjuryRiskScore[],
   playerByExternal: Map<string, number>
-): Promise<number> {
-  let written = 0;
-  const build = (score: InjuryRiskScore) => {
+): Promise<SaveResult> {
+  const ops: Prisma.PrismaPromise<unknown>[] = [];
+  let eligible = 0;
+
+  for (const score of scores) {
     const playerId = playerByExternal.get(score.playerId);
     if (playerId === undefined || score.riskScore == null || score.zone === 'insufficient_data') {
-      return null;
+      continue;
     }
+    eligible += 1;
     const computedAt = new Date(score.computedAt);
-    return prisma.$transaction([
+    ops.push(
       prisma.injuryRiskScores.updateMany({
         where: { playerId, isLatest: true },
         data: { isLatest: false },
@@ -124,32 +130,27 @@ async function saveBatchScores(
           explanation: score.explanation,
           isLatest: true,
         },
-      }),
-    ]);
-  };
+      })
+    );
+  }
 
-  for (const score of scores) {
-    const op = build(score);
-    if (op === null) continue;
+  if (ops.length === 0) return { written: 0, failed: 0 };
+
+  try {
+    await prisma.$transaction(ops);
+    return { written: eligible, failed: 0 };
+  } catch (err) {
+    logger.warn(
+      { error: err instanceof Error ? err.message : String(err) },
+      'risk_compute: batch write failed — retrying once'
+    );
     try {
-      await op;
-      written += 1;
-    } catch (err) {
-      // Retry once (spec 6.6), then give up on this player.
-      logger.warn(
-        { playerId: score.playerId, error: err instanceof Error ? err.message : String(err) },
-        'risk_compute: score write failed — retrying once'
-      );
-      try {
-        await op;
-        written += 1;
-      } catch {
-        // Surfaces to the caller via the batch error path.
-        throw err;
-      }
+      await prisma.$transaction(ops);
+      return { written: eligible, failed: 0 };
+    } catch {
+      return { written: 0, failed: eligible };
     }
   }
-  return written;
 }
 
 const riskComputeJob: JobDefinition = {
@@ -198,7 +199,7 @@ const riskComputeJob: JobDefinition = {
       const sportLeftRed: string[] = [];
 
       for (let i = 0; i < players.length; i += BATCH_SIZE) {
-        const batch = players.slice(i, i + BATCH_SIZE) as BatchPlayer[];
+        const batch = players.slice(i, i + BATCH_SIZE);
         try {
           const logsByPlayer = await loadBatchLogs(
             batch.map(p => p.id),
@@ -228,22 +229,13 @@ const riskComputeJob: JobDefinition = {
           });
           const prevZone = new Map(prev.map(p => [p.playerId, p.zone]));
 
-          let results: InjuryRiskScore[];
-          try {
-            results = await injuryML.computePlayerRiskBatch(inputs);
-          } catch (err) {
-            if (err instanceof MLServiceUnavailableError) {
-              mlDown = true;
-              throw err;
-            }
-            throw err;
-          }
+          const results = await injuryML.computePlayerRiskBatch(inputs);
 
-          try {
-            await saveBatchScores(results, playerByExternal);
-          } catch (err) {
+          // One transaction for the whole batch, retried once per spec 6.6.
+          const save = await saveBatchScores(results, playerByExternal);
+          if (save.failed > 0) {
             pushError(
-              `${sport.name}: batch write failed: ${err instanceof Error ? err.message : String(err)}`
+              `${sport.name}: batch write failed for ${save.failed} players after retry — continuing`
             );
           }
 
@@ -264,10 +256,9 @@ const riskComputeJob: JobDefinition = {
               sportLeftRed.push(result.playerId);
             }
           }
-
-          await sleep(BATCH_DELAY_MS); // pacing (spec 6.2)
         } catch (err) {
           if (err instanceof MLServiceUnavailableError) {
+            mlDown = true; // top-of-loop guard skips remaining sports
             pushError(
               `${sport.name}: ML service unavailable — risk computation skipped (old scores kept)`
             );
@@ -277,6 +268,7 @@ const riskComputeJob: JobDefinition = {
             `${sport.name}: batch failed: ${err instanceof Error ? err.message : String(err)}`
           );
         }
+        await sleep(BATCH_DELAY_MS); // pacing (spec 6.2) — even after a failed batch
       }
 
       newRedZonePlayers.push(...sportNewRed);
