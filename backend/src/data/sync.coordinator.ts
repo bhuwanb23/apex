@@ -355,13 +355,31 @@ export async function syncSport(
     if (!logsStage.ok) errors.push(`playerGameLogs: ${logsStage.error}`);
   }
 
-  // Stage 6 — coach decisions (NFL: extracted from season-scoped play-by-play).
+  // Stage 6 — coach decisions (NFL only). Per the spec these are extracted
+  // FROM THE PLAY-BY-PLAY DATA — the raw NflPlay payload is preserved in
+  // PlayByPlay.rawEvent (see transformPlays), so decisions are derived from
+  // the rows Stage 5 just wrote. This is fully offline: no dependency on the
+  // Python nfl_data_py feed (which 503s when nfl_data_py isn't installed).
   {
     const stage = await runStage('coachDecisions', async () => {
       if (adapter.decisionsPending) return; // NFL-only stage — known gap
-      const res = await manager.fetchSeasonPlays(sport, resolvedSeason);
-      if (res.cached || res.data == null) return;
-      const records = adapter.transformDecisions!(res.data);
+      // Same game window Stage 5 used, so decisions cover the same games.
+      const dateFilter = options.dateRange ? { gte: options.dateRange.startDate } : undefined;
+      const games = await prisma.games.findMany({
+        where: { sportId, status: 'final', ...(dateFilter ? { date: dateFilter } : {}) },
+        select: { id: true },
+      });
+      if (games.length === 0) return;
+      const rows = await prisma.playByPlay.findMany({
+        where: { gameId: { in: games.map(g => g.id) } },
+        orderBy: [{ gameId: 'asc' }, { eventNumber: 'asc' }],
+      });
+      if (rows.length === 0) return;
+      // Reconstruct NflPlay[] from the preserved raw payloads.
+      const plays = rows
+        .filter(r => r.rawEvent != null && typeof r.rawEvent === 'object' && !Array.isArray(r.rawEvent))
+        .map(r => r.rawEvent as unknown as NflPlay);
+      const records = adapter.transformDecisions!(plays);
       counts.decisions = await writeCoachDecisions(records);
     });
     if (!stage.ok) errors.push(`coachDecisions: ${stage.error}`);

@@ -19,6 +19,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:coaches": "tsx scripts/seed-nfl-coaches.ts",
     "postinstall": "node scripts/postinstall.mjs"
   },
   "dependencies": {

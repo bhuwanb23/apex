@@ -57,6 +57,53 @@ export interface EspnCompetitor {
 
 export interface EspnSummaryResponse {
   scoringPlays?: EspnScoringPlay[];
+  /** Full drive-by-drive play list — the rich fallback source for NFL pbp. */
+  drives?: {
+    previous?: EspnDrive[];
+    current?: EspnDrive[];
+  };
+  /** Game header — used to orient score_differential (posteam vs defteam). */
+  header?: {
+    competitions?: Array<{
+      competitors?: Array<{
+        team?: { id?: string };
+        homeAway?: 'home' | 'away';
+      }>;
+    }>;
+  };
+}
+
+/** One drive inside the summary's `drives` object (previous + current). */
+export interface EspnDrive {
+  plays?: EspnDrivePlay[];
+}
+
+/** A single play as exposed by the ESPN summary (much richer than scoringPlays). */
+export interface EspnDrivePlay {
+  id?: string;
+  /** Monotonic game sequence (e.g. "18500") — used as the stable play_id. */
+  sequenceNumber?: string;
+  type?: { id?: string; text?: string; abbreviation?: string };
+  text?: string;
+  homeScore?: number;
+  awayScore?: number;
+  period?: { number?: number };
+  clock?: { displayValue?: string };
+  scoringPlay?: boolean;
+  statYardage?: number;
+  isTurnover?: boolean;
+  start?: {
+    down?: number;
+    distance?: number;
+    yardLine?: number;
+    /** Distance from the possession team's own end zone — nfl_data_py's yardline_100 scale. */
+    yardsToEndzone?: number;
+    downDistanceText?: string;
+    possessionText?: string;
+    team?: { id?: string };
+  };
+  /** Teams involved — index 0 is the offense (and the timeout caller). */
+  teamParticipants?: Array<{ id?: string; type?: string }>;
 }
 
 export interface EspnScoringPlay {

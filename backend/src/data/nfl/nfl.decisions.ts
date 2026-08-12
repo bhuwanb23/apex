@@ -67,6 +67,21 @@ export function extractCoachDecisions(plays: NflPlay[]): NflCoachDecision[] {
       team: play.posteam ?? null,
     };
 
+    // A timeout called on 4th down is a timeout decision, not a 4th-down
+    // play decision — check timeouts before the down === 4 branch.
+    if (play.timeout || play.timeout_team) {
+      decisions.push({
+        ...base,
+        decisionType: 'timeout',
+        chosenAction: 'timeout',
+        team: play.timeout_team ?? play.posteam ?? null,
+        context: { playType: play.play_type, description: play.desc },
+        outcome: null,
+        outcomeSuccess: null,
+      });
+      continue;
+    }
+
     if (play.down === 4) {
       const { outcome, outcomeSuccess } = fourthDownOutcome(play);
       const playType = (play.play_type ?? '').toLowerCase();
@@ -87,19 +102,6 @@ export function extractCoachDecisions(plays: NflPlay[]): NflCoachDecision[] {
         },
         outcome,
         outcomeSuccess,
-      });
-      continue;
-    }
-
-    if (play.timeout || play.timeout_team) {
-      decisions.push({
-        ...base,
-        decisionType: 'timeout',
-        chosenAction: 'timeout',
-        team: play.timeout_team ?? play.posteam ?? null,
-        context: { playType: play.play_type, description: play.desc },
-        outcome: null,
-        outcomeSuccess: null,
       });
       continue;
     }
