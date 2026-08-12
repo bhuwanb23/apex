@@ -33,10 +33,24 @@ export class MLServiceUnavailableError extends MLServiceError {
 
 const MAX_CONNECT_RETRIES = 2; // retry connect failures twice (doc: 2 retries)
 
+/** Full Python /health payload — used by the job control ml-health route. */
+export interface MLHealthPayload {
+  status: string;
+  service?: string;
+  version?: string;
+  environment?: string;
+  models?: Record<string, string>;
+  nflDataAvailable?: boolean;
+  modelCacheSize?: number;
+  timestamp?: string;
+}
+
 export interface MLClient {
   post<TResponse, TBody = unknown>(path: string, body: TBody): Promise<TResponse>;
   /** GET /health — true when the Python service answers 200. */
   checkHealth(): Promise<boolean>;
+  /** GET /health with the full payload (models, version…), or null when unreachable. */
+  getHealth(): Promise<MLHealthPayload | null>;
 }
 
 /**
@@ -54,11 +68,15 @@ export function createMLClient(
   });
 
   async function checkHealth(): Promise<boolean> {
+    return (await getHealth()) !== null;
+  }
+
+  async function getHealth(): Promise<MLHealthPayload | null> {
     try {
-      await http.get('/health', { timeout: 1500 });
-      return true;
+      const res = await http.get<MLHealthPayload>('/health', { timeout: 1500 });
+      return res.data;
     } catch {
-      return false;
+      return null;
     }
   }
 
@@ -81,7 +99,7 @@ export function createMLClient(
     }
   }
 
-  return { post, checkHealth };
+  return { post, checkHealth, getHealth };
 }
 
 function toMLError(err: unknown, path: string): MLServiceError {
