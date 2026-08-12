@@ -121,6 +121,20 @@ export interface MlbRosterEntry {
   status?: { code?: string; description?: string };
 }
 
+// Coaching staff roster — /teams/{id}/roster?rosterType=coach returns the same
+// envelope but entries carry `job`/`jobId`/`title` instead of `position`.
+export interface MlbCoachRosterResponse {
+  roster?: MlbCoachRosterEntry[];
+}
+
+export interface MlbCoachRosterEntry {
+  person?: { id?: number; fullName?: string; link?: string };
+  jerseyNumber?: string;
+  job?: string; // "Manager", "Bench Coach", "Pitching Coach", ...
+  jobId?: string; // "MNGR", "BENCH", ...
+  title?: string; // Display title (same as job in practice)
+}
+
 // Per-player game logs via /people/{id}?hydrate=stats(group=[hitting,pitching],type=[gameLog])
 export interface MlbGameLogResponse {
   people?: Array<{
