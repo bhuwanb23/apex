@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { prisma } from './db/client.js';
+import { startScheduler, stopScheduler } from './jobs/scheduler.js';
 
 async function main(): Promise<void> {
   // Verify DB connectivity before accepting traffic
@@ -14,6 +15,9 @@ async function main(): Promise<void> {
     logger.info(`🚀 ${env.APP_NAME} API listening on http://localhost:${env.PORT}`);
     logger.info(`💚 Health check at http://localhost:${env.PORT}/api/health`);
     logger.info(`📚 Swagger docs at http://localhost:${env.PORT}/api-docs`);
+    // Background job scheduler (Phase 6) — cron jobs start after the server
+    // accepts traffic so a boot failure is caught before any job runs.
+    startScheduler();
   });
 
   // Boot failures (e.g. port already in use) fire asynchronously on the server
@@ -25,6 +29,7 @@ async function main(): Promise<void> {
   // Graceful shutdown
   const shutdown = (signal: string): void => {
     logger.info(`${signal} received — shutting down gracefully`);
+    stopScheduler();
     server.close(() => {
       prisma
         .$disconnect()

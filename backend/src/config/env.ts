@@ -28,6 +28,15 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
 
+  // Background jobs (Phase 6) — master switch + cron overrides
+  JOBS_ENABLED: z.enum(['true', 'false']).default('true').transform(v => v === 'true'),
+  // Default schedule per the Phase 6 plan; override via env for dev/testing
+  JOB_CRON_DATA_SYNC: z.string().default('0 0,6,12,18 * * *'), // every 6h
+  JOB_CRON_RISK_COMPUTE: z.string().default('0 1,7,13,19 * * *'), // 1h after sync
+  JOB_CRON_MOMENTUM: z.string().default('0 2 * * *'), // once daily
+  JOB_CRON_CLEANUP: z.string().default('0 3 * * *'), // once daily
+  JOB_CRON_HEALTH_CHECK: z.string().default('*/15 * * * *'), // every 15 min
+
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('debug'),
