@@ -21,6 +21,14 @@ import type {
 
 const MLB_SPORT_ID = 3;
 
+/**
+ * MLB has no game clock, so event times are derived from the at-bat sequence
+ * number (monotonic within a game). Scaling by ~180s per at-bat keeps the
+ * Cox-model durations and the replay-scrubber timeline in plausible game
+ * seconds (~3 hours for a 9-inning game) instead of raw at-bat indices.
+ */
+const SECONDS_PER_AT_BAT = 180;
+
 /** MLB team → TeamRecord (league → conference, per the spec). */
 export function transformTeam(raw: MlbTeam): TeamRecord {
   return {
@@ -112,7 +120,8 @@ export function transformPlay(
     eventNumber: raw.about.atBatIndex ?? 0,
     period: raw.about.inning ?? 0,
     clock: null,
-    eventTimeSeconds: null,
+    eventTimeSeconds:
+      raw.about.atBatIndex != null ? raw.about.atBatIndex * SECONDS_PER_AT_BAT : null,
     teamExternalId: null, // not carried per-event; caller can fill from the game
     playerExternalId: raw.matchup?.batter?.id != null ? String(raw.matchup.batter.id) : null,
     eventType: raw.result.event ?? 'unknown',
