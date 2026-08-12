@@ -3,6 +3,8 @@ import type { DateRange, SportFetcher } from '../fetcher.manager.js';
 import { toSeasonYear } from '../season.util.js';
 import type {
   MlbBoxscoreResponse,
+  MlbCoachRosterEntry,
+  MlbCoachRosterResponse,
   MlbGameLogResponse,
   MlbGameLogSplit,
   MlbPlay,
@@ -100,6 +102,21 @@ export class MlbFetcher implements SportFetcher {
     const params: Record<string, unknown> = {};
     if (season) params.season = toSeasonYear(season);
     const res = await this.client.get<MlbRosterResponse>(`/teams/${teamId}/roster`, { params });
+    return res.data.roster ?? [];
+  }
+
+  /**
+   * GET /teams/{teamId}/roster?rosterType=coach — the coaching staff
+   * (Manager, Bench Coach, pitching/hitting coaches). Entries carry
+   * `job`/`jobId`/`title` instead of `position`. Omit `season` for the
+   * current season's staff.
+   */
+  async fetchCoaches(teamId: string, season?: string): Promise<MlbCoachRosterEntry[]> {
+    const params: Record<string, unknown> = { rosterType: 'coach' };
+    if (season) params.season = toSeasonYear(season);
+    const res = await this.client.get<MlbCoachRosterResponse>(`/teams/${teamId}/roster`, {
+      params,
+    });
     return res.data.roster ?? [];
   }
 }
