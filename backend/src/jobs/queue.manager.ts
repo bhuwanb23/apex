@@ -159,25 +159,51 @@ export class QueueManager {
       orderBy: { startedAt: 'desc' },
       take: limit,
     });
-    return rows.map(row => ({
-      id: row.id,
-      jobName: row.jobName,
-      sport: row.sport,
-      status: row.status,
-      startedAt: row.startedAt,
-      completedAt: row.completedAt,
-      durationSeconds: row.durationSeconds,
-      recordsProcessed: row.recordsProcessed,
-      errors: (row.errors as unknown as string[]) ?? [],
-      summary: (row.summary as Record<string, unknown> | null) ?? {},
-      triggeredBy: row.triggeredBy,
-    }));
+    return rows.map(toHistoryEntry);
+  }
+
+  /** Latest runs across ALL jobs (newest first) — for the unfiltered history route. */
+  async getRecentHistory(limit = 20): Promise<JobHistoryEntry[]> {
+    const rows = await prisma.jobLogs.findMany({
+      orderBy: { startedAt: 'desc' },
+      take: limit,
+    });
+    return rows.map(toHistoryEntry);
   }
 
   /** Names of jobs with a run currently executing. */
   getRunningJobs(): string[] {
     return getInFlightJobs();
   }
+}
+
+/** One raw JobLogs row → decoded history entry (JSON columns unwrapped). */
+function toHistoryEntry(row: {
+  id: number;
+  jobName: string;
+  sport: string | null;
+  status: string;
+  startedAt: Date;
+  completedAt: Date | null;
+  durationSeconds: number | null;
+  recordsProcessed: number | null;
+  errors: unknown;
+  summary: unknown;
+  triggeredBy: string;
+}): JobHistoryEntry {
+  return {
+    id: row.id,
+    jobName: row.jobName,
+    sport: row.sport,
+    status: row.status,
+    startedAt: row.startedAt,
+    completedAt: row.completedAt,
+    durationSeconds: row.durationSeconds,
+    recordsProcessed: row.recordsProcessed,
+    errors: (row.errors as string[]) ?? [],
+    summary: (row.summary as Record<string, unknown> | null) ?? {},
+    triggeredBy: row.triggeredBy,
+  };
 }
 
 /** Shared instance — job modules and the app import this. */
