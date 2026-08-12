@@ -14,21 +14,30 @@ export const CACHE_TTL = {
   LONG: env.CACHE_TTL_LONG,
 } as const;
 
+// Phase 7 Step 3 (7.1) setup: default 1h TTL, 2-min expiry sweep, references
+// (not clones — callers must not mutate cached objects), auto-delete on expiry.
+export const DEFAULT_CACHE_TTL_SECONDS = 3600;
+
 export const memoryCache = new NodeCache({
-  stdTTL: CACHE_TTL.SHORT,
-  checkperiod: Math.max(60, Math.floor(CACHE_TTL.SHORT / 2)),
-  useClones: false, // perf: store references, not deep clones
+  stdTTL: DEFAULT_CACHE_TTL_SECONDS,
+  checkperiod: 120,
+  useClones: false,
+  deleteOnExpire: true,
 });
 
 export function cacheGet<T>(key: string): T | undefined {
   return memoryCache.get<T>(key);
 }
 
-export function cacheSet<T>(key: string, value: T, ttlSeconds: number = CACHE_TTL.SHORT): boolean {
+export function cacheSet<T>(
+  key: string,
+  value: T,
+  ttlSeconds: number = DEFAULT_CACHE_TTL_SECONDS
+): boolean {
   return memoryCache.set(key, value, ttlSeconds);
 }
 
-export function cacheDel(key: string): number {
+export function cacheDel(key: string | string[]): number {
   return memoryCache.del(key);
 }
 

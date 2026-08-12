@@ -4,9 +4,8 @@
  * are cached in memory for 1 hour (spec) — the LIKE scans are otherwise the
  * hot path on every keystroke.
  */
-import { cacheGet, cacheSet } from '../cache/memoryCache.js';
-import { IN_MEMORY_TTL } from '../utils/cache.config.js';
 import { prisma } from '../db/client.js';
+import { cacheSearchResults, getSearchResults } from './memory.cache.service.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { PaginatedMeta, SportAbbreviation } from '../types/shared.types.js';
 import type {
@@ -16,9 +15,6 @@ import type {
   SearchTeamResult,
 } from '../types/search.types.js';
 import { logger } from '../utils/logger.util.js';
-
-/** Player autocomplete results live for 1 hour (Phase 7 cache config). */
-const SEARCH_TTL_SECONDS = IN_MEMORY_TTL.SEARCH_RESULTS;
 
 function paginationMeta(page: number, limit: number, total: number): PaginatedMeta {
   const totalPages = Math.ceil(total / limit);
@@ -37,8 +33,7 @@ export async function searchPlayers(
   opts: { sport?: SportAbbreviation; limit: number }
 ): Promise<SearchPlayerResult[]> {
   const query = q.trim();
-  const cacheKey = `search_player_${query.toLowerCase()}_${opts.sport ?? 'all'}`;
-  const cached = cacheGet<SearchPlayerResult[]>(cacheKey);
+  const cached = getSearchResults<SearchPlayerResult>(query, opts.sport ?? 'all');
   if (cached) return cached;
 
   const players = await prisma.players.findMany({
@@ -69,7 +64,7 @@ export async function searchPlayers(
     injuryStatus: p.injuryStatus,
   }));
 
-  cacheSet(cacheKey, results, SEARCH_TTL_SECONDS);
+  cacheSearchResults(query, opts.sport ?? 'all', results);
   return results;
 }
 
