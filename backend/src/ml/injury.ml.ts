@@ -44,11 +44,17 @@ export interface InjuryRiskScore {
 
 export interface InjuryMLClient {
   computePlayerRisk(input: InjuryRiskInput): Promise<InjuryRiskScore>;
+  /** Batch variant — one HTTP call for up to ~25 players (risk job). */
+  computePlayerRiskBatch(inputs: InjuryRiskInput[]): Promise<InjuryRiskScore[]>;
 }
 
 export function createInjuryClient(client: MLClient = mlClient): InjuryMLClient {
   return {
     computePlayerRisk: input => client.post<InjuryRiskScore>('/injury/compute-risk', input),
+    computePlayerRiskBatch: inputs =>
+      client
+        .post<{ results: InjuryRiskScore[] }>('/injury/compute-risk/batch', { players: inputs })
+        .then(res => res.results),
   };
 }
 
