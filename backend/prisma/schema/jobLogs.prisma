@@ -1,0 +1,18 @@
+// Table 14 — JobLogs
+// Tracks every background job run so we can see run history and debug failures.
+model JobLogs {
+  id               Int      @id @default(autoincrement())
+  jobName          String // "data_sync" / "risk_compute" / "momentum" / "cleanup" / "health_check"
+  sport            String? // Which sport this run covered (null = all sports)
+  status           String // "running" / "completed" / "failed"
+  startedAt        DateTime @default(now())
+  completedAt      DateTime? // Null while the job is running
+  durationSeconds  Float? // How long the run took
+  recordsProcessed Int? // How many records were handled
+  errors           Json? // JSON array of error strings
+  summary          Json? // Job-specific stats
+  triggeredBy      String // "scheduler" / "manual" / "startup"
+
+  @@index([jobName, status]) // per-job history + failure filters
+  @@index([startedAt]) // retention pruning
+}
