@@ -30,6 +30,11 @@ const envSchema = z.object({
 
   // Background jobs (Phase 6) — master switch + cron overrides
   JOBS_ENABLED: z.enum(['true', 'false']).default('true').transform(v => v === 'true'),
+  // Run every job once immediately at boot (before their cron schedules)
+  RUN_JOBS_ON_STARTUP: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform(v => v === 'true'),
   // Default schedule per the Phase 6 plan; override via env for dev/testing
   JOB_CRON_DATA_SYNC: z.string().default('0 0,6,12,18 * * *'), // every 6h
   JOB_CRON_RISK_COMPUTE: z.string().default('0 1,7,13,19 * * *'), // 1h after sync
