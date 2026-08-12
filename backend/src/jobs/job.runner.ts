@@ -23,7 +23,8 @@ export interface JobContext {
 
 /** What a job reports back to the runner. */
 export interface JobRunResult {
-  status: 'completed' | 'failed';
+  /** 'partial' = some work succeeded, some failed (e.g. one sport down). */
+  status: 'completed' | 'partial' | 'failed';
   recordsProcessed?: number;
   errors?: string[];
   summary?: Record<string, unknown>;
@@ -162,7 +163,11 @@ export async function runJob(
         errorCount: errors.length,
         triggeredBy,
       },
-      result.status === 'completed' ? 'Job completed' : 'Job failed'
+      result.status === 'completed'
+        ? 'Job completed'
+        : result.status === 'partial'
+          ? 'Job partially completed'
+          : 'Job failed'
     );
 
     return {
@@ -181,4 +186,41 @@ export async function runJob(
   } finally {
     inFlight.delete(job.name);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Runner introspection (used by the queue manager + graceful shutdown)
+// ---------------------------------------------------------------------------
+
+/** Names of jobs with a run currently executing. */
+export function getInFlightJobs(): string[] {
+  return [...inFlight];
+}
+
+/** True when a run of the given job is currently executing. */
+export function isJobRunning(name: string): boolean {
+  return inFlight.has(name);
+}
+
+/**
+ * Resolves once every in-flight job has finished (or the timeout elapses).
+ * Used by graceful shutdown so a deployment restart doesn't cut a running
+ * job off mid-write and corrupt data.
+ */
+export function waitForJobs(timeoutMs = 15_000): Promise<void> {
+  return new Promise(resolve => {
+    if (inFlight.size === 0) {
+      resolve();
+      return;
+    }
+    const started = Date.now();
+    const timer = setInterval(() => {
+      if (inFlight.size === 0 || Date.now() - started >= timeoutMs) {
+        clearInterval(timer);
+        resolve();
+      }
+    }, 100);
+    // Never hold the process open just to poll for completions.
+    timer.unref();
+  });
 }
