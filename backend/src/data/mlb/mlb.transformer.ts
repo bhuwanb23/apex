@@ -1,4 +1,5 @@
 import type {
+  CoachRecord,
   GameRecord,
   PlayByPlayRecord,
   PlayerGameLogRecord,
@@ -7,6 +8,7 @@ import type {
 } from '../db.writer.js';
 import { computeWorkloads } from '../workload.util.js';
 import type {
+  MlbCoachRosterEntry,
   MlbGameLogSplit,
   MlbPlay,
   MlbRosterEntry,
@@ -65,6 +67,44 @@ export function transformPlayer(raw: MlbRosterEntry, externalTeamId?: string | n
     weightLbs: null,
     externalId: raw.person?.id != null ? String(raw.person.id) : '',
     externalTeamId: externalTeamId ?? null,
+  };
+}
+
+/** "Bench Coach" → "bench_coach"; Manager maps to head_coach. */
+function toCoachRole(job: string): string {
+  const normalized = job.trim().toLowerCase();
+  if (normalized.includes('manager')) return 'head_coach';
+  if (!normalized) return 'coach';
+  return normalized.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+/**
+ * Coaching-staff roster entry → CoachRecord. `externalTeamId` (the MLB team
+ * id the staff was fetched for) is passed by the sync coordinator — the
+ * rosterType=coach payload doesn't carry the team itself.
+ *
+ * Entries without a person id are dropped (null) — an empty externalId would
+ * collide on the Coaches @@unique([externalId, sportId]) and silently
+ * overwrite each other (last-writer-wins).
+ */
+export function transformCoach(
+  raw: MlbCoachRosterEntry,
+  externalTeamId?: string | null
+): CoachRecord | null {
+  if (raw.person?.id == null) return null;
+  const fullName = raw.person?.fullName ?? '';
+  const nameParts = fullName.trim().split(/\s+/);
+  const firstName = nameParts[0] ?? '';
+  const lastName = nameParts.slice(1).join(' ') || firstName;
+  return {
+    sportId: MLB_SPORT_ID,
+    name: fullName || firstName,
+    firstName,
+    lastName,
+    role: toCoachRole(raw.job ?? raw.title ?? ''),
+    externalId: raw.person?.id != null ? String(raw.person.id) : '',
+    externalTeamId: externalTeamId ?? null,
+    hireDate: null,
   };
 }
 
