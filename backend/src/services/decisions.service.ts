@@ -12,7 +12,8 @@
  * in DecisionEVScores (refreshCoachScorecard in Step 11 keeps them fresh).
  */
 import { format } from 'date-fns';
-import { CACHE_TTL, cacheGet, cacheSet } from '../cache/memoryCache.js';
+import { cacheGet, cacheSet } from '../cache/memoryCache.js';
+import { SQLITE_TTL } from '../utils/cache.config.js';
 import { prisma } from '../db/client.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { decisionsML } from '../ml/decisions.ml.js';
@@ -31,8 +32,8 @@ import { logger } from '../utils/logger.util.js';
 import { getSport } from './shared.service.js';
 
 const DAY_MS = 86_400_000;
-/** Leaderboard lives in memory for 24 hours (spec: cache TTL for scorecards). */
-const LEADERBOARD_TTL_SECONDS = CACHE_TTL.MEDIUM;
+/** Leaderboard lives in memory for 24 hours (Phase 7 cache config: COACH_LEADERBOARD). */
+const LEADERBOARD_TTL_SECONDS = SQLITE_TTL.COACH_LEADERBOARD;
 
 /** '2pt' → '2pt_conversion'; 'all' → undefined (no filter); anything else passes through. */
 function normalizeDecisionType(filter: string): string | undefined {

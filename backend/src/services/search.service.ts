@@ -5,6 +5,7 @@
  * hot path on every keystroke.
  */
 import { cacheGet, cacheSet } from '../cache/memoryCache.js';
+import { IN_MEMORY_TTL } from '../utils/cache.config.js';
 import { prisma } from '../db/client.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { PaginatedMeta, SportAbbreviation } from '../types/shared.types.js';
@@ -16,8 +17,8 @@ import type {
 } from '../types/search.types.js';
 import { logger } from '../utils/logger.util.js';
 
-/** Player autocomplete results live for 1 hour. */
-const SEARCH_TTL_SECONDS = 60 * 60;
+/** Player autocomplete results live for 1 hour (Phase 7 cache config). */
+const SEARCH_TTL_SECONDS = IN_MEMORY_TTL.SEARCH_RESULTS;
 
 function paginationMeta(page: number, limit: number, total: number): PaginatedMeta {
   const totalPages = Math.ceil(total / limit);
