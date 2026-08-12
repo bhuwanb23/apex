@@ -558,6 +558,7 @@ export async function writeCoachDecisions(decisions: CoachDecisionRecord[]): Pro
 const TTL_BY_DATA_TYPE: Record<string, number> = {
   teams: env.CACHE_TTL_LONG,
   players: env.CACHE_TTL_MEDIUM, // rosters share this (fetchRosters → fetchPlayers)
+  coaches: env.CACHE_TTL_MEDIUM, // staffs are as stable as rosters
   games: env.CACHE_TTL_SHORT,
   player_logs: env.CACHE_TTL_MEDIUM,
   play_by_play: env.CACHE_TTL_SHORT,
