@@ -73,7 +73,7 @@ const momentumJob: JobDefinition = {
         }
       }
       logger.info(
-        { windowGames: recentGames.length, pending, gamesProcessed },
+        { windowGames: recentGames.length, pendingGames: pending.length, gamesProcessed },
         'momentum: Task A complete'
       );
     } catch (err) {
@@ -114,15 +114,25 @@ const momentumJob: JobDefinition = {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         errors.push(`${sport.name}: ${message}`);
+        // Step 7.4 — keep the previous analysis and say when it was computed.
+        const prev = await prisma.momentumAnalysis.findUnique({
+          where: { sportId_season: { sportId: sport.id, season: sport.season } },
+          select: { computedAt: true },
+        });
         logger.warn(
-          { sport: sport.name, error: message },
+          {
+            sport: sport.name,
+            error: message,
+            lastComputedAt: prev?.computedAt.toISOString() ?? null,
+          },
           'momentum: season analysis failed — keeping previous analysis'
         );
       }
     }
 
     const recordsProcessed = gamesProcessed + sportsAnalyzed;
-    const status: JobRunResult['status'] = errors.length === 0 ? 'completed' : 'partial';
+    const status: JobRunResult['status'] =
+      errors.length === 0 ? 'completed' : recordsProcessed > 0 ? 'partial' : 'failed';
 
     return {
       status,

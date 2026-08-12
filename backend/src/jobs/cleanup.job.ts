@@ -62,8 +62,10 @@ const cleanupJob: JobDefinition = {
       await prisma.jobLogs.deleteMany({ where: { startedAt: { lt: jobLogCutoff } } })
     ).count;
 
-    // Task 4 — invalid cache metadata not retried for 7 days, plus any entry
-    // past its expiry (updateCacheMetadata upserts fresh data over the key).
+    // Task 4 — invalid cache metadata not retried for 7 days (per spec), plus
+    // any entry past its expiry: checkCacheValid treats expired rows as stale
+    // and updateCacheMetadata upserts fresh data over the same key, so both
+    // are dead weight once the TTL lapses.
     results.invalidCacheMetadata = (
       await prisma.cacheMetadata.deleteMany({
         where: {
@@ -75,7 +77,9 @@ const cleanupJob: JobDefinition = {
       })
     ).count;
 
-    // Task 5 — old timeout recommendations (recomputed live on demand).
+    // Task 5 — old timeout recommendations. The doc says "delete and schedule
+    // recomputation": deleting is enough here because getTimeoutRecommendation
+    // recomputes a missing scenario live via /timeout/recommend on demand.
     results.oldTimeoutRecommendations = (
       await prisma.timeoutRecommendations.deleteMany({
         where: { computedAt: { lt: scoreCutoff } },
