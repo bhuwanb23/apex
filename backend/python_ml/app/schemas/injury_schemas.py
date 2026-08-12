@@ -39,3 +39,27 @@ class InjuryRiskResponse(BaseModel):
     windowEnd: str | None = Field(default=None, description="End of the recent analysis window")
     dataPointsUsed: int = Field(default=0, description="Number of games in the baseline window")
     computedAt: str = Field(description="ISO timestamp")
+
+
+class InjuryRiskBatchRequest(BaseModel):
+    """Many players in one call — the risk job sends 25-player batches."""
+
+    players: list[InjuryRiskRequest] = Field(description="Players to evaluate")
+
+
+class InjuryRiskBatchResponse(BaseModel):
+    """One result per input player, in the same order (never fails wholesale)."""
+
+    results: list[InjuryRiskResponse] = Field(description="One result per input player")
+
+
+class InjuryRiskBatchFailure(BaseModel):
+    """Synthesized result for a player whose compute raised — the batch as a
+    whole still returns 200 so one bad player can't sink the other 24."""
+
+    playerId: str
+    zone: str = "insufficient_data"
+    riskScore: float | None = None
+    explanation: str
+    computedAt: str
+    dataPointsUsed: int = 0

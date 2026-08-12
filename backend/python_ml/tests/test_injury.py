@@ -92,6 +92,34 @@ def test_compute_risk_validates_bad_payload():
     assert res.status_code == 422
 
 
+def test_compute_risk_batch_endpoint():
+    """Batch returns one result per player, in order; a bad player doesn't sink the batch."""
+    spike = [log(d, minutesPlayed=m) for d, m in zip((21, 19, 17, 15, 13, 11, 9, 7), (30, 31, 29, 30, 31, 29, 30, 31))]
+    spike += [log(3, minutesPlayed=46), log(1, minutesPlayed=44)]
+    normal = [log(d, minutesPlayed=30) for d in (21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1)]
+    res = client.post(
+        "/injury/compute-risk/batch",
+        json={
+            "players": [
+                {"playerId": "a1", "playerName": "Ace", "sport": "NBA", "gameLogs": spike},
+                {"playerId": "b2", "sport": "NBA", "gameLogs": normal},
+                {"playerId": "c3", "sport": "NBA", "gameLogs": [log(1, minutesPlayed=30)]},
+            ]
+        },
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert [r["playerId"] for r in body["results"]] == ["a1", "b2", "c3"]
+    assert body["results"][0]["zone"] in ("yellow", "red")
+    assert body["results"][1]["zone"] == "green"
+    assert body["results"][2]["zone"] == "insufficient_data"
+
+
+def test_compute_risk_batch_validates_bad_payload():
+    res = client.post("/injury/compute-risk/batch", json={})
+    assert res.status_code == 422
+
+
 # --- Model unit tests (spec example numbers) -----------------------------------
 
 
