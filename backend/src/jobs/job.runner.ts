@@ -5,8 +5,11 @@
  *   - a JobLogs row is always written (running → completed/failed) so we have
  *     run history and can debug failures
  *   - the job's own result (record counts, errors, summary) is persisted
- *   - the wrapper NEVER throws: a failing job is captured in the log, so one
- *     job can never crash the server or stop the next scheduled run
+ *   - the wrapper NEVER throws and never rejects: a failing job — or even a
+ *     failing JobLogs write — is captured in the logs, so one job can never
+ *     crash the server or stop the next scheduled run
+ *   - only one run of a job executes at a time (overlapping ticks/manual
+ *     triggers are skipped, not queued)
  */
 import { logger } from '../config/logger.js';
 import { prisma } from '../db/client.js';
@@ -54,10 +57,14 @@ export interface JobLogEntry {
   triggeredBy: string;
 }
 
+/** Job names with a run in flight — prevents overlapping executions. */
+const inFlight = new Set<string>();
+
 /**
  * Runs a job under the runner's guarantees and returns the final log entry.
  * Manual triggers pass `triggeredBy: 'manual'`; the scheduler passes
- * 'scheduler'; startup hooks pass 'startup'.
+ * 'scheduler'; startup hooks pass 'startup'. Skips the run (returns a
+ * synthetic entry) if the same job is already executing.
  */
 export async function runJob(
   job: JobDefinition,
@@ -66,67 +73,112 @@ export async function runJob(
   const triggeredBy = opts.triggeredBy ?? 'manual';
   const startedAt = new Date();
 
-  const log = await prisma.jobLogs.create({
-    data: {
+  // Overlap guard: a scheduled tick firing while the previous run is still
+  // going (or a manual trigger racing the scheduler) is dropped, not queued.
+  if (inFlight.has(job.name)) {
+    logger.warn({ job: job.name }, 'Job run skipped — a run is already in flight');
+    return {
+      id: 0,
       jobName: job.name,
-      sport: opts.sport ?? null,
-      status: 'running',
+      status: 'skipped',
       startedAt,
+      completedAt: startedAt,
+      durationSeconds: 0,
+      recordsProcessed: 0,
+      errors: [],
+      summary: { skipped: 'previous run still in flight' },
+      sport: opts.sport ?? null,
       triggeredBy,
-    },
-  });
-
-  let result: JobRunResult;
-  try {
-    result = await job.run({ sport: opts.sport });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    logger.error({ job: job.name, error: message }, 'Job run threw — captured as failure');
-    result = { status: 'failed', errors: [message], summary: { uncaughtError: message } };
+    };
   }
+  inFlight.add(job.name);
 
-  const completedAt = new Date();
-  const durationSeconds = (completedAt.getTime() - startedAt.getTime()) / 1000;
-  const errors = result.errors ?? (result.status === 'failed' ? ['Job reported failure'] : []);
+  try {
+    // Everything below is guarded: even a JobLogs write failure must not
+    // reject — the caller fires jobs with `void runJob(...)`, so any
+    // rejection would be an unhandled rejection and could crash the process.
+    let logId: number | null = null;
+    try {
+      const log = await prisma.jobLogs.create({
+        data: {
+          jobName: job.name,
+          sport: opts.sport ?? null,
+          status: 'running',
+          startedAt,
+          triggeredBy,
+        },
+      });
+      logId = log.id;
+    } catch (err) {
+      logger.error(
+        { job: job.name, error: err instanceof Error ? err.message : String(err) },
+        'JobLogs create failed — continuing without a log row'
+      );
+    }
 
-  const updated = await prisma.jobLogs.update({
-    where: { id: log.id },
-    data: {
+    let result: JobRunResult;
+    try {
+      result = await job.run({ sport: opts.sport });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error({ job: job.name, error: message }, 'Job run threw — captured as failure');
+      result = { status: 'failed', errors: [message], summary: { uncaughtError: message } };
+    }
+
+    const completedAt = new Date();
+    const durationSeconds = (completedAt.getTime() - startedAt.getTime()) / 1000;
+    const errors = result.errors ?? (result.status === 'failed' ? ['Job reported failure'] : []);
+
+    if (logId !== null) {
+      try {
+        await prisma.jobLogs.update({
+          where: { id: logId },
+          data: {
+            status: result.status,
+            completedAt,
+            durationSeconds,
+            recordsProcessed: result.recordsProcessed ?? 0,
+            errors:
+              errors.length > 0
+                ? (errors as unknown as Prisma.InputJsonValue)
+                : Prisma.DbNull,
+            summary: (result.summary ?? {}) as unknown as Prisma.InputJsonValue,
+          },
+        });
+      } catch (err) {
+        logger.error(
+          { job: job.name, logId, error: err instanceof Error ? err.message : String(err) },
+          'JobLogs update failed — result not persisted'
+        );
+      }
+    }
+
+    logger.info(
+      {
+        job: job.name,
+        status: result.status,
+        durationSeconds: Math.round(durationSeconds * 100) / 100,
+        recordsProcessed: result.recordsProcessed ?? 0,
+        errorCount: errors.length,
+        triggeredBy,
+      },
+      result.status === 'completed' ? 'Job completed' : 'Job failed'
+    );
+
+    return {
+      id: logId ?? 0,
+      jobName: job.name,
       status: result.status,
+      startedAt,
       completedAt,
       durationSeconds,
       recordsProcessed: result.recordsProcessed ?? 0,
-      errors:
-        errors.length > 0
-          ? (errors as unknown as Prisma.InputJsonValue)
-          : Prisma.DbNull,
-      summary: (result.summary ?? {}) as unknown as Prisma.InputJsonValue,
-    },
-  });
-
-  logger.info(
-    {
-      job: job.name,
-      status: result.status,
-      durationSeconds: Math.round(durationSeconds * 100) / 100,
-      recordsProcessed: updated.recordsProcessed,
-      errorCount: errors.length,
+      errors,
+      summary: result.summary ?? {},
+      sport: opts.sport ?? null,
       triggeredBy,
-    },
-    result.status === 'completed' ? 'Job completed' : 'Job failed'
-  );
-
-  return {
-    id: updated.id,
-    jobName: updated.jobName,
-    status: updated.status,
-    startedAt: updated.startedAt,
-    completedAt: updated.completedAt,
-    durationSeconds: updated.durationSeconds,
-    recordsProcessed: updated.recordsProcessed,
-    errors,
-    summary: (updated.summary ?? {}) as Record<string, unknown>,
-    sport: updated.sport,
-    triggeredBy: updated.triggeredBy,
-  };
+    };
+  } finally {
+    inFlight.delete(job.name);
+  }
 }

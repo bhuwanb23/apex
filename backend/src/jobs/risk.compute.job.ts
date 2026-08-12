@@ -16,6 +16,9 @@ import { queueManager } from './queue.manager.js';
 /** Player evaluation concurrency — bounded so we don't stampede the ML box. */
 const CONCURRENCY = 8;
 
+/** Cap on per-run error strings — an ML outage must not bloat the JobLogs row. */
+const MAX_ERRORS = 50;
+
 const riskComputeJob: JobDefinition = {
   name: 'risk_compute',
   schedule: env.JOB_CRON_RISK_COMPUTE, // every 6h — 1:00/7:00/13:00/19:00
@@ -56,15 +59,22 @@ const riskComputeJob: JobDefinition = {
             else insufficient += 1;
             recordsProcessed += 1;
           } catch (err) {
-            errors.push(
-              `${sport.name}:player${player.id}: ${err instanceof Error ? err.message : String(err)}`
-            );
+            if (errors.length < MAX_ERRORS) {
+              errors.push(
+                `${sport.name}:player${player.id}: ${err instanceof Error ? err.message : String(err)}`
+              );
+            }
           }
         }
       };
 
       await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
-      perSport[sport.name] = { players: players.length, scored, insufficient };
+      perSport[sport.name] = {
+        players: players.length,
+        scored,
+        insufficient,
+        ...(errors.length >= MAX_ERRORS ? { errorCapReached: true } : {}),
+      };
       logger.info(
         { sport: sport.name, players: players.length, scored, insufficient },
         'risk_compute: sport pass complete'

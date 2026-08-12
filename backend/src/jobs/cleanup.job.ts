@@ -4,6 +4,8 @@
  * Daily database hygiene so tables don't grow forever:
  *   - delete expired CacheMetadata rows (fresh data replaces them anyway)
  *   - delete expired StoryLogs rows (stale stories regenerate on demand)
+ *   - flip JobLogs rows stuck in 'running' for > 24h to 'failed' (the process
+ *     likely died mid-run and never wrote a completion)
  *   - prune JobLogs older than the retention window (default 30 days)
  *   - flush the in-memory response cache (clears any leaked entries; TTL
  *     expiry would have removed most of it already)
@@ -17,14 +19,17 @@ import { queueManager } from './queue.manager.js';
 
 /** Keep this many days of job history. */
 const JOB_LOG_RETENTION_DAYS = 30;
+/** A 'running' row older than this is presumed crashed. */
+const STALE_RUNNING_MS = 24 * 60 * 60 * 1000;
 
 const cleanupJob: JobDefinition = {
   name: 'cleanup',
   schedule: env.JOB_CRON_CLEANUP, // once daily — 3:00 AM
-  description: 'Database housekeeping — expired metadata, story logs, old job logs, memory cache',
+  description: 'Database housekeeping — expired metadata, story logs, stale jobs, old job logs, memory cache',
   run: async () => {
     const now = new Date();
     const retentionCutoff = new Date(now.getTime() - JOB_LOG_RETENTION_DAYS * 86_400_000);
+    const staleCutoff = new Date(now.getTime() - STALE_RUNNING_MS);
 
     const results: Record<string, number> = {};
 
@@ -36,6 +41,19 @@ const cleanupJob: JobDefinition = {
       await prisma.storyLogs.deleteMany({ where: { expiresAt: { lt: now } } })
     ).count;
 
+    // Resolve rows a crashed run left dangling — history must never show a
+    // forever-'running' job.
+    results.staleRunningJobs = (
+      await prisma.jobLogs.updateMany({
+        where: { status: 'running', startedAt: { lt: staleCutoff } },
+        data: {
+          status: 'failed',
+          completedAt: now,
+          summary: { note: 'Marked failed by cleanup — process likely crashed mid-run' },
+        },
+      })
+    ).count;
+
     results.oldJobLogs = (
       await prisma.jobLogs.deleteMany({ where: { startedAt: { lt: retentionCutoff } } })
     ).count;
@@ -44,7 +62,10 @@ const cleanupJob: JobDefinition = {
     results.memoryCacheFlushed = 1;
 
     const recordsProcessed =
-      results.expiredCacheMetadata + results.expiredStoryLogs + results.oldJobLogs;
+      results.expiredCacheMetadata +
+      results.expiredStoryLogs +
+      results.staleRunningJobs +
+      results.oldJobLogs;
 
     logger.info({ results }, 'cleanup: housekeeping complete');
     return { status: 'completed', recordsProcessed, summary: results };
