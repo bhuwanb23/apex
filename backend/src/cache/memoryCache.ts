@@ -32,6 +32,13 @@ export function cacheDel(key: string): number {
   return memoryCache.del(key);
 }
 
+/** Deletes every cached entry whose key starts with `prefix` (e.g. all analysis responses for a sport). */
+export function cacheDelPrefix(prefix: string): number {
+  const keys = memoryCache.keys().filter(k => k.startsWith(prefix));
+  if (keys.length === 0) return 0;
+  return memoryCache.del(keys);
+}
+
 export function cacheFlush(): void {
   memoryCache.flushAll();
 }
