@@ -220,7 +220,10 @@ export function waitForJobs(timeoutMs = 15_000): Promise<void> {
         resolve();
       }
     }, 100);
-    // Never hold the process open just to poll for completions.
-    timer.unref();
+    // Deliberately NOT unref'd: the caller is awaiting this promise, and a
+    // pending await does not keep the event loop alive. If everything else
+    // (cron tasks, job I/O) has already drained, the loop would exit before
+    // this tick fires and the drain would never resolve. The timeout bound
+    // already caps how long we can hold the process open.
   });
 }

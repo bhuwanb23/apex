@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { prisma } from '../db/client.js';
 import { mlClient } from '../ml/ml.client.js';
-import { getMLServiceStatus } from '../ml/availability.js';
+import { getMLServiceStatus, recordMLHealthCheck } from '../ml/availability.js';
 import { queueManager } from '../jobs/queue.manager.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { sendSuccess } from '../utils/response.util.js';
@@ -155,6 +155,10 @@ export async function triggerJob(req: Request, res: Response): Promise<void> {
 /** GET /api/jobs/ml-health — live Python health + model readiness. */
 export async function getMLHealth(_req: Request, res: Response): Promise<void> {
   const payload = await mlClient.getHealth();
+  // A successful live probe is itself a health check: keep the in-memory flag
+  // in step with reality so `available` and `consecutiveFailures` can never
+  // disagree in this response (e.g. Python just came back).
+  if (payload !== null) recordMLHealthCheck(true);
   const { available, lastCheckedAt, consecutiveFailures } = getMLServiceStatus();
 
   sendSuccess(res, {

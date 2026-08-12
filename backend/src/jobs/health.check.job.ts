@@ -39,7 +39,9 @@ const healthCheckJob: JobDefinition = {
       logger.info('ML service healthy');
     } else {
       logger.warn('ML service unreachable');
-      if (consecutiveFailures >= ALERT_AFTER_CONSECUTIVE_FAILURES) {
+      // Spec: alert on the 3rd consecutive failure (the transition), not on
+      // every later failure — a sustained outage is reported once, not spammed.
+      if (consecutiveFailures === ALERT_AFTER_CONSECUTIVE_FAILURES) {
         logger.error(
           { consecutiveFailures },
           'ML service has been down for 30+ minutes — alerts would fire in production'
