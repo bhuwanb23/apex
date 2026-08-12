@@ -8,12 +8,14 @@ import { logger } from '../config/logger.js';
 import { prisma } from '../db/client.js';
 import {
   writeCoachDecisions,
+  writeCoaches,
   writeGames,
   writePlayByPlay,
   writePlayerGameLogs,
   writePlayers,
   writeTeams,
   type CoachDecisionRecord,
+  type CoachRecord,
   type GameRecord,
   type PlayByPlayRecord,
   type PlayerGameLogRecord,
@@ -38,6 +40,7 @@ import {
 import { extractCoachDecisions } from './nfl/nfl.decisions.js';
 import type { EspnEvent, EspnTeam, NflPlay } from './nfl/nfl.types.js';
 import {
+  transformCoach as transformMlbCoach,
   transformGame as transformMlbGame,
   transformPlayer as transformMlbPlayer,
   transformPlayerGameLogs as transformMlbGameLogs,
@@ -45,6 +48,7 @@ import {
   transformTeam as transformMlbTeam,
 } from './mlb/mlb.transformer.js';
 import type {
+  MlbCoachRosterEntry,
   MlbGameLogSplit,
   MlbPlay,
   MlbRosterEntry,
@@ -58,6 +62,7 @@ import type {
 
 export interface SyncCounts {
   teams: number;
+  coaches: number;
   players: number;
   games: number;
   gameLogs: number;
@@ -91,12 +96,14 @@ export interface SyncOptions {
 /** Per-sport transform dispatch. Capability flags avoid error spam for known gaps. */
 interface SportSyncAdapter {
   transformTeams(data: unknown): TeamRecord[];
+  transformCoaches(data: unknown, teamExternalId?: string | null): CoachRecord[];
   transformPlayers(data: unknown, teamExternalId?: string | null): PlayerRecord[];
   transformGames(data: unknown): GameRecord[];
   transformGameLogs(data: unknown, playerExternalId: string): PlayerGameLogRecord[];
   transformPlays(data: unknown): PlayByPlayRecord[];
   transformDecisions?(data: unknown): CoachDecisionRecord[];
   /** Known gaps (logged once, not counted as sync errors). */
+  coachesPending: boolean;
   playersPending: boolean;
   gameLogsPending: boolean;
   playByPlayPending: boolean;
@@ -106,12 +113,16 @@ interface SportSyncAdapter {
 const ADAPTERS: Record<string, SportSyncAdapter> = {
   nba: {
     transformTeams: data => (data as NBATeam[]).map(transformNbaTeam),
+    transformCoaches: () => {
+      throw new Error('NBA coaches pending a data source');
+    },
     transformPlayers: data => (data as NBAPlayer[]).map(transformNbaPlayer),
     transformGames: data => (data as NBAGame[]).map(transformNbaGame),
     transformGameLogs: data => transformNbaGameLogs(data as NBAStats[]),
     transformPlays: () => {
       throw new Error('NBA play-by-play is unavailable on the BallDontLie free tier');
     },
+    coachesPending: true,
     playersPending: false,
     gameLogsPending: false,
     playByPlayPending: true,
@@ -119,6 +130,9 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
   },
   nfl: {
     transformTeams: data => (data as EspnTeam[]).map(transformNflTeam),
+    transformCoaches: () => {
+      throw new Error('NFL coaches pending the Python microservice');
+    },
     transformPlayers: () => {
       throw new Error('NFL players pending the Python microservice');
     },
@@ -128,6 +142,7 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
     },
     transformPlays: data => transformNflPlays(data as NflPlay[]),
     transformDecisions: data => extractCoachDecisions(data as NflPlay[]).map(transformNflDecision),
+    coachesPending: true,
     playersPending: true,
     gameLogsPending: true,
     playByPlayPending: false,
@@ -135,12 +150,17 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
   },
   mlb: {
     transformTeams: data => (data as MlbTeam[]).map(transformMlbTeam),
+    transformCoaches: (data, teamExternalId) =>
+      (data as MlbCoachRosterEntry[])
+        .map(coach => transformMlbCoach(coach, teamExternalId))
+        .filter((c): c is NonNullable<typeof c> => c != null),
     transformPlayers: (data, teamExternalId) =>
       (data as MlbRosterEntry[]).map(roster => transformMlbPlayer(roster, teamExternalId)),
     transformGames: data => (data as MlbScheduleGame[]).map(transformMlbGame),
     transformGameLogs: (data, playerExternalId) =>
       transformMlbGameLogs(data as MlbGameLogSplit[], playerExternalId),
     transformPlays: data => transformMlbPlays(data as MlbPlay[]),
+    coachesPending: false,
     playersPending: false,
     gameLogsPending: false,
     playByPlayPending: false,
@@ -149,7 +169,15 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
 };
 
 function emptyCounts(): SyncCounts {
-  return { teams: 0, players: 0, games: 0, gameLogs: 0, playByPlay: 0, decisions: 0 };
+  return {
+    teams: 0,
+    coaches: 0,
+    players: 0,
+    games: 0,
+    gameLogs: 0,
+    playByPlay: 0,
+    decisions: 0,
+  };
 }
 
 /** Wraps a stage so a failure logs and never breaks the rest of the sync. */
@@ -226,9 +254,28 @@ export async function syncSport(
     if (!stage.ok) errors.push(`teams: ${stage.error}`);
   }
 
-  // Stage 2 — coaches. No live coach source yet (Python microservice planned);
-  // log the gap once instead of failing the sync.
-  logger.info({ sport }, 'Coach ingestion not wired yet (Python microservice) — skipping');
+  // Stage 2 — coaches (MLB: rosterType=coach per team; other sports have no
+  // live coach source yet — logged as a known gap, not a sync error).
+  {
+    const stage = await runStage('coaches', async () => {
+      if (adapter.coachesPending) {
+        logger.info({ sport }, 'Coach ingestion not wired for this sport — skipping');
+        return;
+      }
+      const teams = await prisma.teams.findMany({
+        where: { sportId },
+        select: { externalId: true },
+      });
+      let written = 0;
+      for (const team of teams) {
+        const res = await manager.fetchCoaches(sport, team.externalId);
+        if (res.cached || res.data == null) continue;
+        written += await writeCoaches(adapter.transformCoaches(res.data, team.externalId), sportId);
+      }
+      counts.coaches = written;
+    });
+    if (!stage.ok) errors.push(`coaches: ${stage.error}`);
+  }
 
   // Stage 3 — players. NBA fetches the whole league; MLB fetches per-team
   // rosters (the roster payload needs the team id the coordinator knows).
@@ -327,6 +374,7 @@ export async function syncSport(
   const durationSeconds = (completedAt.getTime() - startedAt.getTime()) / 1000;
   const totalWritten =
     counts.teams +
+    counts.coaches +
     counts.players +
     counts.games +
     counts.gameLogs +
