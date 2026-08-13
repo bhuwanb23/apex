@@ -14,7 +14,6 @@
  * rejects, so the un-awaited promise can't crash the process.
  */
 import type { Request, Response } from 'express';
-import { z } from 'zod';
 import { prisma } from '../db/client.js';
 import { mlClient } from '../ml/ml.client.js';
 import { getMLServiceStatus, recordMLHealthCheck } from '../ml/availability.js';
@@ -22,18 +21,7 @@ import { queueManager } from '../jobs/queue.manager.js';
 import { assertAdminKey } from '../middleware/admin.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { sendSuccess } from '../utils/response.util.js';
-import { validateBody, validateQuery } from '../utils/validator.util.js';
 import { logger } from '../utils/logger.util.js';
-
-const historyQuerySchema = z.object({
-  jobName: z.string().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(10),
-});
-
-const triggerBodySchema = z.object({
-  jobName: z.string().min(1),
-  sport: z.string().min(1).optional(),
-});
 
 const sleep = (ms: number): Promise<void> =>
   new Promise(resolve => {
@@ -96,7 +84,10 @@ export async function getJobsStatus(_req: Request, res: Response): Promise<void>
 
 /** GET /api/jobs/history — recent runs, optionally filtered by jobName. */
 export async function getJobsHistory(req: Request, res: Response): Promise<void> {
-  const { jobName, limit } = validateQuery(historyQuerySchema, req);
+  const { jobName, limit } = req.validatedQuery as {
+    jobName?: string;
+    limit: number;
+  };
   const runs = jobName
     ? await queueManager.getJobHistory(jobName, limit)
     : await queueManager.getRecentHistory(limit);
@@ -106,7 +97,10 @@ export async function getJobsHistory(req: Request, res: Response): Promise<void>
 /** POST /api/jobs/trigger — run any registered job now (background, 202). */
 export async function triggerJob(req: Request, res: Response): Promise<void> {
   assertAdminKey(req);
-  const { jobName, sport } = validateBody(triggerBodySchema, req);
+  const { jobName, sport } = req.validatedBody as {
+    jobName: string;
+    sport?: string;
+  };
 
   const job = queueManager.get(jobName);
   if (!job) throw ApiError.notFound(`Unknown job: ${jobName} — cannot trigger`);
