@@ -23,7 +23,8 @@ export function sendError(
   res: Response,
   message: string,
   statusCode = 500,
-  errorCode = 'INTERNAL_ERROR'
+  errorCode = 'INTERNAL_ERROR',
+  extra?: Record<string, unknown>
 ): Response {
   return res.status(statusCode).json({
     success: false,
@@ -31,6 +32,7 @@ export function sendError(
     message,
     errorCode,
     timestamp: new Date().toISOString(),
+    ...(extra ?? {}),
   });
 }
 

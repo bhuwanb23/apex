@@ -4,6 +4,7 @@ import { logger } from '../config/logger.js';
 import { prisma } from '../db/client.js';
 import { updateCacheMetadata } from './db.writer.js';
 import { isCacheValid } from '../services/sqlite.cache.service.js';
+import { ExternalAPIError } from '../utils/errors.js';
 import { MlbFetcher } from './mlb/mlb.fetcher.js';
 import { NbaFetcher } from './nba/nba.fetcher.js';
 import { NflFetcher } from './nfl/nfl.fetcher.js';
@@ -130,6 +131,37 @@ function isRetryableError(err: unknown): boolean {
     return status === 429 || status >= 500; // rate-limited or server error — retry
   }
   return false; // e.g. "Not implemented" shells — fail fast
+}
+
+/**
+ * Phase 8 Step 3.3 — wraps a failed fetch (raw axios error or plain Error)
+ * into the classified ExternalAPIError so the error contract holds end to end.
+ * Already-classified errors pass through untouched.
+ */
+function toExternalAPIError(err: unknown, apiName: string): ExternalAPIError {
+  if (err instanceof ExternalAPIError) return err;
+  if (axios.isAxiosError(err)) {
+    const apiStatus = err.response?.status;
+    const retryAfterHeader = err.response?.headers?.['retry-after'];
+    const retryAfter = retryAfterHeader ? Number(retryAfterHeader) : undefined;
+    if (apiStatus === 429) {
+      return new ExternalAPIError('External API rate limit exceeded', {
+        apiName,
+        apiStatus,
+        retryAfter: Number.isFinite(retryAfter) ? retryAfter : 60,
+      });
+    }
+    if (apiStatus !== undefined) {
+      return new ExternalAPIError(`External API ${apiName} returned HTTP ${apiStatus}`, {
+        apiName,
+        apiStatus,
+        retryAfter: Number.isFinite(retryAfter) ? retryAfter : undefined,
+      });
+    }
+    return new ExternalAPIError(`External API ${apiName} is unreachable`, { apiName });
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  return new ExternalAPIError(`External API ${apiName} request failed: ${message}`, { apiName });
 }
 
 /**
@@ -263,7 +295,12 @@ export class FetcherManager {
         // Metadata write failed (e.g. DB down) — never mask the original fetch error.
       }
       logger.error({ sport: opts.sport, cacheKey: opts.cacheKey, error: message }, 'Fetch failed');
-      throw err;
+      // Phase 8 Step 3.3/4.2 — surface a classified ExternalAPIError instead of
+      // the raw axios error so callers (and the global error middleware) can
+      // respond with the standard error contract. Data already synced into
+      // SQLite remains queryable regardless (handleAPIFallback in
+      // middleware/fallback.handlers.ts serves it when the API is down).
+      throw toExternalAPIError(err, opts.apiName);
     }
   }
 
