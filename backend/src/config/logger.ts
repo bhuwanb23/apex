@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from 'node:fs';
-import { destination, multistream, pino } from 'pino';
+import { destination, multistream, pino, transport } from 'pino';
+import type { Logger, LogFn } from 'pino';
 import { env } from './env.js';
 
 /**
@@ -42,14 +43,13 @@ const httpFile = destination({ dest: 'logs/http.log', sync: true });
 const exceptionsFile = destination({ dest: 'logs/exceptions.log', sync: true });
 const rejectionsFile = destination({ dest: 'logs/rejections.log', sync: true });
 
-export type AqxLogger = pino.Logger & {
-  /** Request-level logging (custom level, between info and debug). */
-  http: pino.LogFn;
-  /** Most verbose level (below trace). */
-  silly: pino.LogFn;
+export type AqxLogger = Logger<'http' | 'silly', boolean> & {
   /** Alias for pino's fatal — matches the plan's `critical` level name. */
-  critical: pino.LogFn;
+  critical: LogFn;
 };
+
+/** The custom levels every AqxLogger instance carries (http + silly). */
+export type AqxCustomLevels = 'http' | 'silly';
 
 const base = pino(
   {
@@ -65,7 +65,7 @@ const base = pino(
       stream:
         env.NODE_ENV === 'production'
           ? destination(1) // JSON to stdout in production
-          : pino.transport({
+          : transport({
               target: 'pino-pretty',
               options: {
                 colorize: true,
