@@ -2,8 +2,9 @@
 //   npx tsx scripts/sqlite-cache-step4-test.ts
 //
 // Exercises every function of src/services/sqlite.cache.service.ts against the
-// real SQLite DB using scratch keys (prefix "__step4_test:") that are deleted
-// at the end, so it never touches production cache rows.
+// real SQLite DB using scratch keys (prefix "__step4_test:" and the scratch
+// season "__step4_test_season") that are deleted at the end, so it never
+// touches production cache rows.
 import { prisma } from '../src/db/client.js';
 import {
   getCacheInfo,
@@ -24,6 +25,9 @@ import {
 import { CacheDataType, SQLITE_TTL } from '../src/utils/cache.config.js';
 
 const PREFIX = '__step4_test:';
+// Scratch season for sport-scoped helpers — keeps leaderboard/momentum rows
+// out of the real season's namespace so they can never look like real data.
+const SCRATCH_SEASON = '__step4_test_season';
 const SCRATCH_PLAYER_ID = 999_999_999; // guaranteed non-existent — no real rows clobbered
 
 let passed = 0;
@@ -125,30 +129,30 @@ async function main(): Promise<void> {
   await markCacheInvalid(`risk:${SCRATCH_PLAYER_ID}`);
   check('isRiskScoreFresh → false after invalidate', (await isRiskScoreFresh(SCRATCH_PLAYER_ID)) === false);
 
-  // Leaderboard + momentum (sport-scoped, also proves sportId resolution)
+  // Leaderboard + momentum (sport-scoped with a SCRATCH season, also proves
+  // sportId resolution — 'NBA' resolves to the real sport id in the Sports table)
   const sport = await prisma.sports.findFirst({ select: { id: true, abbreviation: true, season: true } });
   if (sport) {
-    const season = sport.season;
-    check('isLeaderboardFresh → false initially', (await isLeaderboardFresh('NBA', season, '4th_down')) === false);
-    await markLeaderboardComputed('NBA', season, '4th_down');
-    const lb = await getCacheInfo(`leaderboard:NBA:${season}:4th_down`);
+    check('isLeaderboardFresh → false initially', (await isLeaderboardFresh('NBA', SCRATCH_SEASON, '4th_down')) === false);
+    await markLeaderboardComputed('NBA', SCRATCH_SEASON, '4th_down');
+    const lb = await getCacheInfo(`leaderboard:NBA:${SCRATCH_SEASON}:4th_down`);
     check('markLeaderboardComputed → row for leaderboard:{sport}:{season}:{type}', lb != null);
     check(
       'leaderboard row: dataType COACH_LEADERBOARD + 24h TTL',
       lb != null && lb.dataType === CacheDataType.COACH_LEADERBOARD && Math.abs(lb.expiresAt.getTime() - (lb.cachedAt.getTime() + SQLITE_TTL.COACH_LEADERBOARD * 1000)) < 2000
     );
     check('leaderboard row resolves sportId via lowercase lookup', lb?.sportId === sport.id);
-    check('isLeaderboardFresh → true after mark', await isLeaderboardFresh('NBA', season, '4th_down'));
+    check('isLeaderboardFresh → true after mark', await isLeaderboardFresh('NBA', SCRATCH_SEASON, '4th_down'));
 
-    check('isMomentumFresh → false initially', (await isMomentumFresh('NBA', season)) === false);
-    await markMomentumComputed('NBA', season);
-    const mo = await getCacheInfo(`momentum:season:NBA:${season}`);
+    check('isMomentumFresh → false initially', (await isMomentumFresh('NBA', SCRATCH_SEASON)) === false);
+    await markMomentumComputed('NBA', SCRATCH_SEASON);
+    const mo = await getCacheInfo(`momentum:season:NBA:${SCRATCH_SEASON}`);
     check('markMomentumComputed → row for momentum:season:{sport}:{season}', mo != null);
     check(
       'momentum row: dataType MOMENTUM_ANALYSIS + 24h TTL + sportId',
       mo != null && mo.dataType === CacheDataType.MOMENTUM_ANALYSIS && Math.abs(mo.expiresAt.getTime() - (mo.cachedAt.getTime() + SQLITE_TTL.MOMENTUM_ANALYSIS * 1000)) < 2000 && mo.sportId === sport.id
     );
-    check('isMomentumFresh → true after mark', await isMomentumFresh('NBA', season));
+    check('isMomentumFresh → true after mark', await isMomentumFresh('NBA', SCRATCH_SEASON));
   } else {
     console.log('  (no sports in DB — skipping leaderboard/momentum checks)');
   }
@@ -172,6 +176,7 @@ async function main(): Promise<void> {
 
   // --- cleanup: delete every scratch row created above ---
   await prisma.cacheMetadata.deleteMany({ where: { cacheKey: { startsWith: PREFIX } } });
+  await prisma.cacheMetadata.deleteMany({ where: { cacheKey: { contains: SCRATCH_SEASON } } });
   await prisma.cacheMetadata.deleteMany({ where: { cacheKey: `risk:${SCRATCH_PLAYER_ID}` } });
   await prisma.storyLogs.deleteMany({ where: { storyKey: { startsWith: PREFIX } } });
 
