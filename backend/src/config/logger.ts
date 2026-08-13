@@ -42,14 +42,14 @@ const httpFile = destination({ dest: 'logs/http.log', sync: true });
 const exceptionsFile = destination({ dest: 'logs/exceptions.log', sync: true });
 const rejectionsFile = destination({ dest: 'logs/rejections.log', sync: true });
 
-export interface AqxLogger extends pino.Logger {
+export type AqxLogger = pino.Logger & {
   /** Request-level logging (custom level, between info and debug). */
   http: pino.LogFn;
   /** Most verbose level (below trace). */
   silly: pino.LogFn;
   /** Alias for pino's fatal — matches the plan's `critical` level name. */
   critical: pino.LogFn;
-}
+};
 
 const base = pino(
   {
