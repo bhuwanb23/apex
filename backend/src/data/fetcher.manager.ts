@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { prisma } from '../db/client.js';
 import { updateCacheMetadata } from './db.writer.js';
+import { isCacheValid } from '../services/sqlite.cache.service.js';
 import { MlbFetcher } from './mlb/mlb.fetcher.js';
 import { NbaFetcher } from './nba/nba.fetcher.js';
 import { NflFetcher } from './nfl/nfl.fetcher.js';
@@ -172,11 +173,11 @@ export class FetcherManager {
 
   // -- Cache helpers ---------------------------------------------------------
 
-  /** True when a fresh CacheMetadata entry exists (data is in SQLite, skip fetch). */
+  /** True when a fresh CacheMetadata entry exists (data is in SQLite, skip fetch).
+   *  Delegates to the SQLite cache layer (Phase 7 Step 4) — the single place
+   *  the freshness rule lives. */
   async checkCacheValid(cacheKey: string): Promise<boolean> {
-    const entry = await prisma.cacheMetadata.findUnique({ where: { cacheKey } });
-    if (!entry || !entry.isValid) return false;
-    return entry.expiresAt.getTime() > Date.now();
+    return isCacheValid(cacheKey);
   }
 
   private async resolveSportId(sport: string): Promise<number | null> {
