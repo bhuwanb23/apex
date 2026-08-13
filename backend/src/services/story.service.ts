@@ -22,6 +22,7 @@ import type { SportAbbreviation, UserRole } from '../types/shared.types.js';
 import type { StoryViewResponse } from '../types/story.types.js';
 import { storyKey as buildStoryKey } from '../utils/cache.keys.js';
 import { logger } from '../utils/logger.util.js';
+import { buildFallbackMeta } from '../middleware/fallback.handlers.js';
 import { getCoachDecisions, getCoachLeaderboard } from './decisions.service.js';
 import { getPlayerRisk } from './injury.service.js';
 import type { PlayerRiskProfile } from '../types/injury.types.js';
@@ -275,7 +276,10 @@ export async function getStory(
       if (existing) {
         return {
           ...storyFromRow(existing),
-          warning: 'ML service unavailable — showing the previous story, which may be stale',
+          ...buildFallbackMeta(
+            existing.createdAt,
+            'ML service unavailable — showing the previous story, which may be stale'
+          ),
         };
       }
       throw new ApiError(502, 'ML service unavailable and no cached story exists');

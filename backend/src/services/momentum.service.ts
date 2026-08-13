@@ -37,6 +37,7 @@ import type {
 } from '../types/momentum.types.js';
 import type { SportAbbreviation } from '../types/shared.types.js';
 import { logger } from '../utils/logger.util.js';
+import { buildFallbackMeta } from '../middleware/fallback.handlers.js';
 import { getSport } from './shared.service.js';
 
 /** A stored analysis is "fresh" for 24 hours (CACHE_TTL_MEDIUM). */
@@ -269,6 +270,11 @@ function toAnalysisResponse(
   };
 }
 
+/** Fallback metadata → the same response shape toAnalysisResponse produces. */
+function withFallbackMeta<T extends object>(resp: T, meta: ReturnType<typeof buildFallbackMeta>): T & ReturnType<typeof buildFallbackMeta> {
+  return { ...resp, ...meta };
+}
+
 /** GET /api/momentum/analysis/:sport — cached Cox findings (24h freshness). */
 export async function getMomentumAnalysis(
   sport: SportAbbreviation,
@@ -300,31 +306,37 @@ export async function getMomentumAnalysis(
     if (err instanceof MLServiceUnavailableError) {
       logger.warn({ sport, error: err.message }, 'Momentum ML unavailable — serving stale analysis');
       if (row) {
-        return toAnalysisResponse(
-          sport,
-          resolvedSeason,
-          { ...row, computedAt: row.computedAt.toISOString() },
-          'ML service unavailable — showing last computed analysis, which may be stale'
+        return withFallbackMeta(
+          toAnalysisResponse(
+            sport,
+            resolvedSeason,
+            { ...row, computedAt: row.computedAt.toISOString() },
+            'ML service unavailable — showing last computed analysis, which may be stale'
+          ),
+          buildFallbackMeta(row.computedAt)
         );
       }
-      return toAnalysisResponse(
-        sport,
-        resolvedSeason,
-        {
-          hazardCoefficient: null,
-          pValue: null,
-          confidenceIntervalLow: null,
-          confidenceIntervalHigh: null,
-          isSignificant: false,
-          effectSize: null,
-          gamesAnalyzed: 0,
-          playsAnalyzed: 0,
-          verdictLabel: 'insufficient_data',
-          plainExplanation: 'ML service unavailable and no cached analysis exists.',
-          shortExplanation: 'ML service unavailable and no cached analysis exists.',
-          computedAt: new Date().toISOString(),
-        },
-        'ML service unavailable — no cached analysis available'
+      return withFallbackMeta(
+        toAnalysisResponse(
+          sport,
+          resolvedSeason,
+          {
+            hazardCoefficient: null,
+            pValue: null,
+            confidenceIntervalLow: null,
+            confidenceIntervalHigh: null,
+            isSignificant: false,
+            effectSize: null,
+            gamesAnalyzed: 0,
+            playsAnalyzed: 0,
+            verdictLabel: 'insufficient_data',
+            plainExplanation: 'ML service unavailable and no cached analysis exists.',
+            shortExplanation: 'ML service unavailable and no cached analysis exists.',
+            computedAt: new Date().toISOString(),
+          },
+          'ML service unavailable — no cached analysis available'
+        ),
+        buildFallbackMeta(null)
       );
     }
     if (err instanceof MLServiceError) {
@@ -481,7 +493,7 @@ export async function getGameMomentum(gameId: number): Promise<GameMomentumRespo
           longestStreak: { length: 0, teamName: null, startTime: null },
         },
         computedAt: new Date().toISOString(),
-        warning: 'ML service unavailable — timeline could not be computed',
+        ...buildFallbackMeta(null, 'ML service unavailable — timeline could not be computed'),
       };
     }
     if (err instanceof MLServiceError) {

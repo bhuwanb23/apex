@@ -14,6 +14,7 @@ import { logger } from '../utils/logger.util.js';
 import { prisma } from '../db/client.js';
 import { env } from '../config/env.js';
 import { ApiError } from '../middleware/error.middleware.js';
+import { buildFallbackMeta } from '../middleware/fallback.handlers.js';
 import { MLServiceError, MLServiceUnavailableError } from '../ml/ml.client.js';
 import { injuryML, type InjuryGameLogInput, type InjuryRiskScore } from '../ml/injury.ml.js';
 import { getSport } from './shared.service.js';
@@ -325,7 +326,10 @@ export async function getPlayerRisk(
           ...profileFromRow(player, latest),
           gameLogSummary: await loadGameLogSummary(playerId),
           history: await loadHistory(playerId, 60, 10),
-          warning: 'ML service unavailable — showing last computed score, which may be stale',
+          ...buildFallbackMeta(
+            latest.computedAt,
+            'ML service unavailable — showing last computed score, which may be stale'
+          ),
         };
       }
       return {
@@ -336,7 +340,7 @@ export async function getPlayerRisk(
         ),
         gameLogSummary: { gamesLast7Days: 0, gamesLast21Days: 0, avgMinutesLast21Days: null },
         history: await loadHistory(playerId, 60, 10),
-        warning: 'ML service unavailable — no cached score available',
+        ...buildFallbackMeta(null, 'ML service unavailable — no cached score available'),
       };
     }
     if (err instanceof MLServiceError) {
