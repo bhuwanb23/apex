@@ -5,6 +5,10 @@ import {
   getPlayerRiskHistory,
   getTeamRisk,
 } from '../controllers/injury.controller.js';
+import {
+  alertsCacheMiddleware,
+  riskScoreCacheMiddleware,
+} from '../middleware/cache.middleware.js';
 
 export const injuryRouter = Router();
 
@@ -35,7 +39,7 @@ export const injuryRouter = Router();
  *       404:
  *         description: Player not found
  */
-injuryRouter.get('/player/:playerId', getPlayerRisk);
+injuryRouter.get('/player/:playerId', riskScoreCacheMiddleware, getPlayerRisk);
 
 /**
  * @openapi
@@ -87,7 +91,7 @@ injuryRouter.get('/team/:teamId', getTeamRisk);
  *       200:
  *         description: List of alerts
  */
-injuryRouter.get('/alerts/:sport', getLeagueAlerts);
+injuryRouter.get('/alerts/:sport', alertsCacheMiddleware, getLeagueAlerts);
 
 /**
  * @openapi

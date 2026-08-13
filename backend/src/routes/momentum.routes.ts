@@ -5,6 +5,7 @@ import {
   getSportComparison,
   getTimeoutRecommendation,
 } from '../controllers/momentum.controller.js';
+import { momentumCacheMiddleware } from '../middleware/cache.middleware.js';
 
 export const momentumRouter = Router();
 
@@ -33,7 +34,7 @@ export const momentumRouter = Router();
  *       404:
  *         description: Sport not found
  */
-momentumRouter.get('/analysis/:sport', getMomentumAnalysis);
+momentumRouter.get('/analysis/:sport', momentumCacheMiddleware, getMomentumAnalysis);
 
 /**
  * @openapi

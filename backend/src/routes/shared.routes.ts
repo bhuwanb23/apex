@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { listPlayers, listSports, listTeams } from '../controllers/shared.controller.js';
+import { teamListCacheMiddleware } from '../middleware/cache.middleware.js';
 
 export const sharedRouter = Router();
 
@@ -64,7 +65,7 @@ sharedRouter.get('/', listSports);
  *       404:
  *         description: Sport not found
  */
-sharedRouter.get('/:sport/teams', listTeams);
+sharedRouter.get('/:sport/teams', teamListCacheMiddleware, listTeams);
 
 /**
  * @openapi

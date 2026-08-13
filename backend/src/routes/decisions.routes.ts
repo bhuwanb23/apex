@@ -5,6 +5,7 @@ import {
   getGameDecisions,
   listDecisionTypes,
 } from '../controllers/decisions.controller.js';
+import { leaderboardCacheMiddleware } from '../middleware/cache.middleware.js';
 
 export const decisionsRouter = Router();
 
@@ -55,7 +56,7 @@ export const decisionsRouter = Router();
  *       404:
  *         description: Sport not found
  */
-decisionsRouter.get('/coaches/:sport', getCoachLeaderboard);
+decisionsRouter.get('/coaches/:sport', leaderboardCacheMiddleware, getCoachLeaderboard);
 
 /**
  * @openapi

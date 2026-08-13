@@ -5,6 +5,10 @@ import {
   searchPlayers,
   searchTeams,
 } from '../controllers/search.controller.js';
+import {
+  searchPlayersCacheMiddleware,
+  searchTeamsCacheMiddleware,
+} from '../middleware/cache.middleware.js';
 
 export const searchRouter = Router();
 
@@ -38,7 +42,7 @@ export const searchRouter = Router();
  *       400:
  *         description: Query too short
  */
-searchRouter.get('/players', searchPlayers);
+searchRouter.get('/players', searchPlayersCacheMiddleware, searchPlayers);
 
 /**
  * @openapi
@@ -62,7 +66,7 @@ searchRouter.get('/players', searchPlayers);
  *       200:
  *         description: Matching teams
  */
-searchRouter.get('/teams', searchTeams);
+searchRouter.get('/teams', searchTeamsCacheMiddleware, searchTeams);
 
 /**
  * @openapi
