@@ -72,6 +72,44 @@ type CacheLayer = 'memory' | 'sqlite' | 'both';
 type CacheStatus = 'HIT' | 'MISS' | 'STALE';
 type CacheLayerHeader = 'memory' | 'sqlite' | 'fresh';
 
+// ---------------------------------------------------------------------------
+// Performance tracking (Step 9 — /api/cache/stats performance block)
+// ---------------------------------------------------------------------------
+// Rolling sums of response times split by how the response was produced:
+// 'hit'  = served from a cache (HIT or STALE — fast)
+// 'miss' = freshly computed (controller ran — slower)
+// Background refreshes are excluded (they run off-request).
+
+let hitSamples = 0;
+let hitTotalMs = 0;
+let missSamples = 0;
+let missTotalMs = 0;
+
+function recordTiming(kind: 'hit' | 'miss', ms: number): void {
+  if (kind === 'hit') {
+    hitSamples += 1;
+    hitTotalMs += ms;
+  } else {
+    missSamples += 1;
+    missTotalMs += ms;
+  }
+}
+
+/** Average response time for cache-served vs freshly-computed responses. */
+export function getCachePerformanceStats(): {
+  avgHitResponseMs: number;
+  avgMissResponseMs: number;
+  hitSamples: number;
+  missSamples: number;
+} {
+  return {
+    avgHitResponseMs: hitSamples > 0 ? Math.round(hitTotalMs / hitSamples) : 0,
+    avgMissResponseMs: missSamples > 0 ? Math.round(missTotalMs / missSamples) : 0,
+    hitSamples,
+    missSamples,
+  };
+}
+
 interface CachedResponse {
   status: number;
   body: unknown;
@@ -173,7 +211,53 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
     skipRead,
   } = options;
 
+  // Dog-pile prevention (Step 10, Test 7): one in-flight computation per memory
+  // key. When a miss arrives while another request is already computing the
+  // same key, it awaits the leader instead of recomputing — N simultaneous
+  // misses trigger exactly ONE controller run.
+  const inFlight = new Map<string, Promise<void>>();
+
+  /**
+   * Serves a cached entry from memory with the correct headers (HIT, or STALE
+   * + background refresh past staleThreshold). Evicts + returns false for
+   * degraded entries so the caller falls through to a fresh compute. Shared by
+   * the direct read path and single-flight followers.
+   */
+  function serveFromMemory(
+    req: Request,
+    res: Response,
+    memKey: string,
+    entry: CachedResponse,
+    startedAt: number
+  ): boolean {
+    if (isDegraded(entry.body)) {
+      // Should never happen (degraded responses aren't cached) — evict any
+      // legacy entry so the next request recomputes live.
+      cacheDel(memKey);
+      return false;
+    }
+    // node-cache's getTtl returns the ABSOLUTE expiry timestamp in ms (not the
+    // remaining TTL) — subtract now for the remaining time.
+    const expiryMs = memoryCache.getTtl(memKey) ?? 0;
+    const remainingMs = Math.max(0, expiryMs - Date.now());
+    // Fractional age drives the stale check; the header rounds for display.
+    const age = Math.max(0, ttl - remainingMs / 1000);
+    const ttlRemaining = Math.max(0, Math.round(remainingMs / 1000));
+    recordTiming('hit', Date.now() - startedAt);
+    if (!allowStale || age <= staleThreshold) {
+      setCacheHeaders(res, 'HIT', 'memory', Math.round(age), ttlRemaining);
+      res.status(entry.status).json(entry.body);
+    } else {
+      // Stale — serve now, refresh in the background.
+      setCacheHeaders(res, 'STALE', 'memory', Math.round(age), ttlRemaining);
+      res.status(entry.status).json(entry.body);
+      scheduleBackgroundRefresh(req);
+    }
+    return true;
+  }
+
   return (req, res, next) => {
+    const startedAt = Date.now();
     void (async () => {
       try {
         if (req.method !== 'GET') {
@@ -184,7 +268,8 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
         // result is as fresh as a normal miss, so the SQLite registry is
         // re-validated too (otherwise a stale-while-revalidate cycle would
         // leave the registry expired and the data would be served stale again
-        // after the next server restart).
+        // after the next server restart). Timing is not recorded — this runs
+        // off-request and would skew the performance stats.
         if (req.header('x-cache-refresh') === '1') {
           const bypassKey = keyBuilder(req);
           runController(req, res, next, {
@@ -193,6 +278,8 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
             status: 'MISS',
             layer: 'fresh',
             markRegistry: cacheLayer !== 'memory' && !sqliteFresh && dataType != null,
+            startedAt,
+            recordTiming: false,
           });
           return;
         }
@@ -203,30 +290,8 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
         // Step 2 — memory layer first.
         if (!skipRead?.(req)) {
           const entry = cacheGet<CachedResponse>(memKey);
-          if (entry) {
-            if (isDegraded(entry.body)) {
-              // Should never happen (degraded responses aren't cached) — evict
-              // any legacy entry so the next request recomputes live.
-              cacheDel(memKey);
-            } else {
-              // node-cache's getTtl returns the ABSOLUTE expiry timestamp in ms
-              // (not the remaining TTL) — subtract now for the remaining time.
-              const expiryMs = memoryCache.getTtl(memKey) ?? 0;
-              const remainingMs = Math.max(0, expiryMs - Date.now());
-              // Fractional age drives the stale check; the header rounds for display.
-              const age = Math.max(0, ttl - remainingMs / 1000);
-              const ttlRemaining = Math.max(0, Math.round(remainingMs / 1000));
-              if (!allowStale || age <= staleThreshold) {
-                setCacheHeaders(res, 'HIT', 'memory', Math.round(age), ttlRemaining);
-                res.status(entry.status).json(entry.body);
-                return;
-              }
-              // Stale — serve now, refresh in the background.
-              setCacheHeaders(res, 'STALE', 'memory', Math.round(age), ttlRemaining);
-              res.status(entry.status).json(entry.body);
-              scheduleBackgroundRefresh(req);
-              return;
-            }
+          if (entry && serveFromMemory(req, res, memKey, entry, startedAt)) {
+            return;
           }
 
           // Step 3 — SQLite registry (sqlite / both layers).
@@ -250,6 +315,7 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
                 age,
                 ttlRemaining,
                 markRegistry: false,
+                startedAt,
               });
               return;
             }
@@ -272,6 +338,7 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
                   age,
                   ttlRemaining,
                   markRegistry: false,
+                  startedAt,
                 });
                 scheduleBackgroundRefresh(req);
                 return;
@@ -281,12 +348,42 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
         }
 
         // Step 5/6 — miss: run the controller, intercept and cache the response.
+        // Dog-pile prevention: if another request is already computing this
+        // key, wait for it and serve its result instead of computing again.
+        const inflight = inFlight.get(memKey);
+        if (inflight) {
+          await inflight;
+          const entry = cacheGet<CachedResponse>(memKey);
+          if (entry && serveFromMemory(req, res, memKey, entry, startedAt)) {
+            return; // follower served the leader's result (counted as a hit)
+          }
+          // Leader produced nothing cacheable (error/degraded) — compute below.
+        }
+
+        let resolveInflight: () => void = () => {};
+        const inflightPromise = new Promise<void>(resolve => {
+          resolveInflight = resolve;
+        });
+        inFlight.set(memKey, inflightPromise);
+        let settled = false;
+        const settle = (): void => {
+          if (settled) return;
+          settled = true;
+          inFlight.delete(memKey);
+          resolveInflight();
+        };
+        // Resolve when the response is fully sent (finish) or the connection
+        // dropped (close) — both cover error paths where res.json never fires.
+        res.on('finish', settle);
+        res.on('close', settle);
+
         runController(req, res, next, {
           memKey,
           registryKey: base,
           status: 'MISS',
           layer: 'fresh',
           markRegistry: cacheLayer !== 'memory' && !sqliteFresh && dataType != null,
+          startedAt,
         });
       } catch (err) {
         // A cache-layer failure must never break the request — fall through to
@@ -313,10 +410,17 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
       age?: number;
       ttlRemaining?: number;
       markRegistry: boolean;
+      /** When the request started — drives the performance stats. */
+      startedAt: number;
+      /** False for background refreshes (off-request, would skew stats). */
+      recordTiming?: boolean;
     }
   ): void {
     const originalJson = res.json.bind(res);
     res.json = ((body: unknown) => {
+      if (meta.recordTiming !== false) {
+        recordTiming(meta.status === 'MISS' ? 'miss' : 'hit', Date.now() - meta.startedAt);
+      }
       if (res.statusCode >= 200 && res.statusCode < 400 && !isDegraded(body)) {
         setCacheHeaders(res, meta.status, meta.layer, meta.age ?? 0, meta.ttlRemaining ?? ttl);
         cacheSet(meta.memKey, { status: res.statusCode, body }, ttl);
