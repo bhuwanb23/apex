@@ -201,16 +201,20 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
               // any legacy entry so the next request recomputes live.
               cacheDel(memKey);
             } else {
-              const remainingMs = memoryCache.getTtl(memKey) ?? 0;
-              const age = Math.max(0, Math.round(ttl - remainingMs / 1000));
+              // node-cache's getTtl returns the ABSOLUTE expiry timestamp in ms
+              // (not the remaining TTL) — subtract now for the remaining time.
+              const expiryMs = memoryCache.getTtl(memKey) ?? 0;
+              const remainingMs = Math.max(0, expiryMs - Date.now());
+              // Fractional age drives the stale check; the header rounds for display.
+              const age = Math.max(0, ttl - remainingMs / 1000);
               const ttlRemaining = Math.max(0, Math.round(remainingMs / 1000));
               if (!allowStale || age <= staleThreshold) {
-                setCacheHeaders(res, 'HIT', 'memory', age, ttlRemaining);
+                setCacheHeaders(res, 'HIT', 'memory', Math.round(age), ttlRemaining);
                 res.status(entry.status).json(entry.body);
                 return;
               }
               // Stale — serve now, refresh in the background.
-              setCacheHeaders(res, 'STALE', 'memory', age, ttlRemaining);
+              setCacheHeaders(res, 'STALE', 'memory', Math.round(age), ttlRemaining);
               res.status(entry.status).json(entry.body);
               scheduleBackgroundRefresh(req);
               return;
