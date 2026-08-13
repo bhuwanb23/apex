@@ -6,6 +6,7 @@
 
 import { logger } from '../config/logger.js';
 import { prisma } from '../db/client.js';
+import { logSyncComplete, logSyncSection, logSyncStart } from './fetch.logger.js';
 import {
   writeCoachDecisions,
   writeCoaches,
@@ -91,6 +92,8 @@ export interface SyncOptions {
   maxGameLogPlayers?: number;
   /** Restrict games to a date range (used by syncRecentGames). */
   dateRange?: DateRange;
+  /** Who triggered the sync (scheduler / manual) — appears in the Step 9.4 log. */
+  triggeredBy?: string;
 }
 
 /** Per-sport transform dispatch. Capability flags avoid error spam for known gaps. */
@@ -184,13 +187,14 @@ function emptyCounts(): SyncCounts {
 async function runStage<T>(
   name: string,
   fn: () => Promise<T>
-): Promise<{ ok: boolean; value?: T; error?: string }> {
+): Promise<{ ok: boolean; value?: T; error?: string; durationMs: number }> {
+  const started = Date.now();
   try {
-    return { ok: true, value: await fn() };
+    return { ok: true, value: await fn(), durationMs: Date.now() - started };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.warn({ stage: name, error: message }, 'Sync stage failed — continuing');
-    return { ok: false, error: message };
+    return { ok: false, error: message, durationMs: Date.now() - started };
   }
 }
 
@@ -242,7 +246,20 @@ export async function syncSport(
     };
   }
 
-  logger.info({ sport, season: resolvedSeason }, 'Starting full data sync');
+  // Step 9.4a — sync start.
+  logSyncStart({
+    sport,
+    sections: [
+      'teams',
+      'coaches',
+      'players',
+      'games',
+      'playByPlay',
+      'playerGameLogs',
+      'coachDecisions',
+    ],
+    triggeredBy: options.triggeredBy ?? 'scheduler',
+  });
 
   // Stage 1 — teams (must exist before players/games).
   {
@@ -252,6 +269,13 @@ export async function syncSport(
       counts.teams = await writeTeams(adapter.transformTeams(res.data), sportId);
     });
     if (!stage.ok) errors.push(`teams: ${stage.error}`);
+    logSyncSection({
+      section: 'teams',
+      recordCount: counts.teams,
+      durationMs: stage.durationMs,
+      upsertCount: counts.teams,
+      skipCount: 0,
+    });
   }
 
   // Stage 2 — coaches (MLB: rosterType=coach per team; other sports have no
@@ -275,6 +299,13 @@ export async function syncSport(
       counts.coaches = written;
     });
     if (!stage.ok) errors.push(`coaches: ${stage.error}`);
+    logSyncSection({
+      section: 'coaches',
+      recordCount: counts.coaches,
+      durationMs: stage.durationMs,
+      upsertCount: counts.coaches,
+      skipCount: 0,
+    });
   }
 
   // Stage 3 — players. NBA fetches the whole league; MLB fetches per-team
@@ -302,6 +333,13 @@ export async function syncSport(
       counts.players = written;
     });
     if (!stage.ok) errors.push(`players: ${stage.error}`);
+    logSyncSection({
+      section: 'players',
+      recordCount: counts.players,
+      durationMs: stage.durationMs,
+      upsertCount: counts.players,
+      skipCount: 0,
+    });
   }
 
   // Stage 4 — games (schedule).
@@ -312,6 +350,13 @@ export async function syncSport(
       counts.games = await writeGames(adapter.transformGames(res.data), sportId);
     });
     if (!stage.ok) errors.push(`games: ${stage.error}`);
+    logSyncSection({
+      section: 'games',
+      recordCount: counts.games,
+      durationMs: stage.durationMs,
+      upsertCount: counts.games,
+      skipCount: 0,
+    });
   }
 
   // Stage 5 — per completed game: play-by-play + player game logs.
@@ -334,6 +379,13 @@ export async function syncSport(
       counts.playByPlay = written;
     });
     if (!stage.ok) errors.push(`playByPlay: ${stage.error}`);
+    logSyncSection({
+      section: 'playByPlay',
+      recordCount: counts.playByPlay,
+      durationMs: stage.durationMs,
+      upsertCount: counts.playByPlay,
+      skipCount: 0,
+    });
 
     const logsStage = await runStage('playerGameLogs', async () => {
       if (adapter.gameLogsPending) return; // NFL logs pending Python — known gap
@@ -353,6 +405,13 @@ export async function syncSport(
       counts.gameLogs = written;
     });
     if (!logsStage.ok) errors.push(`playerGameLogs: ${logsStage.error}`);
+    logSyncSection({
+      section: 'playerGameLogs',
+      recordCount: counts.gameLogs,
+      durationMs: logsStage.durationMs,
+      upsertCount: counts.gameLogs,
+      skipCount: 0,
+    });
   }
 
   // Stage 6 — coach decisions (NFL only). Per the spec these are extracted
@@ -377,12 +436,21 @@ export async function syncSport(
       if (rows.length === 0) return;
       // Reconstruct NflPlay[] from the preserved raw payloads.
       const plays = rows
-        .filter(r => r.rawEvent != null && typeof r.rawEvent === 'object' && !Array.isArray(r.rawEvent))
+        .filter(
+          r => r.rawEvent != null && typeof r.rawEvent === 'object' && !Array.isArray(r.rawEvent)
+        )
         .map(r => r.rawEvent as unknown as NflPlay);
       const records = adapter.transformDecisions!(plays);
       counts.decisions = await writeCoachDecisions(records);
     });
     if (!stage.ok) errors.push(`coachDecisions: ${stage.error}`);
+    logSyncSection({
+      section: 'coachDecisions',
+      recordCount: counts.decisions,
+      durationMs: stage.durationMs,
+      upsertCount: counts.decisions,
+      skipCount: 0,
+    });
   }
 
   // Cache metadata is refreshed inside every manager fetch (updateCacheMetadata),
@@ -401,10 +469,15 @@ export async function syncSport(
   const status: SyncResult['status'] =
     errors.length === 0 ? 'complete' : totalWritten > 0 ? 'partial' : 'failed';
 
-  logger.info(
-    { sport, season: resolvedSeason, status, counts, errors: errors.length, durationSeconds },
-    'Full sync finished'
-  );
+  // Step 9.4c — sync completion.
+  logSyncComplete({
+    sport,
+    totalDurationMs: Math.round(durationSeconds * 1000),
+    recordsProcessed: totalWritten,
+    errors: errors.length,
+    nextSyncAt: null,
+    status,
+  });
 
   return {
     sport,

@@ -9,6 +9,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '../utils/errors.js';
+import { categoryForError, trackError } from '../utils/error.tracker.js';
 import { sendError } from '../utils/response.util.js';
 
 /**
@@ -53,6 +54,13 @@ export class ApiError extends AppError {
 
 /** Catch-all for unmatched routes (Step 4.4). Points judges at Swagger docs. */
 export const notFound: RequestHandler = (req, res) => {
+  // Step 10.1 — 404s feed the notFoundErrors bucket.
+  trackError('notFoundErrors', {
+    message: 'Route not found',
+    errorCode: 'ROUTE_NOT_FOUND',
+    statusCode: 404,
+    url: req.originalUrl,
+  });
   sendError(res, 'Route not found', 404, 'ROUTE_NOT_FOUND', {
     suggestion: 'See /api/docs for available endpoints',
   });
@@ -222,6 +230,14 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   } else {
     logger.error(logContext, classified.message);
   }
+
+  // Step 10.1 — feed the running error counters (per category, per hour).
+  trackError(categoryForError(classified), {
+    message: classified.message,
+    errorCode: classified.errorCode,
+    statusCode: classified.statusCode,
+    url: req.originalUrl,
+  });
 
   // Step 3+4 — safe response from the error's own toResponse() guarantee.
   res.status(classified.statusCode).json(classified.toResponse());

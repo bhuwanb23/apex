@@ -257,6 +257,15 @@ export const cacheInvalidateBodySchema = z.object({
   all: z.boolean().optional(),
 });
 
+/** GET /api/logs/recent (Step 11.2) — level at-or-more-severe filter, context,
+ *  since timestamp and line limit. */
+export const logsQuerySchema = z.object({
+  level: z.enum(['silly', 'trace', 'debug', 'http', 'info', 'warn', 'error', 'fatal']).optional(),
+  context: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  since: z.string().min(1).optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Step 5.2 — middleware factory
 // ---------------------------------------------------------------------------

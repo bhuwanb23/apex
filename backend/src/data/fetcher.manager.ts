@@ -5,6 +5,14 @@ import { prisma } from '../db/client.js';
 import { updateCacheMetadata } from './db.writer.js';
 import { isCacheValid } from '../services/sqlite.cache.service.js';
 import { ExternalAPIError } from '../utils/errors.js';
+import {
+  classifyFetchError,
+  logFetchFailure,
+  logFetchStart,
+  logFetchSuccess,
+  logSyncComplete,
+  logSyncStart,
+} from './fetch.logger.js';
 import { MlbFetcher } from './mlb/mlb.fetcher.js';
 import { NbaFetcher } from './nba/nba.fetcher.js';
 import { NflFetcher } from './nfl/nfl.fetcher.js';
@@ -241,14 +249,26 @@ export class FetcherManager {
     apiName: string;
     dataType: string;
     cacheKey: string;
+    endpoint: string;
+    params?: Record<string, unknown>;
     entityId?: string;
     season?: string;
     fetchFn: () => Promise<T>;
   }): Promise<FetchResult<T>> {
     const started = Date.now();
 
-    // 1. Cache check — fresh data already in SQLite? Skip the external API.
-    if (await this.checkCacheValid(opts.cacheKey)) {
+    // Step 9.1 — cache check, then log the fetch start.
+    const cacheValid = await this.checkCacheValid(opts.cacheKey);
+    logFetchStart({
+      apiName: opts.apiName,
+      endpoint: opts.endpoint,
+      params: opts.params,
+      cacheCheck: true,
+      cacheResult: cacheValid ? 'hit' : 'miss',
+    });
+
+    // 1. Cache hit — fresh data already in SQLite? Skip the external API.
+    if (cacheValid) {
       logger.debug({ cacheKey: opts.cacheKey }, 'Cache hit — skipping external fetch');
       return {
         data: null,
@@ -261,7 +281,10 @@ export class FetcherManager {
     // 2. Pace the external API, then fetch (with retries)
     await this.rateLimiter.acquire(opts.apiName);
     try {
-      const data = await this.retryWithBackoff(opts.fetchFn, opts.cacheKey);
+      const data = await this.retryWithBackoff(opts.fetchFn, opts.cacheKey, 3, {
+        apiName: opts.apiName,
+        endpoint: opts.endpoint,
+      });
       const durationMs = Date.now() - started;
       const recordCount = Array.isArray(data) ? data.length : 1;
       await updateCacheMetadata({
@@ -273,10 +296,14 @@ export class FetcherManager {
         recordCount,
         fetchDurationMs: durationMs,
       });
-      logger.info(
-        { sport: opts.sport, cacheKey: opts.cacheKey, recordCount, durationMs },
-        'Fetch completed'
-      );
+      // Step 9.2 — successful external fetch.
+      logFetchSuccess({
+        apiName: opts.apiName,
+        endpoint: opts.endpoint,
+        responseTimeMs: durationMs,
+        recordCount,
+        cacheUpdated: true,
+      });
       return { data, cached: false, cacheKey: opts.cacheKey, durationMs };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -304,11 +331,17 @@ export class FetcherManager {
     }
   }
 
-  /** Retry wrapper — up to `maxRetries` attempts with 1s → 2s → 4s backoff. */
+  /**
+   * Retry wrapper — up to `maxRetries` attempts with 1s → 2s → 4s backoff.
+   * When `meta` (apiName + endpoint) is provided, every failure is logged via
+   * the Step 9.3 fetch-failure logger (warn when retrying, error when giving
+   * up); without it the older compact warn/error lines are used.
+   */
   async retryWithBackoff<T>(
     fetchFn: () => Promise<T>,
     context: string,
-    maxRetries = 3
+    maxRetries = 3,
+    meta?: { apiName: string; endpoint: string }
   ): Promise<T> {
     let attempt = 0;
     for (;;) {
@@ -316,17 +349,41 @@ export class FetcherManager {
         return await fetchFn();
       } catch (err) {
         attempt += 1;
+        const { type, statusCode } = classifyFetchError(err);
         if (attempt > maxRetries || !isRetryableError(err)) {
-          logger.error({ context, attempt }, 'Fetch failed permanently');
+          if (meta) {
+            logFetchFailure({
+              apiName: meta.apiName,
+              endpoint: meta.endpoint,
+              errorType: type,
+              statusCode,
+              retryAttempt: attempt,
+              willRetry: false,
+            });
+          } else {
+            logger.error({ context, attempt }, 'Fetch failed permanently');
+          }
           throw err;
         }
         const isRateLimited = axios.isAxiosError(err) && err.response?.status === 429;
         // 429 → wait out the full rate-limit window; otherwise exponential backoff.
         const delayMs = isRateLimited ? 60_000 : 1_000 * 2 ** (attempt - 1);
-        logger.warn(
-          { context, attempt, delayMs, isRateLimited },
-          'Fetch failed — retrying with backoff'
-        );
+        if (meta) {
+          logFetchFailure({
+            apiName: meta.apiName,
+            endpoint: meta.endpoint,
+            errorType: type,
+            statusCode,
+            retryAttempt: attempt,
+            retryIn: Math.round(delayMs / 1000),
+            willRetry: true,
+          });
+        } else {
+          logger.warn(
+            { context, attempt, delayMs, isRateLimited },
+            'Fetch failed — retrying with backoff'
+          );
+        }
         await sleep(delayMs);
       }
     }
@@ -341,6 +398,7 @@ export class FetcherManager {
       apiName: fetcher.apiName,
       dataType: 'teams',
       cacheKey: `teams:${sport}`,
+      endpoint: 'teams',
       fetchFn: () => fetcher.fetchTeams(),
     });
   }
@@ -352,6 +410,8 @@ export class FetcherManager {
       apiName: fetcher.apiName,
       dataType: 'players',
       cacheKey: teamId ? `players:${sport}:${teamId}` : `players:${sport}`,
+      endpoint: teamId ? `players?team_id=${teamId}` : 'players',
+      params: teamId ? { team_id: teamId } : undefined,
       entityId: teamId,
       fetchFn: () => fetcher.fetchPlayers(teamId),
     });
@@ -372,6 +432,18 @@ export class FetcherManager {
       apiName: fetcher.apiName,
       dataType: 'games',
       cacheKey: `games:${sport}:${season}${rangeKey}`,
+      endpoint: dateRange
+        ? `games?season=${season}&from=${dateRange.startDate.toISOString().slice(0, 10)}&to=${dateRange.endDate.toISOString().slice(0, 10)}`
+        : `games?season=${season}`,
+      params: {
+        season,
+        ...(dateRange
+          ? {
+              from: dateRange.startDate.toISOString().slice(0, 10),
+              to: dateRange.endDate.toISOString().slice(0, 10),
+            }
+          : {}),
+      },
       season,
       fetchFn: () => fetcher.fetchGames(season, dateRange),
     });
@@ -388,6 +460,8 @@ export class FetcherManager {
       apiName: fetcher.apiName,
       dataType: 'player_logs',
       cacheKey: `player_logs:${sport}:${playerId}:${season}`,
+      endpoint: `player_logs/${playerId}?season=${season}`,
+      params: { season },
       entityId: playerId,
       season,
       fetchFn: () => fetcher.fetchPlayerGameLogs(playerId, season),
@@ -401,6 +475,7 @@ export class FetcherManager {
       apiName: fetcher.apiName,
       dataType: 'play_by_play',
       cacheKey: `play_by_play:${sport}:${gameId}`,
+      endpoint: `play_by_play/${gameId}`,
       entityId: gameId,
       fetchFn: () => fetcher.fetchPlayByPlay(gameId),
     });
@@ -419,6 +494,8 @@ export class FetcherManager {
       apiName: fetcher.apiName,
       dataType: 'coaches',
       cacheKey: teamId ? `coaches:${sport}:${teamId}` : `coaches:${sport}`,
+      endpoint: teamId ? `coaches?team_id=${teamId}` : 'coaches',
+      params: teamId ? { team_id: teamId } : undefined,
       entityId: teamId,
       fetchFn: () => fetcher.fetchCoaches(teamId),
     });
@@ -446,6 +523,8 @@ export class FetcherManager {
       apiName: fetcher.apiName,
       dataType: 'play_by_play',
       cacheKey: key,
+      endpoint: `season_plays?season=${season}${week != null ? `&week=${week}` : ''}${team ? `&team=${team}` : ''}`,
+      params: { season, week, team },
       season,
       fetchFn: () => seasonPlaysFetcher.fetchSeasonPlays!(season, week, team),
     });
@@ -460,7 +539,12 @@ export class FetcherManager {
    */
   async syncAllData(sport: string, season?: string): Promise<SyncAllResult> {
     const started = Date.now();
-    logger.info({ sport }, 'Starting full data sync');
+    // Step 9.4 — sync start / completion around the stage pipeline.
+    logSyncStart({
+      sport,
+      sections: ['teams', 'players', 'games'],
+      triggeredBy: 'manager',
+    });
 
     const resolvedSeason = season ?? (await this.resolveSportSeason(sport));
     const teams = await this.fetchTeams(sport);
@@ -474,7 +558,17 @@ export class FetcherManager {
     });
 
     const durationMs = Date.now() - started;
-    logger.info({ sport, durationMs }, 'Full sync finished');
+    logSyncComplete({
+      sport,
+      totalDurationMs: durationMs,
+      recordsProcessed:
+        (Array.isArray(teams.data) ? teams.data.length : 0) +
+        (Array.isArray(players.data) ? players.data.length : 0) +
+        (Array.isArray(games.data) ? games.data.length : 0),
+      errors: 0,
+      nextSyncAt: null,
+      status: 'complete',
+    });
     return {
       sport,
       season: resolvedSeason,
