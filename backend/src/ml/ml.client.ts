@@ -7,29 +7,21 @@
  * Error contract (services rely on these):
  *   MLServiceUnavailableError — Python unreachable (connection refused/timeout)
  *   MLServiceError            — Python responded with an error status
+ *
+ * Both error classes are defined in src/utils/errors.ts (Phase 8 Step 2) and
+ * re-exported here so existing `import … from '../ml/ml.client.js'` call sites
+ * keep working — there is exactly one definition in the codebase.
  */
 import axios, { type AxiosInstance } from 'axios';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.util.js';
+import {
+  MLServiceError,
+  MLServiceUnavailableError,
+  type MLServiceErrorOptions,
+} from '../utils/errors.js';
 
-/** The Python service responded with an error status (HTTP response received). */
-export class MLServiceError extends Error {
-  statusCode?: number;
-
-  constructor(message: string, statusCode?: number) {
-    super(message);
-    this.name = 'MLServiceError';
-    this.statusCode = statusCode;
-  }
-}
-
-/** The Python service could not be reached at all (network/connection failure). */
-export class MLServiceUnavailableError extends MLServiceError {
-  constructor(message: string) {
-    super(message);
-    this.name = 'MLServiceUnavailableError';
-  }
-}
+export { MLServiceError, MLServiceUnavailableError };
 
 const MAX_CONNECT_RETRIES = 2; // retry connect failures twice (doc: 2 retries)
 
@@ -108,15 +100,21 @@ function toMLError(err: unknown, path: string): MLServiceError {
     if (status === undefined) {
       // No HTTP response — network/connection failure (never retried as 4xx/5xx).
       return new MLServiceUnavailableError(
-        `ML service unreachable at ${env.PYTHON_ML_URL}${path}`
+        `ML service unreachable at ${env.PYTHON_ML_URL}${path}`,
+        { mlEndpoint: path }
       );
     }
     const detail = (err.response?.data as { detail?: unknown } | undefined)?.detail;
     const suffix = detail !== undefined ? `: ${JSON.stringify(detail)}` : '';
-    return new MLServiceError(`ML service error (HTTP ${status}) for ${path}${suffix}`, status);
+    return new MLServiceError(`ML service error (HTTP ${status}) for ${path}${suffix}`, {
+      mlEndpoint: path,
+      mlStatusCode: status,
+    } satisfies MLServiceErrorOptions);
   }
   const message = err instanceof Error ? err.message : String(err);
-  return new MLServiceError(`ML request to ${path} failed: ${message}`);
+  return new MLServiceError(`ML request to ${path} failed: ${message}`, {
+    mlEndpoint: path,
+  });
 }
 
 /** Shared instance — import this, don't construct your own (tests use createMLClient). */

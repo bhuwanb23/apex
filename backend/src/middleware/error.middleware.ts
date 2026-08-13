@@ -1,19 +1,28 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { logger } from '../config/logger.js';
+import { AppError } from '../utils/errors.js';
 import { sendError } from '../utils/response.util.js';
 
 /**
  * Application error with an HTTP status code.
  * Throw/return this from route handlers to produce a structured error response.
+ *
+ * Extends AppError (Phase 8 Step 2) so every error in the app is part of the
+ * same family — statusCode, errorCode, isOperational, context, timestamp.
+ * Specific Phase 8 classes (ValidationError, NotFoundError, …) live in
+ * src/utils/errors.ts and should be preferred for new code.
  */
-export class ApiError extends Error {
-  statusCode: number;
+export class ApiError extends AppError {
   details?: unknown;
 
   constructor(statusCode: number, message: string, details?: unknown) {
-    super(message);
-    this.name = 'ApiError';
-    this.statusCode = statusCode;
+    super(message, {
+      statusCode,
+      errorCode: errorCodeForStatus(statusCode),
+      // 4xx are expected client errors (operational); 5xx are not.
+      isOperational: statusCode < 500,
+      context: details !== undefined ? { details } : undefined,
+    });
     this.details = details;
   }
 
@@ -39,26 +48,36 @@ export const notFound: RequestHandler = (req, res) => {
   sendError(res, 'Not Found', 404, 'NOT_FOUND');
 };
 
-/**
- * Central error handler. Express 5 forwards rejected promises here automatically,
- * so async handlers don't need try/catch wrappers.
- */
+/** Machine readable code for a generic status code (ApiError default). */
 function errorCodeForStatus(statusCode: number): string {
   switch (statusCode) {
     case 400:
       return 'BAD_REQUEST';
+    case 401:
+      return 'UNAUTHORIZED';
+    case 403:
+      return 'FORBIDDEN';
     case 404:
       return 'NOT_FOUND';
     case 409:
       return 'CONFLICT';
+    case 429:
+      return 'RATE_LIMIT_EXCEEDED';
     default:
       return 'API_ERROR';
   }
 }
 
+/**
+ * Central error handler. Express 5 forwards rejected promises here automatically,
+ * so async handlers don't need try/catch wrappers.
+ */
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
-  if (err instanceof ApiError) {
-    sendError(res, err.message, err.statusCode, errorCodeForStatus(err.statusCode));
+  // Phase 8 Step 2 family — respond with the error's own guaranteed shape
+  // (errorCode + validationErrors for ValidationError, safe message for
+  // non-operational errors). Never sends context or stack traces.
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json(err.toResponse());
     return;
   }
 
