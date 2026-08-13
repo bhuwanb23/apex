@@ -57,15 +57,18 @@ export interface ApiSuccessResponse<T> {
 }
 
 /**
- * Error response — matches sendError().
- * (The util names this field `error` rather than `errorCode` — reality wins.)
+ * Error response — matches sendError() and the Phase 8 error response
+ * guarantee (AppError.toResponse()). The machine readable code lives in
+ * `errorCode`; ValidationError responses additionally carry
+ * `validationErrors: FieldError[]`.
  */
 export interface ApiErrorResponse {
   success: false;
   status: number;
   message: string;
-  error: string;
+  errorCode: string;
   timestamp: string;
+  validationErrors?: Array<{ field: string; message: string; value?: unknown }>;
 }
 
 export interface PaginatedMeta {

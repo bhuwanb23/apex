@@ -29,7 +29,7 @@ export function sendError(
     success: false,
     status: statusCode,
     message,
-    error: errorCode,
+    errorCode,
     timestamp: new Date().toISOString(),
   });
 }
