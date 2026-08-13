@@ -3,6 +3,7 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { prisma } from './db/client.js';
 import { queueManager } from './jobs/queue.manager.js';
+import { warmUpCache } from './services/cache.warmup.js';
 
 async function main(): Promise<void> {
   // Verify DB connectivity before accepting traffic
@@ -19,6 +20,14 @@ async function main(): Promise<void> {
     // accepts traffic so a boot failure is caught before any job runs. All
     // control flows through the queue manager (single control point).
     void queueManager.startAllJobs();
+    // Cache warmup (Phase 7 Step 9.1) — pre-populate common entries so the
+    // first visitor gets a fast response. Fire-and-forget; failures are
+    // logged and never block boot. If RUN_JOBS_ON_STARTUP is running jobs
+    // that invalidate caches, their invalidation simply wins and the next
+    // request repopulates.
+    void warmUpCache().catch(err =>
+      logger.warn({ err }, 'Cache warmup failed at startup')
+    );
   });
 
   // Boot failures (e.g. port already in use) fire asynchronously on the server
