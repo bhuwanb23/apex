@@ -14,8 +14,8 @@
  * keeps the previous season analysis (it is still valid and useful).
  */
 import { env } from '../config/env.js';
-import { cacheDelPrefix } from '../cache/memoryCache.js';
 import { prisma } from '../db/client.js';
+import { invalidateMomentumAnalysis } from '../services/cache.invalidation.js';
 import {
   computeAndStoreGameTimeline,
   computeAndStoreSeasonAnalysis,
@@ -103,14 +103,17 @@ const momentumJob: JobDefinition = {
           gamesAnalyzed: stats.gamesAnalyzed,
           playsAnalyzed: stats.playsAnalyzed,
         };
-        // Invalidate the middleware's cached analysis responses for this sport
-        // (memory key namespace is "resp:", Step 6.3) so the next request
-        // reads the fresh row. The comparison route has no cache middleware.
-        const deleted = cacheDelPrefix(`resp:momentum:season:${sport.name}`);
-        logger.info(
-          { sport: sport.name, deleted },
-          'momentum: season analysis refreshed, cached responses invalidated'
-        );
+        // Phase 7 Step 7.2 — a refreshed analysis invalidates every cached
+        // response for this sport (memory service keys + resp: middleware
+        // entries + the CacheMetadata registry row) so the next request reads
+        // the fresh row. The comparison route has no cache middleware.
+        if (stats.verdictLabel !== 'insufficient_data') {
+          await invalidateMomentumAnalysis(sport.name, sport.season);
+          logger.info(
+            { sport: sport.name },
+            'momentum: season analysis refreshed, cached responses invalidated'
+          );
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         errors.push(`${sport.name}: ${message}`);

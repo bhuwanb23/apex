@@ -26,6 +26,7 @@ import {
   type InjuryRiskInput,
   type InjuryRiskScore,
 } from '../ml/injury.ml.js';
+import { invalidatePlayerCache, invalidateTeamCache } from '../services/cache.invalidation.js';
 import { logger } from '../utils/logger.util.js';
 import type { JobDefinition } from './job.runner.js';
 import { queueManager } from './queue.manager.js';
@@ -200,7 +201,7 @@ const riskComputeJob: JobDefinition = {
 
       const players = await prisma.players.findMany({
         where: { sportId: sport.id, isActive: true },
-        select: { id: true, externalId: true, name: true },
+        select: { id: true, externalId: true, name: true, teamId: true },
         orderBy: { id: 'asc' },
       });
       if (players.length === 0) {
@@ -209,12 +210,16 @@ const riskComputeJob: JobDefinition = {
       }
 
       const playerByExternal = new Map(players.map(p => [p.externalId, p.id]));
+      const teamByPlayer = new Map(players.map(p => [p.id, p.teamId]));
       const lookback = new Date(Date.now() - LOOKBACK_DAYS * DAY_MS);
       let scored = 0;
       let insufficient = 0;
       let skippedFewGames = 0;
       const sportNewRed: string[] = [];
       const sportLeftRed: string[] = [];
+      // Phase 7 Step 7.2 — internal ids of players whose zone changed this
+      // run; their caches (and their teams') are invalidated after the pass.
+      const changedPlayers = new Set<number>();
 
       for (let i = 0; i < players.length; i += BATCH_SIZE) {
         const batch = players.slice(i, i + BATCH_SIZE);
@@ -273,6 +278,11 @@ const riskComputeJob: JobDefinition = {
             if (old === 'red' && result.zone !== 'red') {
               sportLeftRed.push(result.playerId);
             }
+            // Any zone change means the cached risk profile + team dashboard +
+            // league alerts are stale — flag for invalidation.
+            if (playerId !== undefined && old !== undefined && result.zone !== old) {
+              changedPlayers.add(playerId);
+            }
           }
         } catch (err) {
           if (err instanceof MLServiceUnavailableError) {
@@ -289,6 +299,26 @@ const riskComputeJob: JobDefinition = {
         await sleep(BATCH_DELAY_MS); // pacing (spec 6.2) — even after a failed batch
       }
 
+      // Phase 7 Step 7.2 — invalidate every zone-changed player's caches so
+      // the next risk request gets the fresh score and the next team dashboard
+      // shows the updated traffic light. Team invalidation also drops the
+      // league alert keys for the sport.
+      let invalidated = 0;
+      for (const playerId of changedPlayers) {
+        await invalidatePlayerCache(playerId);
+        const teamId = teamByPlayer.get(playerId);
+        if (teamId !== undefined) {
+          await invalidateTeamCache(teamId, sport.name);
+        }
+        invalidated += 1;
+      }
+      if (invalidated > 0) {
+        logger.info(
+          { sport: sport.name, invalidated },
+          'risk_compute: caches invalidated for zone-changed players'
+        );
+      }
+
       newRedZonePlayers.push(...sportNewRed);
       leftRedZonePlayers.push(...sportLeftRed);
       perSport[sport.name] = {
@@ -298,6 +328,7 @@ const riskComputeJob: JobDefinition = {
         skippedFewGames,
         newRedZonePlayers: sportNewRed,
         leftRedZonePlayers: sportLeftRed,
+        cachesInvalidated: invalidated,
       };
       logger.info(
         { sport: sport.name, players: players.length, scored, insufficient, skippedFewGames },

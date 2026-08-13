@@ -139,6 +139,52 @@ export async function getCacheInfo(cacheKey: string): Promise<CacheMetadata | nu
   return prisma.cacheMetadata.findUnique({ where: { cacheKey } });
 }
 
+/**
+ * Marks every entry whose cacheKey starts with `prefix` invalid — the key-
+ * family equivalent of markCacheInvalid. Used by the invalidation system for
+ * keys whose family is known but exact members aren't (e.g. every leaderboard
+ * row for a sport, which may carry different decisionType/gameType segments).
+ */
+export async function markCacheInvalidByPrefix(prefix: string): Promise<number> {
+  const result = await prisma.cacheMetadata.updateMany({
+    where: { cacheKey: { startsWith: prefix } },
+    data: { isValid: false },
+  });
+  if (result.count > 0) {
+    logger.debug({ prefix, count: result.count }, 'sqlite cache marked invalid by prefix');
+  }
+  return result.count;
+}
+
+/**
+ * Marks every entry for a sportId invalid, optionally restricted to a set of
+ * dataTypes. The fetch layer records sportId on its CacheMetadata rows, so a
+ * sport-scoped invalidation can target exactly what a data sync touched.
+ */
+export async function markCacheInvalidBySport(
+  sportId: number,
+  dataTypes?: CacheDataType[]
+): Promise<number> {
+  const result = await prisma.cacheMetadata.updateMany({
+    where: {
+      sportId,
+      ...(dataTypes && dataTypes.length > 0 ? { dataType: { in: dataTypes } } : {}),
+    },
+    data: { isValid: false },
+  });
+  if (result.count > 0) {
+    logger.debug({ sportId, count: result.count }, 'sqlite cache marked invalid by sport');
+  }
+  return result.count;
+}
+
+/** Marks every CacheMetadata entry invalid — the nuclear option. */
+export async function markAllCacheInvalid(): Promise<number> {
+  const result = await prisma.cacheMetadata.updateMany({ data: { isValid: false } });
+  logger.info({ count: result.count }, 'all sqlite cache entries marked invalid');
+  return result.count;
+}
+
 /** All entries past their expiry (optional dataType filter) — used by the cleanup job. */
 export async function getExpiredCaches(dataType?: CacheDataType): Promise<CacheMetadata[]> {
   return prisma.cacheMetadata.findMany({
@@ -172,7 +218,7 @@ export async function getCacheStats(): Promise<CacheStats> {
 // ---------------------------------------------------------------------------
 
 /** Resolves a sport abbreviation (API uses 'NBA', the Sports table stores 'nba'). */
-async function resolveSportId(sport: string): Promise<number | null> {
+export async function resolveSportId(sport: string): Promise<number | null> {
   const row = await prisma.sports.findUnique({
     where: { abbreviation: sport.toLowerCase() },
     select: { id: true },

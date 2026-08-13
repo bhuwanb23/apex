@@ -17,6 +17,7 @@ import { env } from '../config/env.js';
 import { logger } from '../utils/logger.util.js';
 import { prisma } from '../db/client.js';
 import { syncRecentGames } from '../data/sync.coordinator.js';
+import { invalidateSportCache } from '../services/cache.invalidation.js';
 import type { JobDefinition } from './job.runner.js';
 import { queueManager } from './queue.manager.js';
 
@@ -66,6 +67,11 @@ const dataSyncJob: JobDefinition = {
         if (result.errors.length > 0) {
           errors.push(`${sport.name}: ${result.errors.join('; ')}`);
         }
+        // Phase 7 Step 7.2 — the sync changed this sport's underlying data, so
+        // every cached response derived from it (searches, team lists, alerts,
+        // leaderboards, momentum) must be recomputed on the next request. Even
+        // a partial sync is fresher than what the caches hold.
+        await invalidateSportCache(sport.name);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         errors.push(`${sport.name}: ${message}`);
