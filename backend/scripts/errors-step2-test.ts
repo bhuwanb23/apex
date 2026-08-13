@@ -279,7 +279,7 @@ check('ml down → 503 + ML_SERVICE_UNAVAILABLE', mlRes.status === 503 && mlRes.
 const dbRes = await (await fetch(`${base}/db-error`)).json();
 check('db error → 500 + DATABASE_ERROR + safe message (no internal detail)', dbRes.status === 500 && dbRes.errorCode === 'DATABASE_ERROR' && dbRes.message === DEFAULT_SAFE_MESSAGE && !JSON.stringify(dbRes).includes('SQLITE_BUSY'));
 const plainRes = await (await fetch(`${base}/plain-error`)).json();
-check('unknown error → 500 + safe message (no leak)', plainRes.status === 500 && plainRes.message === 'Internal Server Error' && !JSON.stringify(plainRes).includes('kaboom'));
+check('unknown error → 500 + safe message (no leak)', plainRes.status === 500 && plainRes.message === 'An internal error occurred' && !JSON.stringify(plainRes).includes('kaboom'));
 server.close();
 
 console.log(`\nRESULT: ${passed} passed, ${failed} failed`);

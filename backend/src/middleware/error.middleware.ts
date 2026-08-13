@@ -89,8 +89,16 @@ function classifyPrismaKnownError(err: Prisma.PrismaClientKnownRequestError): Ap
       // Unique constraint violation — e.g. seeding the same externalId twice.
       const target = Array.isArray(err.meta?.target) ? err.meta.target.join(', ') : undefined;
       return new ValidationError(
-        target ? `A record with this ${target} already exists` : 'A record with these values already exists',
-        [{ field: target ?? 'unique', message: 'Unique constraint violation', value: err.meta?.target }],
+        target
+          ? `A record with this ${target} already exists`
+          : 'A record with these values already exists',
+        [
+          {
+            field: target ?? 'unique',
+            message: 'Unique constraint violation',
+            value: err.meta?.target,
+          },
+        ],
         { prismaCode: err.code }
       );
     }
@@ -101,9 +109,11 @@ function classifyPrismaKnownError(err: Prisma.PrismaClientKnownRequestError): Ap
       });
     case 'P2003':
       // Foreign key constraint — a related record is missing/invalid.
-      return new ValidationError('Invalid reference — the related record does not exist', [
-        { field: String(err.meta?.field_name ?? 'relation'), message: 'Invalid reference' },
-      ], { prismaCode: err.code });
+      return new ValidationError(
+        'Invalid reference — the related record does not exist',
+        [{ field: String(err.meta?.field_name ?? 'relation'), message: 'Invalid reference' }],
+        { prismaCode: err.code }
+      );
     default:
       return new DatabaseError('Database request failed', {
         operation: 'prisma-request',
