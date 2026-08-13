@@ -29,7 +29,10 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
 
   // Background jobs (Phase 6) — master switch + cron overrides
-  JOBS_ENABLED: z.enum(['true', 'false']).default('true').transform(v => v === 'true'),
+  JOBS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform(v => v === 'true'),
   // Shared secret for POST /api/jobs/trigger (X-Admin-Key header must match).
   // When unset, the trigger route is disabled (fail-closed).
   JOB_CONTROL_ADMIN_KEY: z.string().min(1).optional(),
