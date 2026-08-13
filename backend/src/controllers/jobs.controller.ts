@@ -15,11 +15,11 @@
  */
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import { env } from '../config/env.js';
 import { prisma } from '../db/client.js';
 import { mlClient } from '../ml/ml.client.js';
 import { getMLServiceStatus, recordMLHealthCheck } from '../ml/availability.js';
 import { queueManager } from '../jobs/queue.manager.js';
+import { assertAdminKey } from '../middleware/admin.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { sendSuccess } from '../utils/response.util.js';
 import { validateBody, validateQuery } from '../utils/validator.util.js';
@@ -63,21 +63,6 @@ async function awaitJobLogId(
     await sleep(50);
   }
   return null;
-}
-
-/** Basic protection for mutating job endpoints (docs: simple header check). */
-function assertAdminKey(req: Request): void {
-  const configured = env.JOB_CONTROL_ADMIN_KEY;
-  if (!configured) {
-    throw new ApiError(
-      503,
-      'Job triggering is disabled — JOB_CONTROL_ADMIN_KEY is not configured'
-    );
-  }
-  const provided = req.header('x-admin-key');
-  if (!provided || provided !== configured) {
-    throw new ApiError(403, 'Invalid or missing X-Admin-Key header');
-  }
 }
 
 /**
