@@ -11,12 +11,14 @@
  *   • extracts data from req[source] (body / query / params)
  *   • runs a Zod parse
  *   • on success: attaches the cleaned data to req.validatedQuery /
- *     req.validatedBody / req.validatedParams, AND writes the normalized
- *     values back onto the raw source. The write-back is what keeps the
- *     cache middleware's key builders (which read req.params / req.query)
- *     in lockstep with the controller — e.g. `/api/sports/nba/teams` gets
- *     req.params.sport normalized to 'NBA' so the cache key is `teams:NBA`,
- *     identical to an uppercase request.
+ *     req.validatedBody / req.validatedParams. Params and body are also
+ *     written back onto the raw source — that is what keeps the cache
+ *     middleware's key builders in lockstep with the controller (e.g.
+ *     `/api/sports/nba/teams` gets req.params.sport normalized to 'NBA' so
+ *     the cache key is `teams:NBA`, identical to an uppercase request).
+ *     Query values can NOT be written back — Express's req.query is a getter
+ *     that re-parses on every access — so cache keys keep the raw wire
+ *     values, which is deterministic per input.
  *   • on failure: throws ValidationError (via next) with field errors
  *
  * Controllers read the typed data from req.validated* and never re-validate.
@@ -49,11 +51,9 @@ export type ValidationSource = 'body' | 'query' | 'params';
 
 /** Positive integer — coerced from strings (URL params) with a clear message. */
 export function positiveInt(field: string) {
-  return z.coerce
-    .number()
-    .refine(v => Number.isInteger(v) && v > 0, {
-      message: `${field} must be a positive integer`,
-    });
+  return z.coerce.number().refine(v => Number.isInteger(v) && v > 0, {
+    message: `${field} must be a positive integer`,
+  });
 }
 
 /**
@@ -66,7 +66,9 @@ export const sportSchema = z
   .refine(v => (SUPPORTED_SPORTS as readonly string[]).includes(v.toUpperCase()), {
     message: 'sport must be one of: NBA, NFL, MLB, NHL',
   })
-  .transform((v): (typeof SUPPORTED_SPORTS)[number] => v.toUpperCase() as (typeof SUPPORTED_SPORTS)[number]);
+  .transform(
+    (v): (typeof SUPPORTED_SPORTS)[number] => v.toUpperCase() as (typeof SUPPORTED_SPORTS)[number]
+  );
 
 export const sportParamsSchema = z.object({ sport: sportSchema });
 
@@ -106,8 +108,11 @@ export function addDateRangeCheck<T extends { dateFrom?: Date; dateTo?: Date }>(
   schema: z.ZodType<T>
 ) {
   return schema.superRefine((val, ctx) => {
-    const { dateFrom, dateTo } = val;
-    if (!dateFrom || !dateTo) return;
+    // zod v4 runs refinements even when an inner field failed to parse — in
+    // that case dateFrom/dateTo are still raw strings, so guard with
+    // instanceof before touching Date methods.
+    const { dateFrom, dateTo } = val as { dateFrom?: unknown; dateTo?: unknown };
+    if (!(dateFrom instanceof Date) || !(dateTo instanceof Date)) return;
     if (dateFrom.getTime() > dateTo.getTime()) {
       ctx.addIssue({
         code: 'custom',
@@ -300,7 +305,11 @@ export function createValidator(schema: z.ZodType, source: ValidationSource) {
     const result = schema.safeParse(raw);
     if (!result.success) {
       const label =
-        source === 'body' ? 'Invalid request body' : source === 'query' ? 'Invalid query parameters' : 'Invalid URL parameters';
+        source === 'body'
+          ? 'Invalid request body'
+          : source === 'query'
+            ? 'Invalid query parameters'
+            : 'Invalid URL parameters';
       next(ValidationError.fromZod(result.error, label, raw));
       return;
     }

@@ -448,8 +448,7 @@ export const searchPlayersCacheMiddleware = createCacheMiddleware({
   ttl: IN_MEMORY_TTL.SEARCH_RESULTS,
   cacheLayer: 'memory',
   allowStale: false,
-  keyBuilder: req =>
-    searchPlayersKey(String(req.query.sport ?? 'all'), String(req.query.q ?? '')),
+  keyBuilder: req => searchPlayersKey(String(req.query.sport ?? 'all'), String(req.query.q ?? '')),
   varyBy: ['limit'],
 });
 
@@ -581,8 +580,7 @@ export const comparisonCacheMiddleware = createCacheMiddleware({
   allowStale: true,
   staleThreshold: STALE_WHILE_REVALIDATE.MOMENTUM_STALE_AFTER,
   dataType: CacheDataType.MOMENTUM_ANALYSIS,
-  keyBuilder: req =>
-    momentumComparisonKey(req.query.season ? String(req.query.season) : undefined),
+  keyBuilder: req => momentumComparisonKey(req.query.season ? String(req.query.season) : undefined),
 });
 
 /**
