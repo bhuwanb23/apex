@@ -47,6 +47,14 @@ function headers(res: Response): Record<string, string | null> {
 const wait = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 try {
+  // Self-clean: another test (e.g. the step-9 warmup) may have left a valid
+  // leaderboard registry row behind, which would flip this test's first
+  // leaderboard request from MISS to HIT. The registry must start empty for
+  // the "first request" semantics this suite asserts.
+  await prisma.cacheMetadata.deleteMany({
+    where: { cacheKey: { startsWith: 'leaderboard:NBA:' } },
+  });
+  cacheFlush();
   // -------------------------------------------------------------------------
   // 1. Stale-while-revalidate + background refresh (scratch instance)
   // -------------------------------------------------------------------------
