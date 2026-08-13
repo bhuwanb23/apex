@@ -106,11 +106,7 @@ searchRouter.get(
  *       200:
  *         description: Matching coaches
  */
-searchRouter.get(
-  '/coaches',
-  createValidator(simpleSearchQuerySchema, 'query'),
-  searchCoaches
-);
+searchRouter.get('/coaches', createValidator(simpleSearchQuerySchema, 'query'), searchCoaches);
 
 /**
  * @openapi
@@ -157,8 +153,4 @@ searchRouter.get(
  *       200:
  *         description: Paginated game list
  */
-searchRouter.get(
-  '/games',
-  createValidator(gamesSearchQuerySchema, 'query'),
-  searchGames
-);
+searchRouter.get('/games', createValidator(gamesSearchQuerySchema, 'query'), searchGames);

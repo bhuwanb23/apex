@@ -72,11 +72,7 @@ momentumRouter.get(
  *       404:
  *         description: Game not found
  */
-momentumRouter.get(
-  '/game/:gameId',
-  createValidator(gameIdParamsSchema, 'params'),
-  getGameMomentum
-);
+momentumRouter.get('/game/:gameId', createValidator(gameIdParamsSchema, 'params'), getGameMomentum);
 
 /**
  * @openapi

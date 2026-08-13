@@ -80,10 +80,7 @@ cacheRouter.get('/stats', async (_req, res) => {
  *       200:
  *         description: Cache entries with computed fields
  */
-cacheRouter.get(
-  '/entries',
-  createValidator(cacheEntriesQuerySchema, 'query'),
-  async (req, res) => {
+cacheRouter.get('/entries', createValidator(cacheEntriesQuerySchema, 'query'), async (req, res) => {
   const { dataType, sport, valid } = req.validatedQuery as {
     dataType?: string;
     sport?: string;
@@ -114,8 +111,7 @@ cacheRouter.get(
     ttlRemaining: Math.max(0, Math.round((r.expiresAt.getTime() - now) / 1000)),
   }));
   sendSuccess(res, { total: entries.length, entries });
-  }
-);
+});
 
 /**
  * @openapi
@@ -161,59 +157,65 @@ cacheRouter.delete(
   '/invalidate',
   createValidator(cacheInvalidateBodySchema, 'body'),
   async (req, res) => {
-  assertAdminKey(req);
-  const { key, sport, type, all } = req.validatedBody as {
-    key?: string;
-    sport?: string;
-    type?: string;
-    all?: boolean;
-  };
+    assertAdminKey(req);
+    const { key, sport, type, all } = req.validatedBody as {
+      key?: string;
+      sport?: string;
+      type?: string;
+      all?: boolean;
+    };
 
-  if (all) {
-    await invalidateAllCaches();
-    sendSuccess(res, {
-      invalidated: 'all',
-      note: 'Memory cache flushed and every CacheMetadata entry marked invalid',
-    });
-    return;
-  }
-  if (key) {
-    const memoryDeleted = cacheDel(key);
-    const respDeleted = cacheDelPrefix(`resp:${key}`);
-    const registryInvalidated = await markCacheInvalid(key);
-    sendSuccess(res, { invalidated: 'key', key, memoryDeleted, respDeleted, registryInvalidated });
-    return;
-  }
-  if (sport && type) {
-    // Combined filter — e.g. { type: 'coach_leaderboard', sport: 'NFL' }.
-    // The sport-keyed families reuse the full invalidation functions (memory +
-    // registry, catching middleware rows that store no sportId); other types
-    // fall back to a sportId-scoped registry pass.
-    const sportId = await resolveSportId(sport);
-    const registryInvalidated = await markCacheInvalidByDataType(type, sportId ?? undefined);
-    if (type === CacheDataType.COACH_LEADERBOARD) {
-      await invalidateLeaderboard(sport);
-    } else if (type === CacheDataType.MOMENTUM_ANALYSIS) {
-      await invalidateMomentumAnalysis(sport);
+    if (all) {
+      await invalidateAllCaches();
+      sendSuccess(res, {
+        invalidated: 'all',
+        note: 'Memory cache flushed and every CacheMetadata entry marked invalid',
+      });
+      return;
     }
-    sendSuccess(res, { invalidated: 'type+sport', type, sport, registryInvalidated });
-    return;
-  }
-  if (sport) {
-    await invalidateSportCache(sport);
-    sendSuccess(res, {
-      invalidated: 'sport',
-      sport,
-      note: 'All caches for the sport invalidated',
-    });
-    return;
-  }
-  if (type) {
-    const registryInvalidated = await markCacheInvalidByDataType(type);
-    sendSuccess(res, { invalidated: 'type', type, registryInvalidated });
-    return;
-  }
-  throw ApiError.badRequest('Provide one of: key, sport, type or all');
+    if (key) {
+      const memoryDeleted = cacheDel(key);
+      const respDeleted = cacheDelPrefix(`resp:${key}`);
+      const registryInvalidated = await markCacheInvalid(key);
+      sendSuccess(res, {
+        invalidated: 'key',
+        key,
+        memoryDeleted,
+        respDeleted,
+        registryInvalidated,
+      });
+      return;
+    }
+    if (sport && type) {
+      // Combined filter — e.g. { type: 'coach_leaderboard', sport: 'NFL' }.
+      // The sport-keyed families reuse the full invalidation functions (memory +
+      // registry, catching middleware rows that store no sportId); other types
+      // fall back to a sportId-scoped registry pass.
+      const sportId = await resolveSportId(sport);
+      const registryInvalidated = await markCacheInvalidByDataType(type, sportId ?? undefined);
+      if (type === CacheDataType.COACH_LEADERBOARD) {
+        await invalidateLeaderboard(sport);
+      } else if (type === CacheDataType.MOMENTUM_ANALYSIS) {
+        await invalidateMomentumAnalysis(sport);
+      }
+      sendSuccess(res, { invalidated: 'type+sport', type, sport, registryInvalidated });
+      return;
+    }
+    if (sport) {
+      await invalidateSportCache(sport);
+      sendSuccess(res, {
+        invalidated: 'sport',
+        sport,
+        note: 'All caches for the sport invalidated',
+      });
+      return;
+    }
+    if (type) {
+      const registryInvalidated = await markCacheInvalidByDataType(type);
+      sendSuccess(res, { invalidated: 'type', type, registryInvalidated });
+      return;
+    }
+    throw ApiError.badRequest('Provide one of: key, sport, type or all');
   }
 );
 

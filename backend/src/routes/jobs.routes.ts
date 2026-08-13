@@ -49,11 +49,7 @@ jobsRouter.get('/status', getJobsStatus);
  *       200:
  *         description: Recent job runs
  */
-jobsRouter.get(
-  '/history',
-  createValidator(jobHistoryQuerySchema, 'query'),
-  getJobsHistory
-);
+jobsRouter.get('/history', createValidator(jobHistoryQuerySchema, 'query'), getJobsHistory);
 
 /**
  * @openapi
@@ -94,11 +90,7 @@ jobsRouter.get(
  *       503:
  *         description: Triggering disabled — JOB_CONTROL_ADMIN_KEY not configured
  */
-jobsRouter.post(
-  '/trigger',
-  createValidator(triggerJobBodySchema, 'body'),
-  triggerJob
-);
+jobsRouter.post('/trigger', createValidator(triggerJobBodySchema, 'body'), triggerJob);
 
 /**
  * @openapi
