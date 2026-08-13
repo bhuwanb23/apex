@@ -49,11 +49,18 @@ export type ValidationSource = 'body' | 'query' | 'params';
 // Step 5.1 — shared schemas
 // ---------------------------------------------------------------------------
 
-/** Positive integer — coerced from strings (URL params) with a clear message. */
+/**
+ * Positive integer — coerced from strings (URL params) with a clear message.
+ * zod v4 rejects NaN ('abc' → NaN) at the base number parse BEFORE any
+ * refine runs, so the custom message must be set on the schema itself via
+ * the `{ error }` option; the refine then covers non-integer/negative input.
+ */
 export function positiveInt(field: string) {
-  return z.coerce.number().refine(v => Number.isInteger(v) && v > 0, {
-    message: `${field} must be a positive integer`,
-  });
+  return z.coerce
+    .number({ error: `${field} must be a positive integer` })
+    .refine(v => Number.isInteger(v) && v > 0, {
+      message: `${field} must be a positive integer`,
+    });
 }
 
 /**

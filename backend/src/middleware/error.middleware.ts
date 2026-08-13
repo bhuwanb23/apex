@@ -228,7 +228,10 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (classified.isOperational) {
     logger.warn(logContext, classified.message);
   } else {
-    logger.error(logContext, classified.message);
+    // Non-operational (programmer/unknown) errors are logged with the
+    // ORIGINAL error — real message + stack land in error.log for debugging
+    // while the client only ever sees the safe, sanitized message.
+    logger.error({ err, ...logContext }, classified.message);
   }
 
   // Step 10.1 — feed the running error counters (per category, per hour).

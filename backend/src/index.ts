@@ -3,6 +3,10 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { prisma } from './db/client.js';
+// Side-effect import: every job module registers itself on import, so the
+// startup banner (which lists scheduled jobs) sees them. startAllJobs() later
+// schedules the registered jobs without re-registering (module cache).
+import './jobs/scheduler.js';
 import { queueManager } from './jobs/queue.manager.js';
 import { collectRoutesSummary } from './routes/index.js';
 import { getMemoryCacheStats } from './services/memory.cache.service.js';
