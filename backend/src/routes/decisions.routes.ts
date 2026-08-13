@@ -9,6 +9,14 @@ import {
   coachDetailCacheMiddleware,
   leaderboardCacheMiddleware,
 } from '../middleware/cache.middleware.js';
+import {
+  coachIdParamsSchema,
+  coachQuerySchema,
+  createValidator,
+  gameIdParamsSchema,
+  leaderboardQuerySchema,
+  sportParamsSchema,
+} from '../middleware/validation.middleware.js';
 
 export const decisionsRouter = Router();
 
@@ -59,7 +67,13 @@ export const decisionsRouter = Router();
  *       404:
  *         description: Sport not found
  */
-decisionsRouter.get('/coaches/:sport', leaderboardCacheMiddleware, getCoachLeaderboard);
+decisionsRouter.get(
+  '/coaches/:sport',
+  createValidator(sportParamsSchema, 'params'),
+  createValidator(leaderboardQuerySchema, 'query'),
+  leaderboardCacheMiddleware,
+  getCoachLeaderboard
+);
 
 /**
  * @openapi
@@ -104,7 +118,13 @@ decisionsRouter.get('/coaches/:sport', leaderboardCacheMiddleware, getCoachLeade
  *       404:
  *         description: Coach not found
  */
-decisionsRouter.get('/coach/:coachId', coachDetailCacheMiddleware, getCoachDecisions);
+decisionsRouter.get(
+  '/coach/:coachId',
+  createValidator(coachIdParamsSchema, 'params'),
+  createValidator(coachQuerySchema, 'query'),
+  coachDetailCacheMiddleware,
+  getCoachDecisions
+);
 
 /**
  * @openapi
@@ -125,7 +145,11 @@ decisionsRouter.get('/coach/:coachId', coachDetailCacheMiddleware, getCoachDecis
  *       404:
  *         description: Game not found
  */
-decisionsRouter.get('/game/:gameId', getGameDecisions);
+decisionsRouter.get(
+  '/game/:gameId',
+  createValidator(gameIdParamsSchema, 'params'),
+  getGameDecisions
+);
 
 /**
  * @openapi
@@ -147,4 +171,8 @@ decisionsRouter.get('/game/:gameId', getGameDecisions);
  *       404:
  *         description: Sport not found
  */
-decisionsRouter.get('/types/:sport', listDecisionTypes);
+decisionsRouter.get(
+  '/types/:sport',
+  createValidator(sportParamsSchema, 'params'),
+  listDecisionTypes
+);

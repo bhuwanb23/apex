@@ -10,6 +10,15 @@ import {
   riskScoreCacheMiddleware,
   teamRiskCacheMiddleware,
 } from '../middleware/cache.middleware.js';
+import {
+  alertsQuerySchema,
+  createValidator,
+  historyQuerySchema,
+  playerIdParamsSchema,
+  playerRiskQuerySchema,
+  sportParamsSchema,
+  teamIdParamsSchema,
+} from '../middleware/validation.middleware.js';
 
 export const injuryRouter = Router();
 
@@ -40,7 +49,13 @@ export const injuryRouter = Router();
  *       404:
  *         description: Player not found
  */
-injuryRouter.get('/player/:playerId', riskScoreCacheMiddleware, getPlayerRisk);
+injuryRouter.get(
+  '/player/:playerId',
+  createValidator(playerIdParamsSchema, 'params'),
+  createValidator(playerRiskQuerySchema, 'query'),
+  riskScoreCacheMiddleware,
+  getPlayerRisk
+);
 
 /**
  * @openapi
@@ -61,7 +76,12 @@ injuryRouter.get('/player/:playerId', riskScoreCacheMiddleware, getPlayerRisk);
  *       404:
  *         description: Team not found
  */
-injuryRouter.get('/team/:teamId', teamRiskCacheMiddleware, getTeamRisk);
+injuryRouter.get(
+  '/team/:teamId',
+  createValidator(teamIdParamsSchema, 'params'),
+  teamRiskCacheMiddleware,
+  getTeamRisk
+);
 
 /**
  * @openapi
@@ -92,7 +112,13 @@ injuryRouter.get('/team/:teamId', teamRiskCacheMiddleware, getTeamRisk);
  *       200:
  *         description: List of alerts
  */
-injuryRouter.get('/alerts/:sport', alertsCacheMiddleware, getLeagueAlerts);
+injuryRouter.get(
+  '/alerts/:sport',
+  createValidator(sportParamsSchema, 'params'),
+  createValidator(alertsQuerySchema, 'query'),
+  alertsCacheMiddleware,
+  getLeagueAlerts
+);
 
 /**
  * @openapi
@@ -118,4 +144,9 @@ injuryRouter.get('/alerts/:sport', alertsCacheMiddleware, getLeagueAlerts);
  *       404:
  *         description: Player not found
  */
-injuryRouter.get('/player/:playerId/history', getPlayerRiskHistory);
+injuryRouter.get(
+  '/player/:playerId/history',
+  createValidator(playerIdParamsSchema, 'params'),
+  createValidator(historyQuerySchema, 'query'),
+  getPlayerRiskHistory
+);

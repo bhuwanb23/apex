@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { listPlayers, listSports, listTeams } from '../controllers/shared.controller.js';
 import { teamListCacheMiddleware } from '../middleware/cache.middleware.js';
+import {
+  createValidator,
+  sharedPlayersQuerySchema,
+  sportParamsSchema,
+} from '../middleware/validation.middleware.js';
 
 export const sharedRouter = Router();
 
@@ -65,7 +70,12 @@ sharedRouter.get('/', listSports);
  *       404:
  *         description: Sport not found
  */
-sharedRouter.get('/:sport/teams', teamListCacheMiddleware, listTeams);
+sharedRouter.get(
+  '/:sport/teams',
+  createValidator(sportParamsSchema, 'params'),
+  teamListCacheMiddleware,
+  listTeams
+);
 
 /**
  * @openapi
@@ -102,4 +112,9 @@ sharedRouter.get('/:sport/teams', teamListCacheMiddleware, listTeams);
  *       404:
  *         description: Sport not found
  */
-sharedRouter.get('/:sport/players', listPlayers);
+sharedRouter.get(
+  '/:sport/players',
+  createValidator(sportParamsSchema, 'params'),
+  createValidator(sharedPlayersQuerySchema, 'query'),
+  listPlayers
+);

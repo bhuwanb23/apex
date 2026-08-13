@@ -10,6 +10,13 @@ import {
   momentumCacheMiddleware,
   timeoutCacheMiddleware,
 } from '../middleware/cache.middleware.js';
+import {
+  createValidator,
+  gameIdParamsSchema,
+  seasonQuerySchema,
+  sportParamsSchema,
+  timeoutSituationSchema,
+} from '../middleware/validation.middleware.js';
 
 export const momentumRouter = Router();
 
@@ -38,7 +45,13 @@ export const momentumRouter = Router();
  *       404:
  *         description: Sport not found
  */
-momentumRouter.get('/analysis/:sport', momentumCacheMiddleware, getMomentumAnalysis);
+momentumRouter.get(
+  '/analysis/:sport',
+  createValidator(sportParamsSchema, 'params'),
+  createValidator(seasonQuerySchema, 'query'),
+  momentumCacheMiddleware,
+  getMomentumAnalysis
+);
 
 /**
  * @openapi
@@ -59,7 +72,11 @@ momentumRouter.get('/analysis/:sport', momentumCacheMiddleware, getMomentumAnaly
  *       404:
  *         description: Game not found
  */
-momentumRouter.get('/game/:gameId', getGameMomentum);
+momentumRouter.get(
+  '/game/:gameId',
+  createValidator(gameIdParamsSchema, 'params'),
+  getGameMomentum
+);
 
 /**
  * @openapi
@@ -77,7 +94,12 @@ momentumRouter.get('/game/:gameId', getGameMomentum);
  *       200:
  *         description: Comparison array sorted by effect size
  */
-momentumRouter.get('/comparison', comparisonCacheMiddleware, getSportComparison);
+momentumRouter.get(
+  '/comparison',
+  createValidator(seasonQuerySchema, 'query'),
+  comparisonCacheMiddleware,
+  getSportComparison
+);
 
 /**
  * @openapi
@@ -125,4 +147,10 @@ momentumRouter.get('/comparison', comparisonCacheMiddleware, getSportComparison)
  *       404:
  *         description: Sport not found
  */
-momentumRouter.get('/timeout/:sport', timeoutCacheMiddleware, getTimeoutRecommendation);
+momentumRouter.get(
+  '/timeout/:sport',
+  createValidator(sportParamsSchema, 'params'),
+  createValidator(timeoutSituationSchema, 'query'),
+  timeoutCacheMiddleware,
+  getTimeoutRecommendation
+);

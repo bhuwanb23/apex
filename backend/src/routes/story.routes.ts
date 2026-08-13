@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { getStory } from '../controllers/story.controller.js';
 import { storyCacheMiddleware } from '../middleware/cache.middleware.js';
+import {
+  createValidator,
+  storyModuleSportParamsSchema,
+  storyQuerySchema,
+} from '../middleware/validation.middleware.js';
 
 export const storyRouter = Router();
 
@@ -47,4 +52,10 @@ export const storyRouter = Router();
  *       404:
  *         description: Entity or sport not found
  */
-storyRouter.get('/:module/:sport', storyCacheMiddleware, getStory);
+storyRouter.get(
+  '/:module/:sport',
+  createValidator(storyModuleSportParamsSchema, 'params'),
+  createValidator(storyQuerySchema, 'query'),
+  storyCacheMiddleware,
+  getStory
+);

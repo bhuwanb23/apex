@@ -7,7 +7,6 @@
  * (same protection as the job trigger route).
  */
 import { Router } from 'express';
-import { z } from 'zod';
 import { cacheDel, cacheDelPrefix } from '../cache/memoryCache.js';
 import { prisma } from '../db/client.js';
 import { assertAdminKey } from '../middleware/admin.middleware.js';
@@ -28,8 +27,12 @@ import {
   markCacheInvalidByDataType,
   resolveSportId,
 } from '../services/sqlite.cache.service.js';
+import {
+  cacheEntriesQuerySchema,
+  cacheInvalidateBodySchema,
+  createValidator,
+} from '../middleware/validation.middleware.js';
 import { sendSuccess } from '../utils/response.util.js';
-import { validateBody, validateQuery } from '../utils/validator.util.js';
 
 export const cacheRouter = Router();
 
@@ -48,12 +51,6 @@ cacheRouter.get('/stats', async (_req, res) => {
   const [memory, sqlite] = await Promise.all([getMemoryCacheStats(), getCacheStats()]);
   const performance = getCachePerformanceStats();
   sendSuccess(res, { memory, sqlite, performance });
-});
-
-const entriesQuerySchema = z.object({
-  dataType: z.string().min(1).optional(),
-  sport: z.string().min(1).optional(),
-  valid: z.enum(['true', 'false']).optional(),
 });
 
 /**
@@ -83,8 +80,15 @@ const entriesQuerySchema = z.object({
  *       200:
  *         description: Cache entries with computed fields
  */
-cacheRouter.get('/entries', async (req, res) => {
-  const { dataType, sport, valid } = validateQuery(entriesQuerySchema, req);
+cacheRouter.get(
+  '/entries',
+  createValidator(cacheEntriesQuerySchema, 'query'),
+  async (req, res) => {
+  const { dataType, sport, valid } = req.validatedQuery as {
+    dataType?: string;
+    sport?: string;
+    valid?: 'true' | 'false';
+  };
   const sportId = sport ? await resolveSportId(sport) : undefined;
   const rows = await prisma.cacheMetadata.findMany({
     where: {
@@ -110,14 +114,8 @@ cacheRouter.get('/entries', async (req, res) => {
     ttlRemaining: Math.max(0, Math.round((r.expiresAt.getTime() - now) / 1000)),
   }));
   sendSuccess(res, { total: entries.length, entries });
-});
-
-const invalidateBodySchema = z.object({
-  key: z.string().min(1).optional(),
-  sport: z.string().min(1).optional(),
-  type: z.string().min(1).optional(),
-  all: z.boolean().optional(),
-});
+  }
+);
 
 /**
  * @openapi
@@ -159,9 +157,17 @@ const invalidateBodySchema = z.object({
  *       403:
  *         description: Missing or invalid X-Admin-Key
  */
-cacheRouter.delete('/invalidate', async (req, res) => {
+cacheRouter.delete(
+  '/invalidate',
+  createValidator(cacheInvalidateBodySchema, 'body'),
+  async (req, res) => {
   assertAdminKey(req);
-  const { key, sport, type, all } = validateBody(invalidateBodySchema, req);
+  const { key, sport, type, all } = req.validatedBody as {
+    key?: string;
+    sport?: string;
+    type?: string;
+    all?: boolean;
+  };
 
   if (all) {
     await invalidateAllCaches();
@@ -208,7 +214,8 @@ cacheRouter.delete('/invalidate', async (req, res) => {
     return;
   }
   throw ApiError.badRequest('Provide one of: key, sport, type or all');
-});
+  }
+);
 
 /**
  * @openapi

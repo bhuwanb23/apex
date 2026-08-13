@@ -5,6 +5,11 @@ import {
   getMLHealth,
   triggerJob,
 } from '../controllers/jobs.controller.js';
+import {
+  createValidator,
+  jobHistoryQuerySchema,
+  triggerJobBodySchema,
+} from '../middleware/validation.middleware.js';
 
 export const jobsRouter = Router();
 
@@ -44,7 +49,11 @@ jobsRouter.get('/status', getJobsStatus);
  *       200:
  *         description: Recent job runs
  */
-jobsRouter.get('/history', getJobsHistory);
+jobsRouter.get(
+  '/history',
+  createValidator(jobHistoryQuerySchema, 'query'),
+  getJobsHistory
+);
 
 /**
  * @openapi
@@ -85,7 +94,11 @@ jobsRouter.get('/history', getJobsHistory);
  *       503:
  *         description: Triggering disabled — JOB_CONTROL_ADMIN_KEY not configured
  */
-jobsRouter.post('/trigger', triggerJob);
+jobsRouter.post(
+  '/trigger',
+  createValidator(triggerJobBodySchema, 'body'),
+  triggerJob
+);
 
 /**
  * @openapi

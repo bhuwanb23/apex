@@ -9,6 +9,12 @@ import {
   searchPlayersCacheMiddleware,
   searchTeamsCacheMiddleware,
 } from '../middleware/cache.middleware.js';
+import {
+  createValidator,
+  gamesSearchQuerySchema,
+  searchPlayersQuerySchema,
+  simpleSearchQuerySchema,
+} from '../middleware/validation.middleware.js';
 
 export const searchRouter = Router();
 
@@ -42,7 +48,12 @@ export const searchRouter = Router();
  *       400:
  *         description: Query too short
  */
-searchRouter.get('/players', searchPlayersCacheMiddleware, searchPlayers);
+searchRouter.get(
+  '/players',
+  createValidator(searchPlayersQuerySchema, 'query'),
+  searchPlayersCacheMiddleware,
+  searchPlayers
+);
 
 /**
  * @openapi
@@ -66,7 +77,12 @@ searchRouter.get('/players', searchPlayersCacheMiddleware, searchPlayers);
  *       200:
  *         description: Matching teams
  */
-searchRouter.get('/teams', searchTeamsCacheMiddleware, searchTeams);
+searchRouter.get(
+  '/teams',
+  createValidator(simpleSearchQuerySchema, 'query'),
+  searchTeamsCacheMiddleware,
+  searchTeams
+);
 
 /**
  * @openapi
@@ -90,7 +106,11 @@ searchRouter.get('/teams', searchTeamsCacheMiddleware, searchTeams);
  *       200:
  *         description: Matching coaches
  */
-searchRouter.get('/coaches', searchCoaches);
+searchRouter.get(
+  '/coaches',
+  createValidator(simpleSearchQuerySchema, 'query'),
+  searchCoaches
+);
 
 /**
  * @openapi
@@ -137,4 +157,8 @@ searchRouter.get('/coaches', searchCoaches);
  *       200:
  *         description: Paginated game list
  */
-searchRouter.get('/games', searchGames);
+searchRouter.get(
+  '/games',
+  createValidator(gamesSearchQuerySchema, 'query'),
+  searchGames
+);
