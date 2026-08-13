@@ -233,7 +233,10 @@ async function loadHistory(
  * Persists a new score atomically: first de-lists the previous latest row,
  * then inserts the new one as isLatest. Exactly one latest per player.
  */
-async function saveRiskScore(playerId: number, score: InjuryRiskScore): Promise<{ computedAt: Date }> {
+async function saveRiskScore(
+  playerId: number,
+  score: InjuryRiskScore
+): Promise<{ computedAt: Date }> {
   // Order matters: de-list the old latest first, then insert the new one.
   const [, created] = await prisma.$transaction([
     prisma.injuryRiskScores.updateMany({
@@ -296,7 +299,11 @@ export async function getPlayerRisk(
 
     if (logs.length === 0) {
       return {
-        ...noScoreProfile(player, 'No game log data available — risk cannot be computed.', new Date().toISOString()),
+        ...noScoreProfile(
+          player,
+          'No game log data available — risk cannot be computed.',
+          new Date().toISOString()
+        ),
         gameLogSummary: { gamesLast7Days: 0, gamesLast21Days: 0, avgMinutesLast21Days: null },
         history: await loadHistory(playerId, 60, 10),
       };

@@ -13,10 +13,7 @@
 import { prisma } from '../db/client.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { ApiError } from '../middleware/error.middleware.js';
-import {
-  MLServiceError,
-  MLServiceUnavailableError,
-} from '../ml/ml.client.js';
+import { MLServiceError, MLServiceUnavailableError } from '../ml/ml.client.js';
 import { storyML } from '../ml/story.ml.js';
 import type { SportAbbreviation, UserRole } from '../types/shared.types.js';
 import type { StoryViewResponse } from '../types/story.types.js';
@@ -272,7 +269,10 @@ export async function getStory(
     };
   } catch (err) {
     if (err instanceof MLServiceUnavailableError) {
-      logger.warn({ storyKey, error: err.message }, 'Story ML unavailable — serving previous story');
+      logger.warn(
+        { storyKey, error: err.message },
+        'Story ML unavailable — serving previous story'
+      );
       if (existing) {
         return {
           ...storyFromRow(existing),

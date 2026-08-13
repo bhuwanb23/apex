@@ -18,10 +18,7 @@ import { CACHE_TTL } from '../cache/memoryCache.js';
 import { prisma } from '../db/client.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import type { Prisma } from '../generated/prisma/client.js';
-import {
-  MLServiceError,
-  MLServiceUnavailableError,
-} from '../ml/ml.client.js';
+import { MLServiceError, MLServiceUnavailableError } from '../ml/ml.client.js';
 import {
   momentumML,
   type GameMomentumResult,
@@ -129,9 +126,11 @@ async function loadGamePlays(gameId: number): Promise<PlayRow[]> {
  * teamId, so scoring events without a team attribution (teamId null) count as
  * length-1 runs, whereas Python can infer the scorer from score deltas.
  */
-function deriveLongestStreak(
-  plays: PlayRow[]
-): { length: number; teamName: string | null; startTime: string | null } {
+function deriveLongestStreak(plays: PlayRow[]): {
+  length: number;
+  teamName: string | null;
+  startTime: string | null;
+} {
   // Chronological order; plays without a time sink last.
   const scoring = plays
     .filter(p => p.isScoring)
@@ -247,7 +246,9 @@ function toAnalysisResponse(
     season,
     verdict: {
       verdictLabel: (r.verdictLabel ??
-        (r.isSignificant ? 'significant' : 'not_significant')) as MomentumAnalysisResponse['verdict']['verdictLabel'],
+        (r.isSignificant
+          ? 'significant'
+          : 'not_significant')) as MomentumAnalysisResponse['verdict']['verdictLabel'],
       isSignificant: r.isSignificant,
       shortExplanation: r.shortExplanation,
     },
@@ -271,7 +272,10 @@ function toAnalysisResponse(
 }
 
 /** Fallback metadata → the same response shape toAnalysisResponse produces. */
-function withFallbackMeta<T extends object>(resp: T, meta: ReturnType<typeof buildFallbackMeta>): T & ReturnType<typeof buildFallbackMeta> {
+function withFallbackMeta<T extends object>(
+  resp: T,
+  meta: ReturnType<typeof buildFallbackMeta>
+): T & ReturnType<typeof buildFallbackMeta> {
   return { ...resp, ...meta };
 }
 
@@ -304,18 +308,24 @@ export async function getMomentumAnalysis(
     return toAnalysisResponse(sport, resolvedSeason, { ...stats, computedAt });
   } catch (err) {
     if (err instanceof MLServiceUnavailableError) {
-      logger.warn({ sport, error: err.message }, 'Momentum ML unavailable — serving stale analysis');
+      logger.warn(
+        { sport, error: err.message },
+        'Momentum ML unavailable — serving stale analysis'
+      );
       if (row) {
+        const warning =
+          'ML service unavailable — showing last computed analysis, which may be stale';
         return withFallbackMeta(
           toAnalysisResponse(
             sport,
             resolvedSeason,
             { ...row, computedAt: row.computedAt.toISOString() },
-            'ML service unavailable — showing last computed analysis, which may be stale'
+            warning
           ),
-          buildFallbackMeta(row.computedAt)
+          buildFallbackMeta(row.computedAt, warning)
         );
       }
+      const warning = 'ML service unavailable — no cached analysis available';
       return withFallbackMeta(
         toAnalysisResponse(
           sport,
@@ -330,13 +340,13 @@ export async function getMomentumAnalysis(
             gamesAnalyzed: 0,
             playsAnalyzed: 0,
             verdictLabel: 'insufficient_data',
-            plainExplanation: 'ML service unavailable and no cached analysis exists.',
-            shortExplanation: 'ML service unavailable and no cached analysis exists.',
+            plainExplanation: warning,
+            shortExplanation: warning,
             computedAt: new Date().toISOString(),
           },
-          'ML service unavailable — no cached analysis available'
+          warning
         ),
-        buildFallbackMeta(null)
+        buildFallbackMeta(null, warning)
       );
     }
     if (err instanceof MLServiceError) {
@@ -539,7 +549,9 @@ export async function getSportComparison(season?: string): Promise<SportComparis
       summaries.push({
         sport: s.name as SportAbbreviation,
         // The table stores no verdict column — significant rows imply the verdict.
-        verdictLabel: (row.isSignificant ? 'significant' : 'not_significant') as SportMomentumSummary['verdictLabel'],
+        verdictLabel: (row.isSignificant
+          ? 'significant'
+          : 'not_significant') as SportMomentumSummary['verdictLabel'],
         hazardCoefficient: row.hazardCoefficient,
         pValue: row.pValue,
         effectSize: row.effectSize,
@@ -553,7 +565,10 @@ export async function getSportComparison(season?: string): Promise<SportComparis
       const computeKey = `${s.name}:${resolvedSeason}`;
       if (!pendingSeasonComputes.has(computeKey)) {
         pendingSeasonComputes.add(computeKey);
-        logger.info({ sport: s.name, season: resolvedSeason }, 'Background momentum compute triggered');
+        logger.info(
+          { sport: s.name, season: resolvedSeason },
+          'Background momentum compute triggered'
+        );
         void computeAndStoreSeasonAnalysis(s.name as SportAbbreviation, s.id, resolvedSeason)
           .catch(err => logger.error({ sport: s.name, err }, 'Background momentum compute failed'))
           .finally(() => pendingSeasonComputes.delete(computeKey));
@@ -561,9 +576,7 @@ export async function getSportComparison(season?: string): Promise<SportComparis
     }
   }
 
-  summaries.sort(
-    (a, b) => (b.effectSize ?? -Infinity) - (a.effectSize ?? -Infinity)
-  );
+  summaries.sort((a, b) => (b.effectSize ?? -Infinity) - (a.effectSize ?? -Infinity));
 
   return { season: resolvedSeason, sports: summaries, generatedAt: new Date().toISOString() };
 }
