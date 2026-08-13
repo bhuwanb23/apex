@@ -1,9 +1,14 @@
+import pkg from '../package.json' with { type: 'json' };
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { prisma } from './db/client.js';
 import { queueManager } from './jobs/queue.manager.js';
+import { collectRoutesSummary } from './routes/index.js';
+import { getMemoryCacheStats } from './services/memory.cache.service.js';
+import { getCacheStats } from './services/sqlite.cache.service.js';
 import { warmUpCache } from './services/cache.warmup.js';
+import { logStartupBanner, rotateAllLogFiles } from './utils/log.manager.js';
 
 async function main(): Promise<void> {
   // Verify DB connectivity before accepting traffic
@@ -12,10 +17,35 @@ async function main(): Promise<void> {
 
   const app = createApp();
 
-  const server = app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, async () => {
     logger.info(`🚀 ${env.APP_NAME} API listening on http://localhost:${env.PORT}`);
     logger.info(`💚 Health check at http://localhost:${env.PORT}/api/health`);
     logger.info(`📚 Swagger docs at http://localhost:${env.PORT}/api-docs`);
+    // Phase 8 Step 11 — rotate oversized logs, then print the startup banner
+    // (version, environment, port, routes, scheduled jobs, cache status).
+    rotateAllLogFiles();
+    try {
+      const [memory, sqlite] = await Promise.all([getMemoryCacheStats(), getCacheStats()]);
+      logStartupBanner({
+        appName: env.APP_NAME,
+        version: pkg.version,
+        environment: env.NODE_ENV,
+        port: env.PORT,
+        database: env.DATABASE_URL,
+        mlService: env.PYTHON_ML_URL,
+        nodeVersion: process.version,
+        startedAt: new Date().toISOString(),
+        routes: collectRoutesSummary(),
+        jobs: queueManager.list().map(job => ({
+          name: job.name,
+          schedule: job.schedule ?? 'manual',
+        })),
+        cache: { memoryKeys: memory.keys, sqliteEntries: sqlite.totalEntries },
+      });
+    } catch (err) {
+      // The banner is cosmetic — a cache/DB hiccup at boot must not block it.
+      logger.warn({ err }, 'Startup banner could not read cache stats');
+    }
     // Background job scheduler (Phase 6) — cron jobs start after the server
     // accepts traffic so a boot failure is caught before any job runs. All
     // control flows through the queue manager (single control point).
@@ -25,9 +55,7 @@ async function main(): Promise<void> {
     // logged and never block boot. If RUN_JOBS_ON_STARTUP is running jobs
     // that invalidate caches, their invalidation simply wins and the next
     // request repopulates.
-    void warmUpCache().catch(err =>
-      logger.warn({ err }, 'Cache warmup failed at startup')
-    );
+    void warmUpCache().catch(err => logger.warn({ err }, 'Cache warmup failed at startup'));
   });
 
   // Boot failures (e.g. port already in use) fire asynchronously on the server
