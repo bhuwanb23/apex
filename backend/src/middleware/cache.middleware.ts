@@ -176,7 +176,11 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
           next();
           return;
         }
-        // Background-refresh bypass — recompute and store, never serve.
+        // Background-refresh bypass — recompute and store, never serve. The
+        // result is as fresh as a normal miss, so the SQLite registry is
+        // re-validated too (otherwise a stale-while-revalidate cycle would
+        // leave the registry expired and the data would be served stale again
+        // after the next server restart).
         if (req.header('x-cache-refresh') === '1') {
           const bypassKey = keyBuilder(req);
           runController(req, res, next, {
@@ -184,7 +188,7 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestH
             registryKey: bypassKey,
             status: 'MISS',
             layer: 'fresh',
-            markRegistry: false,
+            markRegistry: cacheLayer !== 'memory' && !sqliteFresh && dataType != null,
           });
           return;
         }

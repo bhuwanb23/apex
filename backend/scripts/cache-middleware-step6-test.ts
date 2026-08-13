@@ -164,11 +164,72 @@ try {
   );
 
   mainServer.close();
+
+  // -------------------------------------------------------------------------
+  // 3. Stale-while-revalidate on a sqlite layer re-validates the registry
+  // -------------------------------------------------------------------------
+  console.log('3. sqlite stale-while-revalidate + registry refresh:');
+  const regApp = (await import('express')).default();
+  const REG_KEY = 'test:registry-refresh';
+  let regCount = 0;
+  const regMw = createCacheMiddleware({
+    ttl: 60,
+    allowStale: true,
+    staleThreshold: 1,
+    cacheLayer: 'sqlite',
+    dataType: 'season_data',
+    keyBuilder: () => REG_KEY,
+  });
+  regApp.get('/test', regMw, (_req, res) => {
+    regCount += 1;
+    res.json({ n: regCount });
+  });
+  // Same port as env.PORT so scheduleBackgroundRefresh (self-request) hits this app.
+  const regServer = await new Promise<import('node:http').Server>(resolve => {
+    const srv = regApp.listen(STALE_PORT, () => resolve(srv));
+  });
+  const regBase = `http://127.0.0.1:${STALE_PORT}`;
+
+  const r1 = await fetch(`${regBase}/test`);
+  check('sqlite layer first request → MISS', r1.headers.get('x-cache-status') === 'MISS', headers(r1));
+
+  // Expire the registry row + clear memory so the next request hits the
+  // sqlite stale path (data exists in the registry but is past expiry).
+  await prisma.cacheMetadata.updateMany({
+    where: { cacheKey: REG_KEY },
+    data: { isValid: false, expiresAt: new Date(Date.now() - 1000) },
+  });
+  cacheFlush();
+
+  const r2 = await fetch(`${regBase}/test`);
+  check(
+    'expired registry + empty memory → STALE (sqlite)',
+    r2.headers.get('x-cache-status') === 'STALE' && r2.headers.get('x-cache-layer') === 'sqlite',
+    headers(r2)
+  );
+
+  await wait(700); // background refresh (self-request) recomputes + re-validates
+  const regRow = await prisma.cacheMetadata.findUnique({ where: { cacheKey: REG_KEY } });
+  check(
+    'background refresh re-validated the sqlite registry',
+    regRow != null && regRow.isValid && regRow.expiresAt.getTime() > Date.now(),
+    { isValid: regRow?.isValid, expiresAt: regRow?.expiresAt }
+  );
+  const r3 = await fetch(`${regBase}/test`);
+  check(
+    'after refresh → HIT (memory) with fresh body',
+    r3.headers.get('x-cache-status') === 'HIT' &&
+      r3.headers.get('x-cache-layer') === 'memory' &&
+      ((await r3.json()) as { n: number }).n === 3,
+    headers(r3)
+  );
+  regServer.close();
 } finally {
-  // Cleanup — registry rows the middleware marked during the leaderboard tests.
+  // Cleanup — registry rows the middleware marked during the tests.
   await prisma.cacheMetadata.deleteMany({
     where: { cacheKey: { startsWith: 'leaderboard:NBA:' } },
   });
+  await prisma.cacheMetadata.deleteMany({ where: { cacheKey: 'test:registry-refresh' } });
   cacheFlush();
   await prisma.$disconnect();
 }
