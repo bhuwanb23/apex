@@ -15,9 +15,7 @@ import { sendSuccess } from '../utils/response.util.js';
 
 /** GET /api/story/:module/:sport — cached or freshly generated narrative. */
 export async function getStory(req: Request, res: Response): Promise<void> {
-  const { module, sport } = req.validatedParams as z.infer<
-    typeof storyModuleSportParamsSchema
-  >;
+  const { module, sport } = req.validatedParams as z.infer<typeof storyModuleSportParamsSchema>;
   const { role, entityId, season } = req.validatedQuery as z.infer<typeof storyQuerySchema>;
   const data = await storyService.getStory(module, sport, role, entityId, season);
   sendSuccess(res, data);
