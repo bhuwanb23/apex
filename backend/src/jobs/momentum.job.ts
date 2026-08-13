@@ -103,10 +103,10 @@ const momentumJob: JobDefinition = {
           gamesAnalyzed: stats.gamesAnalyzed,
           playsAnalyzed: stats.playsAnalyzed,
         };
-        // Invalidate cached analysis responses for this sport (and the
-        // cross-sport comparison) so the next request reads the fresh row.
-        const deleted = cacheDelPrefix(`http:/api/momentum/analysis/${sport.name}`);
-        cacheDelPrefix('http:/api/momentum/comparison');
+        // Invalidate the middleware's cached analysis responses for this sport
+        // (memory key namespace is "resp:", Step 6.3) so the next request
+        // reads the fresh row. The comparison route has no cache middleware.
+        const deleted = cacheDelPrefix(`resp:momentum:season:${sport.name}`);
         logger.info(
           { sport: sport.name, deleted },
           'momentum: season analysis refreshed, cached responses invalidated'

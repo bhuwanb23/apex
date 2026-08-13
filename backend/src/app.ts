@@ -4,7 +4,6 @@ import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env.js';
-import { cacheMiddleware } from './middleware/cache.middleware.js';
 import { corsMiddleware } from './middleware/cors.middleware.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 import { loggerMiddleware } from './middleware/logger.middleware.js';
@@ -42,8 +41,9 @@ export function createApp(): express.Express {
     res.json(swaggerSpec);
   });
 
-  // Response cache (GET requests only) + feature routes
-  app.use('/', cacheMiddleware, routes);
+  // Feature routes — caching is per-route (Phase 7 Step 6.2 instances are
+  // wired in each route file; uncached routes always compute fresh).
+  app.use('/', routes);
 
   // 404 + error handling (must be registered last)
   app.use(notFound);

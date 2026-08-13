@@ -1,26 +1,106 @@
-import type { RequestHandler } from 'express';
-import { cacheDel, cacheGet, cacheSet } from '../cache/memoryCache.js';
+/**
+ * Cache middleware (Phase 7, Step 6 — 7.3).
+ *
+ * createCacheMiddleware(options) returns an Express middleware that sits
+ * between the router and the controller:
+ *
+ *   HIT   → cached response returned immediately (controller never runs)
+ *   MISS  → controller runs, response stored for next time
+ *   STALE → cached data older than staleThreshold returned immediately while a
+ *           background refresh recomputes and repopulates the cache
+ *
+ * Layers (Step 6.1):
+ *   memory → node-cache only (searches, team lists, alerts)
+ *   sqlite → CacheMetadata registry (Step 4) — a fresh registry row means the
+ *            controller reads fresh persisted data from its proper table, so
+ *            responses survive a server restart (X-Cache-Layer: sqlite)
+ *   both   → memory fast path + sqlite persistence
+ *
+ * Keys:
+ *   Response bodies live in memory under "resp:<key>" so they can never
+ *   collide with the service-level caches (search, leaderboard) that use the
+ *   same Step 5 key builders in node-cache. The SQLite registry keeps the
+ *   plain Step 5 key. varyBy query params are appended to the memory key only
+ *   (they change the response shape, not the underlying data freshness).
+ *
+ * Headers (Step 6.3) on every cached response:
+ *   X-Cache-Status: HIT | MISS | STALE
+ *   X-Cache-Age / X-Cache-TTL: seconds
+ *   X-Cache-Layer: memory | sqlite | fresh
+ *
+ * Degraded responses (payloads carrying a `warning`, e.g. an ML-service
+ * fallback) are never cached — they must be recomputed as soon as the ML
+ * service recovers.
+ */
+import type { Request, RequestHandler, Response } from 'express';
+import { cacheDel, cacheGet, cacheSet, memoryCache } from '../cache/memoryCache.js';
 import { env } from '../config/env.js';
+import {
+  getCacheInfo,
+  isCacheStale,
+  isCacheValid,
+  isStoryFresh,
+  markCacheValid,
+} from '../services/sqlite.cache.service.js';
+import {
+  CacheDataType,
+  IN_MEMORY_TTL,
+  SQLITE_TTL,
+  STALE_WHILE_REVALIDATE,
+} from '../utils/cache.config.js';
+import {
+  alertsKey,
+  leaderboardKey,
+  momentumSeasonKey,
+  riskScoreKey,
+  searchPlayersKey,
+  searchTeamsKey,
+  storyKey,
+  teamListKey,
+} from '../utils/cache.keys.js';
+import { logger } from '../utils/logger.util.js';
+
+// ---------------------------------------------------------------------------
+// Types + helpers
+// ---------------------------------------------------------------------------
+
+type CacheLayer = 'memory' | 'sqlite' | 'both';
+type CacheStatus = 'HIT' | 'MISS' | 'STALE';
+type CacheLayerHeader = 'memory' | 'sqlite' | 'fresh';
 
 interface CachedResponse {
   status: number;
   body: unknown;
 }
 
+export interface CacheMiddlewareOptions {
+  /** How long to cache in seconds. */
+  ttl: number;
+  /** Builds the base cache key from the request (use the Step 5 builders). */
+  keyBuilder: (req: Request) => string;
+  /** Which layers to use. Default 'memory'. */
+  cacheLayer?: CacheLayer;
+  /** Enable stale-while-revalidate. Default false. */
+  allowStale?: boolean;
+  /** Seconds after which a cached entry is served stale while refreshing. */
+  staleThreshold?: number;
+  /** Query params that change the response — appended to the memory key. */
+  varyBy?: string[];
+  /** CacheMetadata dataType written for sqlite/both layers. */
+  dataType?: CacheDataType;
+  /** Custom "fresh in the persistent layer" check — the story route checks the
+   *  StoryLogs table directly instead of the CacheMetadata registry. */
+  sqliteFresh?: (key: string) => Promise<boolean>;
+  /** Skip the cache read path (but still cache the response) — e.g. a
+   *  ?recalculate=true flag that must always force fresh computation. */
+  skipRead?: (req: Request) => boolean;
+}
+
 /**
  * A response is "degraded" when its payload carries a `warning` — services add
  * one (e.g. "ML service unavailable — showing last computed score…") when they
  * fall back to cached/stale data because the Python ML service was unreachable.
- *
- * Degraded responses must never be cached: they are temporary fallbacks that
- * should be recomputed as soon as the ML service recovers. Caching them would
- * serve stale warnings for the whole TTL even after Python comes back up.
- *
- * Tradeoff: while the ML service stays down, every request re-attempts the ML
- * connection instead of being served from cache. That is intentional — the ML
- * client fails fast on connection-refused (short retry backoff), and it keeps
- * the API self-healing: the moment Python is reachable again, fresh data flows
- * without waiting out the old TTL.
+ * Degraded responses are never cached (see file header).
  */
 function isDegraded(body: unknown): boolean {
   if (typeof body !== 'object' || body === null) return false;
@@ -33,44 +113,315 @@ function isDegraded(body: unknown): boolean {
   return hasWarning(root) || hasWarning(root.data);
 }
 
+function setCacheHeaders(
+  res: Response,
+  status: CacheStatus,
+  layer: CacheLayerHeader,
+  ageSeconds: number,
+  ttlSeconds: number
+): void {
+  res.setHeader('X-Cache-Status', status);
+  res.setHeader('X-Cache-Age', String(Math.max(0, Math.round(ageSeconds))));
+  res.setHeader('X-Cache-TTL', String(Math.max(0, Math.round(ttlSeconds))));
+  res.setHeader('X-Cache-Layer', layer);
+}
+
+/** Appends the varyBy query params (sorted, only those present) to the key. */
+function appendVaryBy(base: string, req: Request, varyBy: string[]): string {
+  const parts = varyBy
+    .filter(name => req.query[name] !== undefined)
+    .sort()
+    .map(name => `${name}=${String(req.query[name])}`);
+  return parts.length > 0 ? `${base}:${parts.join(':')}` : base;
+}
+
 /**
- * Cache-first middleware for GET requests.
- * Returns the cached JSON response when fresh; otherwise lets the request
- * through and stores the JSON response before sending it.
- * Uses the request URL as the cache key.
+ * Background refresh: re-issue the same request with an x-cache-refresh header
+ * so the middleware bypasses the read path, the controller recomputes, and the
+ * fresh response repopulates the memory + registry caches. The response itself
+ * is discarded. Errors are logged at debug — a failed refresh just means the
+ * next request serves stale again or recomputes.
  */
-export const cacheMiddleware: RequestHandler = (req, res, next) => {
-  if (
-    req.method !== 'GET' ||
-    req.originalUrl.startsWith('/api/health') ||
-    req.originalUrl.startsWith('/api/jobs')
-  ) {
-    // Skip non-GET requests, health checks and job control (always live)
+function scheduleBackgroundRefresh(req: Request): void {
+  const url = `http://127.0.0.1:${env.PORT}${req.originalUrl}`;
+  fetch(url, { headers: { 'x-cache-refresh': '1' } }).catch(err => {
+    logger.debug(
+      { url, error: err instanceof Error ? err.message : String(err) },
+      'cache: background refresh failed'
+    );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Factory
+// ---------------------------------------------------------------------------
+
+export function createCacheMiddleware(options: CacheMiddlewareOptions): RequestHandler {
+  const {
+    ttl,
+    keyBuilder,
+    cacheLayer = 'memory',
+    allowStale = false,
+    staleThreshold = ttl,
+    varyBy = [],
+    dataType,
+    sqliteFresh,
+    skipRead,
+  } = options;
+
+  return (req, res, next) => {
+    void (async () => {
+      try {
+        if (req.method !== 'GET') {
+          next();
+          return;
+        }
+        // Background-refresh bypass — recompute and store, never serve.
+        if (req.header('x-cache-refresh') === '1') {
+          const bypassKey = keyBuilder(req);
+          runController(req, res, next, {
+            memKey: `resp:${appendVaryBy(bypassKey, req, varyBy)}`,
+            registryKey: bypassKey,
+            status: 'MISS',
+            layer: 'fresh',
+            markRegistry: false,
+          });
+          return;
+        }
+
+        const base = keyBuilder(req);
+        const memKey = `resp:${appendVaryBy(base, req, varyBy)}`;
+
+        // Step 2 — memory layer first.
+        if (!skipRead?.(req)) {
+          const entry = cacheGet<CachedResponse>(memKey);
+          if (entry) {
+            if (isDegraded(entry.body)) {
+              // Should never happen (degraded responses aren't cached) — evict
+              // any legacy entry so the next request recomputes live.
+              cacheDel(memKey);
+            } else {
+              const remainingMs = memoryCache.getTtl(memKey) ?? 0;
+              const age = Math.max(0, Math.round(ttl - remainingMs / 1000));
+              const ttlRemaining = Math.max(0, Math.round(remainingMs / 1000));
+              if (!allowStale || age <= staleThreshold) {
+                setCacheHeaders(res, 'HIT', 'memory', age, ttlRemaining);
+                res.status(entry.status).json(entry.body);
+                return;
+              }
+              // Stale — serve now, refresh in the background.
+              setCacheHeaders(res, 'STALE', 'memory', age, ttlRemaining);
+              res.status(entry.status).json(entry.body);
+              scheduleBackgroundRefresh(req);
+              return;
+            }
+          }
+
+          // Step 3 — SQLite registry (sqlite / both layers).
+          if (cacheLayer !== 'memory') {
+            const fresh = sqliteFresh ? await sqliteFresh(base) : await isCacheValid(base);
+            if (fresh) {
+              // Fresh in the persistent layer → the controller reads fresh data
+              // from its proper table (fast) and we label it a sqlite hit.
+              const info = sqliteFresh ? null : await getCacheInfo(base);
+              const age = info
+                ? Math.max(0, Math.round((Date.now() - info.cachedAt.getTime()) / 1000))
+                : 0;
+              const ttlRemaining = info
+                ? Math.max(0, Math.round((info.expiresAt.getTime() - Date.now()) / 1000))
+                : ttl;
+              runController(req, res, next, {
+                memKey,
+                registryKey: base,
+                status: 'HIT',
+                layer: 'sqlite',
+                age,
+                ttlRemaining,
+                markRegistry: false,
+              });
+              return;
+            }
+            // Step 4 — stale-while-revalidate: data exists but past expiry.
+            if (allowStale && !sqliteFresh) {
+              const stale = await isCacheStale(base);
+              if (stale.isStale) {
+                const info = await getCacheInfo(base);
+                const age = info
+                  ? Math.max(0, Math.round((Date.now() - info.cachedAt.getTime()) / 1000))
+                  : ttl;
+                const ttlRemaining = info
+                  ? Math.max(0, Math.round((info.expiresAt.getTime() - Date.now()) / 1000))
+                  : 0;
+                runController(req, res, next, {
+                  memKey,
+                  registryKey: base,
+                  status: 'STALE',
+                  layer: 'sqlite',
+                  age,
+                  ttlRemaining,
+                  markRegistry: false,
+                });
+                scheduleBackgroundRefresh(req);
+                return;
+              }
+            }
+          }
+        }
+
+        // Step 5/6 — miss: run the controller, intercept and cache the response.
+        runController(req, res, next, {
+          memKey,
+          registryKey: base,
+          status: 'MISS',
+          layer: 'fresh',
+          markRegistry: cacheLayer !== 'memory' && !sqliteFresh && dataType != null,
+        });
+      } catch (err) {
+        // A cache-layer failure must never break the request — fall through to
+        // the controller, which computes fresh.
+        logger.warn(
+          { err: err instanceof Error ? err.message : String(err) },
+          'cache middleware error — continuing without cache'
+        );
+        next();
+      }
+    })();
+  };
+
+  /** Runs the controller, intercepting res.json to store the response. */
+  function runController(
+    req: Request,
+    res: Response,
+    next: () => void,
+    meta: {
+      memKey: string;
+      registryKey: string;
+      status: CacheStatus;
+      layer: CacheLayerHeader;
+      age?: number;
+      ttlRemaining?: number;
+      markRegistry: boolean;
+    }
+  ): void {
+    const originalJson = res.json.bind(res);
+    res.json = ((body: unknown) => {
+      if (res.statusCode >= 200 && res.statusCode < 400 && !isDegraded(body)) {
+        setCacheHeaders(res, meta.status, meta.layer, meta.age ?? 0, meta.ttlRemaining ?? ttl);
+        cacheSet(meta.memKey, { status: res.statusCode, body }, ttl);
+        if (meta.markRegistry) {
+          markCacheValid(meta.registryKey, dataType!, { ttl }).catch(err => {
+            logger.debug(
+              { key: meta.registryKey, error: err instanceof Error ? err.message : String(err) },
+              'sqlite cache: registry mark failed'
+            );
+          });
+        }
+      }
+      return originalJson(body);
+    }) as typeof res.json;
     next();
-    return;
   }
+}
 
-  const key = `http:${req.originalUrl}`;
-  const cached = cacheGet<CachedResponse>(key);
-  if (cached) {
-    // Evict stale degraded entries (e.g. cached while the ML service was down)
-    // so the next request recomputes against the live service instead of
-    // serving a permanent warning.
-    if (isDegraded(cached.body)) {
-      cacheDel(key);
-    } else {
-      res.status(cached.status).json(cached.body);
-      return;
-    }
-  }
+// ---------------------------------------------------------------------------
+// Step 6.2 — Route-specific middleware instances
+// ---------------------------------------------------------------------------
 
-  const originalJson = res.json.bind(res);
-  res.json = ((body: unknown) => {
-    if (res.statusCode >= 200 && res.statusCode < 400 && !isDegraded(body)) {
-      cacheSet(key, { status: res.statusCode, body }, env.CACHE_TTL_SHORT);
-    }
-    return originalJson(body);
-  }) as typeof res.json;
+/** Search players (Step 6.2 searchCacheMiddleware — memory, 1h, fresh only). */
+export const searchPlayersCacheMiddleware = createCacheMiddleware({
+  ttl: IN_MEMORY_TTL.SEARCH_RESULTS,
+  cacheLayer: 'memory',
+  allowStale: false,
+  keyBuilder: req =>
+    searchPlayersKey(String(req.query.sport ?? 'all'), String(req.query.q ?? '')),
+  varyBy: ['limit'],
+});
 
-  next();
-};
+/** Search teams (same config, team key). */
+export const searchTeamsCacheMiddleware = createCacheMiddleware({
+  ttl: IN_MEMORY_TTL.SEARCH_RESULTS,
+  cacheLayer: 'memory',
+  allowStale: false,
+  keyBuilder: req => searchTeamsKey(String(req.query.sport ?? 'all'), String(req.query.q ?? '')),
+});
+
+/** Team list (Step 6.2 — 24h, stale-while-revalidate after 12h). */
+export const teamListCacheMiddleware = createCacheMiddleware({
+  ttl: IN_MEMORY_TTL.TEAM_LISTS,
+  cacheLayer: 'memory',
+  allowStale: true,
+  staleThreshold: 43_200, // 12h per Step 6.2
+  keyBuilder: req => teamListKey(String(req.params.sport)),
+});
+
+/** League alerts (Step 6.2 — 30min, stale after 15min). */
+export const alertsCacheMiddleware = createCacheMiddleware({
+  ttl: IN_MEMORY_TTL.ACTIVE_ALERTS,
+  cacheLayer: 'memory',
+  allowStale: true,
+  staleThreshold: STALE_WHILE_REVALIDATE.ALERTS_STALE_AFTER,
+  keyBuilder: req => alertsKey(String(req.params.sport), String(req.query.zone ?? 'red')),
+  varyBy: ['limit'],
+});
+
+/** Coach leaderboard (Step 6.2 — both layers, 24h, stale after 12h). */
+export const leaderboardCacheMiddleware = createCacheMiddleware({
+  ttl: SQLITE_TTL.COACH_LEADERBOARD,
+  cacheLayer: 'both',
+  allowStale: true,
+  staleThreshold: STALE_WHILE_REVALIDATE.LEADERBOARD_STALE_AFTER,
+  dataType: CacheDataType.COACH_LEADERBOARD,
+  keyBuilder: req =>
+    leaderboardKey(
+      String(req.params.sport),
+      String(req.query.season ?? ''),
+      String(req.query.decisionType ?? 'all'),
+      String(req.query.gameType ?? 'all')
+    ),
+  varyBy: ['page', 'limit'],
+});
+
+/** Momentum season analysis (Step 6.2 — both layers, 24h, stale after 12h). */
+export const momentumCacheMiddleware = createCacheMiddleware({
+  ttl: SQLITE_TTL.MOMENTUM_ANALYSIS,
+  cacheLayer: 'both',
+  allowStale: true,
+  staleThreshold: STALE_WHILE_REVALIDATE.MOMENTUM_STALE_AFTER,
+  dataType: CacheDataType.MOMENTUM_ANALYSIS,
+  keyBuilder: req => momentumSeasonKey(String(req.params.sport), String(req.query.season ?? '')),
+});
+
+/**
+ * Risk score (Step 6.2 — sqlite layer, 6h, stale after 3h; the data survives
+ * restart in InjuryRiskScores). ?recalculate=true bypasses the cache read so a
+ * fresh ML computation always runs.
+ */
+export const riskScoreCacheMiddleware = createCacheMiddleware({
+  ttl: SQLITE_TTL.RISK_SCORES,
+  cacheLayer: 'sqlite',
+  allowStale: true,
+  staleThreshold: 10_800, // 3h per Step 6.2
+  dataType: CacheDataType.RISK_SCORES,
+  keyBuilder: req => riskScoreKey(String(req.params.playerId)),
+  skipRead: req => req.query.recalculate === 'true',
+});
+
+/**
+ * Story (Step 6.2 — 1h). Persistence lives in the StoryLogs table (the
+ * controller owns it), so the "sqlite" freshness check is isStoryFresh —
+ * StoryLogs directly, not the CacheMetadata registry.
+ */
+export const storyCacheMiddleware = createCacheMiddleware({
+  ttl: SQLITE_TTL.STORY_TEXT,
+  cacheLayer: 'sqlite',
+  allowStale: false,
+  sqliteFresh: isStoryFresh,
+  keyBuilder: req =>
+    storyKey(
+      String(req.params.module),
+      String(req.params.sport),
+      String(req.query.role ?? 'analyst'),
+      req.query.entityId ? String(req.query.entityId) : undefined,
+      req.query.season ? String(req.query.season) : undefined
+    ),
+});
