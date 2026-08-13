@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pkg from '../../package.json' with { type: 'json' };
 import { env } from '../config/env.js';
 import { sendSuccess } from '../utils/response.util.js';
+import { cacheRouter } from './cache.routes.js';
 import { decisionsRouter } from './decisions.routes.js';
 import { healthRouter } from './health.routes.js';
 import { injuryRouter } from './injury.routes.js';
@@ -43,3 +44,4 @@ routes.use('/api/momentum', momentumRouter);   // Step 7
 routes.use('/api/search', searchRouter);       // Step 8
 routes.use('/api/story', storyRouter);         // Step 9
 routes.use('/api/jobs', jobsRouter);           // Phase 6 Step 10 — job control
+routes.use('/api/cache', cacheRouter);         // Phase 7 Step 9 — cache monitoring
