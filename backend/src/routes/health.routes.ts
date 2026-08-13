@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { healthCheck } from '../controllers/health.controller.js';
+import { getErrorSummary } from '../utils/error.tracker.js';
+import { sendSuccess } from '../utils/response.util.js';
 
 export const healthRouter = Router();
 
@@ -44,3 +46,18 @@ export const healthRouter = Router();
  *                           type: string
  */
 healthRouter.get('/', healthCheck);
+
+/**
+ * @openapi
+ * /api/health/errors:
+ *   get:
+ *     summary: Error tracking summary
+ *     description: Phase 8 Step 10 — per-category error counts and rates for the current hour, the last 5 errors, and an overall health status.
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Error summary (counts, rates, recentErrors, status)
+ */
+healthRouter.get('/errors', (_req, res) => {
+  sendSuccess(res, getErrorSummary());
+});
