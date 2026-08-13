@@ -14,7 +14,7 @@
  */
 import axios, { type AxiosInstance } from 'axios';
 import { env } from '../config/env.js';
-import { logger } from '../utils/logger.util.js';
+import { mlLogger as logger } from '../config/logger.js';
 import {
   MLServiceError,
   MLServiceUnavailableError,

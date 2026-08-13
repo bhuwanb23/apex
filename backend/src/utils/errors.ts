@@ -178,15 +178,19 @@ export class ValidationError extends AppError {
   /**
    * Convenience mapper for zod parse failures — turns each issue into a
    * FieldError ({ field: 'sport', message: '…', value: 'FOOTBALL' }).
-   * Structural type on purpose: errors.ts stays dependency-free.
+   * Pass the raw source (req.query / req.params / req.body) so `value` is the
+   * actual input the client sent. Structural type on purpose: errors.ts stays
+   * dependency-free.
    */
   static fromZod(
-    err: { issues: Array<{ path: ReadonlyArray<string | number>; message: string }> },
-    message = 'Invalid request'
+    err: { issues: Array<{ path: ReadonlyArray<PropertyKey>; message: string }> },
+    message = 'Invalid request',
+    source?: unknown
   ): ValidationError {
     const validationErrors: FieldError[] = err.issues.map(issue => ({
       field: issue.path.join('.') || '(root)',
       message: issue.message,
+      value: source !== undefined ? getValueAtPath(source, issue.path) : undefined,
     }));
     return new ValidationError(message, validationErrors);
   }
@@ -194,6 +198,16 @@ export class ValidationError extends AppError {
   override toResponse(): ErrorResponsePayload {
     return { ...super.toResponse(), validationErrors: this.validationErrors };
   }
+}
+
+/** Walks a nested object along a zod issue path to recover the raw input value. */
+function getValueAtPath(source: unknown, path: ReadonlyArray<PropertyKey>): unknown {
+  let current: unknown = source;
+  for (const key of path) {
+    if (current == null || typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[String(key)];
+  }
+  return current;
 }
 
 /**

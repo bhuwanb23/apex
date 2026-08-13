@@ -17,7 +17,7 @@
  * statically imports this one.
  */
 import { env } from '../config/env.js';
-import { logger } from '../config/logger.js';
+import { jobLogger as logger } from '../config/logger.js';
 import { prisma } from '../db/client.js';
 import {
   getInFlightJobs,
