@@ -20,6 +20,7 @@ import {
   MLServiceUnavailableError,
   type MLServiceErrorOptions,
 } from '../utils/errors.js';
+import { instrumentMLCall } from './ml.logger.js';
 
 export { MLServiceError, MLServiceUnavailableError };
 
@@ -76,8 +77,13 @@ export function createMLClient(
     let attempt = 0;
     for (;;) {
       try {
-        const res = await http.post<TResponse>(path, body);
-        return res.data;
+        // Phase 8 Step 8 — every Python call is logged (request/response/
+        // failure) and timed into the rolling performance window by
+        // instrumentMLCall. Errors rethrow so the retry/error mapping below
+        // is unchanged.
+        return await instrumentMLCall(path, body, () =>
+          http.post<TResponse>(path, body).then(res => res.data)
+        );
       } catch (err) {
         const mlErr = toMLError(err, path);
         const isConnectFailure = mlErr instanceof MLServiceUnavailableError;

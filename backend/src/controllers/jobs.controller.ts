@@ -17,6 +17,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '../db/client.js';
 import { mlClient } from '../ml/ml.client.js';
 import { getMLServiceStatus, recordMLHealthCheck } from '../ml/availability.js';
+import { getMLPerformance } from '../ml/ml.logger.js';
 import { queueManager } from '../jobs/queue.manager.js';
 import { assertAdminKey } from '../middleware/admin.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
@@ -149,5 +150,8 @@ export async function getMLHealth(_req: Request, res: Response): Promise<void> {
     nflDataAvailable: payload?.nflDataAvailable ?? null,
     modelCacheSize: payload?.modelCacheSize ?? null,
     flag: { available, lastCheckedAt },
+    // Phase 8 Step 8.3 — rolling ML performance (avg / P95 / slowest per
+    // endpoint) + endpoints stuck on repeated timeouts.
+    performance: getMLPerformance(),
   });
 }
