@@ -178,6 +178,28 @@ export async function markCacheInvalidBySport(
   return result.count;
 }
 
+/**
+ * Marks every entry of one dataType invalid, optionally narrowed to a sportId
+ * — used by the monitoring route's "invalidate by type" option
+ * (DELETE /api/cache/invalidate { type } or { type, sport }).
+ */
+export async function markCacheInvalidByDataType(
+  dataType: string,
+  sportId?: number
+): Promise<number> {
+  const result = await prisma.cacheMetadata.updateMany({
+    where: {
+      dataType,
+      ...(sportId !== undefined ? { sportId } : {}),
+    },
+    data: { isValid: false },
+  });
+  if (result.count > 0) {
+    logger.debug({ dataType, sportId: sportId ?? null, count: result.count }, 'sqlite cache marked invalid by data type');
+  }
+  return result.count;
+}
+
 /** Marks every CacheMetadata entry invalid — the nuclear option. */
 export async function markAllCacheInvalid(): Promise<number> {
   const result = await prisma.cacheMetadata.updateMany({ data: { isValid: false } });
