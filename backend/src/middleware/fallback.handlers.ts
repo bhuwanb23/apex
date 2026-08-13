@@ -227,7 +227,7 @@ export function handleDBFallback(
     };
   }
   const dbError = new DatabaseError('Database query failed', errorContext);
-  logger.fatal(
+  logger.critical(
     { cacheKey, err: dbError.getLogContext() },
     'Database query failed — no cache to serve'
   );

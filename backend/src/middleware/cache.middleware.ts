@@ -519,7 +519,9 @@ export const riskScoreCacheMiddleware = createCacheMiddleware({
   staleThreshold: 10_800, // 3h per Step 6.2
   dataType: CacheDataType.RISK_SCORES,
   keyBuilder: req => riskScoreKey(String(req.params.playerId)),
-  skipRead: req => req.query.recalculate === 'true',
+  // ?recalculate=true — String() covers both the raw wire value ('true') and
+  // the boolean the Phase 8 validation middleware writes back after coercion.
+  skipRead: req => String(req.query.recalculate) === 'true',
 });
 
 /**

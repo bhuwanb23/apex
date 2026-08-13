@@ -143,7 +143,7 @@ function classifyError(err: unknown): AppError {
   }
   if (err instanceof Prisma.PrismaClientInitializationError) {
     // Critical — the DB cannot connect at all. Needs immediate attention.
-    logger.fatal({ err }, 'Prisma failed to initialize — database unreachable');
+    logger.critical({ err }, 'Prisma failed to initialize — database unreachable');
     return new DatabaseError('Database connection could not be initialized', {
       operation: 'initialize',
     });
