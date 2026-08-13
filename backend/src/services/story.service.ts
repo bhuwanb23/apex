@@ -20,6 +20,7 @@ import {
 import { storyML } from '../ml/story.ml.js';
 import type { SportAbbreviation, UserRole } from '../types/shared.types.js';
 import type { StoryViewResponse } from '../types/story.types.js';
+import { storyKey as buildStoryKey } from '../utils/cache.keys.js';
 import { logger } from '../utils/logger.util.js';
 import { getCoachDecisions, getCoachLeaderboard } from './decisions.service.js';
 import { getPlayerRisk } from './injury.service.js';
@@ -201,7 +202,7 @@ export async function getStory(
   entityId?: string,
   season?: string
 ): Promise<StoryViewResponse> {
-  const storyKey = `story:${module}:${sport}:${role}:${entityId ?? 'none'}:${season ?? 'none'}`;
+  const storyKey = buildStoryKey(module, sport, role, entityId, season);
 
   const existing = await prisma.storyLogs.findUnique({ where: { storyKey } });
   const isValid = existing != null && existing.expiresAt.getTime() > Date.now();

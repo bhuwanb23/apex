@@ -14,6 +14,7 @@
 import { format } from 'date-fns';
 import { cacheGet, cacheSet } from '../cache/memoryCache.js';
 import { SQLITE_TTL } from '../utils/cache.config.js';
+import { leaderboardKey } from '../utils/cache.keys.js';
 import { prisma } from '../db/client.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { decisionsML } from '../ml/decisions.ml.js';
@@ -220,8 +221,8 @@ export async function getCoachLeaderboard(
   const decisionType = normalizeDecisionType(opts.decisionType);
   const gameType = opts.gameType === 'all' ? undefined : opts.gameType;
 
-  // Cache key per spec: sport + season + decisionType + gameType (not page).
-  const cacheKey = `decisions:leaderboard:${sport}:${season}:${opts.decisionType}:${opts.gameType}`;
+  // Cache key per Step 5 spec: sport + season + decisionType + gameType (not page).
+  const cacheKey = leaderboardKey(sport, season, opts.decisionType, opts.gameType);
   let scorecards = cacheGet<CoachScorecard[]>(cacheKey);
   if (!scorecards) {
     scorecards = await computeLeaderboard(sport, sportRow.id, season, decisionType, gameType);

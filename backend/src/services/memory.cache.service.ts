@@ -14,12 +14,19 @@
  *   getStats()    → getMemoryCacheStats() (below)
  *
  * Key conventions (Step 3.3): lowercase, colon-separated segments, most
- * specific segment last, no spaces/special characters. The builders below are
- * the single place memory keys are constructed — Step 5 centralizes all of
- * them in utils/cache.keys.ts.
+ * specific segment last, no spaces/special characters. All keys come from
+ * utils/cache.keys.ts (Step 5) — this service never interpolates a key.
  */
 import { cacheGet, cacheSet, memoryCache } from '../cache/memoryCache.js';
 import { IN_MEMORY_TTL } from '../utils/cache.config.js';
+import {
+  alertsKey,
+  mlHealthKey,
+  playerInfoKey,
+  searchPlayersKey,
+  sportConfigKey,
+  teamListKey,
+} from '../utils/cache.keys.js';
 import { logger } from '../utils/logger.util.js';
 
 // ---------------------------------------------------------------------------
@@ -53,39 +60,7 @@ export function getMemoryCacheStats(): MemoryCacheStats {
 }
 
 // ---------------------------------------------------------------------------
-// Key builders (Step 3.3 conventions)
-// ---------------------------------------------------------------------------
-
-/** "search:players:{sport}:{query}" — e.g. search:players:NBA:lebr */
-function searchPlayersKey(sport: string, query: string): string {
-  return `search:players:${sport}:${query.trim().toLowerCase()}`;
-}
-
-/** "teams:{sport}" — e.g. teams:NBA */
-function teamListKey(sport: string): string {
-  return `teams:${sport}`;
-}
-
-/** "alerts:{sport}:{zone}" — e.g. alerts:NBA:red */
-function alertsKey(sport: string, zone: string): string {
-  return `alerts:${sport}:${zone}`;
-}
-
-/** "player:info:{playerId}" — e.g. player:info:237 */
-function playerInfoKey(playerId: number): string {
-  return `player:info:${playerId}`;
-}
-
-/** "sport:config:{sport}" — e.g. sport:config:NFL */
-function sportConfigKey(sport: string): string {
-  return `sport:config:${sport}`;
-}
-
-/** "ml:health" — single well-known key. */
-const ML_HEALTH_KEY = 'ml:health';
-
-// ---------------------------------------------------------------------------
-// Typed helpers (Step 3.2)
+// Typed helpers (Step 3.2) — keys come from utils/cache.keys.ts (Step 5)
 // ---------------------------------------------------------------------------
 
 /** Cache player autocomplete results for (query, sport) — TTL 1 hour.
@@ -144,10 +119,10 @@ export function getSportConfig<T>(sport: string): T | undefined {
 
 /** Cache the Python ML service health payload — TTL 15 minutes. */
 export function cacheMLHealth(status: Record<string, unknown>): boolean {
-  return cacheSet(ML_HEALTH_KEY, status, IN_MEMORY_TTL.ML_SERVICE_HEALTH);
+  return cacheSet(mlHealthKey(), status, IN_MEMORY_TTL.ML_SERVICE_HEALTH);
 }
 
 /** The cached ML health payload, or undefined on miss. */
 export function getMLHealthStatus(): Record<string, unknown> | undefined {
-  return cacheGet<Record<string, unknown>>(ML_HEALTH_KEY);
+  return cacheGet<Record<string, unknown>>(mlHealthKey());
 }

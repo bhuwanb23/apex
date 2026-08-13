@@ -19,27 +19,8 @@
 import { prisma } from '../db/client.js';
 import type { CacheMetadata } from '../generated/prisma/client.js';
 import { CacheDataType, SQLITE_TTL } from '../utils/cache.config.js';
+import { leaderboardKey, momentumSeasonKey, riskScoreKey } from '../utils/cache.keys.js';
 import { logger } from '../utils/logger.util.js';
-
-// ---------------------------------------------------------------------------
-// Key builders (Step 4.2 key formats — Step 5 centralizes every key in
-// utils/cache.keys.ts; these stay private until then).
-// ---------------------------------------------------------------------------
-
-/** "risk:{playerId}" — e.g. risk:237 */
-function riskScoreKey(playerId: number): string {
-  return `risk:${playerId}`;
-}
-
-/** "leaderboard:{sport}:{season}:{decisionType}" — e.g. leaderboard:NBA:2024-25:4th_down */
-function leaderboardKey(sport: string, season: string, decisionType: string): string {
-  return `leaderboard:${sport}:${season}:${decisionType}`;
-}
-
-/** "momentum:season:{sport}:{season}" — e.g. momentum:season:NBA:2024-25 */
-function momentumSeasonKey(sport: string, season: string): string {
-  return `momentum:season:${sport}:${season}`;
-}
 
 // ---------------------------------------------------------------------------
 // Types
