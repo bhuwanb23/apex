@@ -45,8 +45,11 @@ const envSchema = z.object({
   JOB_CRON_CLEANUP: z.string().default('0 3 * * *'), // once daily
   JOB_CRON_HEALTH_CHECK: z.string().default('*/15 * * * *'), // every 15 min
 
+  // Phase 8 Step 6 — custom levels: critical/fatal (0) → error → warn → info
+  // → http → debug → silly (6). 'http' sits above debug (request logs);
+  // 'silly' is the most verbose (disabled in production).
   LOG_LEVEL: z
-    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+    .enum(['fatal', 'error', 'warn', 'info', 'http', 'debug', 'silly', 'trace', 'silent'])
     .default('debug'),
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
   OPENAI_API_KEY: z.string().optional(),
