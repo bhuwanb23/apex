@@ -8,6 +8,7 @@ import {
 import {
   alertsCacheMiddleware,
   riskScoreCacheMiddleware,
+  teamRiskCacheMiddleware,
 } from '../middleware/cache.middleware.js';
 
 export const injuryRouter = Router();
@@ -60,7 +61,7 @@ injuryRouter.get('/player/:playerId', riskScoreCacheMiddleware, getPlayerRisk);
  *       404:
  *         description: Team not found
  */
-injuryRouter.get('/team/:teamId', getTeamRisk);
+injuryRouter.get('/team/:teamId', teamRiskCacheMiddleware, getTeamRisk);
 
 /**
  * @openapi

@@ -5,7 +5,11 @@ import {
   getSportComparison,
   getTimeoutRecommendation,
 } from '../controllers/momentum.controller.js';
-import { momentumCacheMiddleware } from '../middleware/cache.middleware.js';
+import {
+  comparisonCacheMiddleware,
+  momentumCacheMiddleware,
+  timeoutCacheMiddleware,
+} from '../middleware/cache.middleware.js';
 
 export const momentumRouter = Router();
 
@@ -73,7 +77,7 @@ momentumRouter.get('/game/:gameId', getGameMomentum);
  *       200:
  *         description: Comparison array sorted by effect size
  */
-momentumRouter.get('/comparison', getSportComparison);
+momentumRouter.get('/comparison', comparisonCacheMiddleware, getSportComparison);
 
 /**
  * @openapi
@@ -121,4 +125,4 @@ momentumRouter.get('/comparison', getSportComparison);
  *       404:
  *         description: Sport not found
  */
-momentumRouter.get('/timeout/:sport', getTimeoutRecommendation);
+momentumRouter.get('/timeout/:sport', timeoutCacheMiddleware, getTimeoutRecommendation);

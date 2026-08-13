@@ -50,13 +50,17 @@ import {
 } from '../utils/cache.config.js';
 import {
   alertsKey,
+  coachDetailKey,
   leaderboardKey,
+  momentumComparisonKey,
   momentumSeasonKey,
   riskScoreKey,
   searchPlayersKey,
   searchTeamsKey,
   storyKey,
   teamListKey,
+  teamRiskKey,
+  timeoutKey,
 } from '../utils/cache.keys.js';
 import { logger } from '../utils/logger.util.js';
 
@@ -431,5 +435,70 @@ export const storyCacheMiddleware = createCacheMiddleware({
       String(req.query.role ?? 'analyst'),
       req.query.entityId ? String(req.query.entityId) : undefined,
       req.query.season ? String(req.query.season) : undefined
+    ),
+});
+
+// ---------------------------------------------------------------------------
+// Step 8 — remaining route instances (team risk, coach detail, comparison,
+// timeout). These complete the Step 6.2 set.
+// ---------------------------------------------------------------------------
+
+/**
+ * Team risk dashboard (Step 8 — sqlite layer, 6h, stale after 3h; the roster's
+ * risk data survives restart in InjuryRiskScores). Mirrors the risk score
+ * route config — same data family.
+ */
+export const teamRiskCacheMiddleware = createCacheMiddleware({
+  ttl: SQLITE_TTL.RISK_SCORES,
+  cacheLayer: 'sqlite',
+  allowStale: true,
+  staleThreshold: 10_800, // 3h — same pattern as the risk score route
+  dataType: CacheDataType.RISK_SCORES,
+  keyBuilder: req => teamRiskKey(String(req.params.teamId)),
+});
+
+/** Coach decision drill-down (Step 8 — 1 hour TTL, both layers). */
+export const coachDetailCacheMiddleware = createCacheMiddleware({
+  ttl: SQLITE_TTL.COACH_DETAIL,
+  cacheLayer: 'both',
+  allowStale: true,
+  staleThreshold: 1800, // 30 min
+  dataType: CacheDataType.COACH_DECISIONS,
+  keyBuilder: req => coachDetailKey(String(req.params.coachId)),
+  varyBy: ['season', 'decisionType', 'isOptimal', 'page', 'limit'],
+});
+
+/** Sport comparison (Step 8 — 24h, both layers, stale after 12h). */
+export const comparisonCacheMiddleware = createCacheMiddleware({
+  ttl: SQLITE_TTL.MOMENTUM_ANALYSIS,
+  cacheLayer: 'both',
+  allowStale: true,
+  staleThreshold: STALE_WHILE_REVALIDATE.MOMENTUM_STALE_AFTER,
+  dataType: CacheDataType.MOMENTUM_ANALYSIS,
+  keyBuilder: req =>
+    momentumComparisonKey(req.query.season ? String(req.query.season) : undefined),
+});
+
+/**
+ * Timeout optimizer (Step 8 — 30 day TTL, scenarios are static per game
+ * state; the underlying TimeoutRecommendations row refreshes on the same
+ * window). The scenario key is built from the validated situation params, so
+ * each distinct game state gets its own cached recommendation.
+ */
+export const timeoutCacheMiddleware = createCacheMiddleware({
+  ttl: SQLITE_TTL.TIMEOUT_RECOMMENDATIONS,
+  cacheLayer: 'both',
+  allowStale: false,
+  dataType: CacheDataType.TIMEOUT_RECOMMENDATIONS,
+  keyBuilder: req =>
+    timeoutKey(
+      String(req.params.sport),
+      [
+        String(req.query.consecutiveScores ?? '0'),
+        String(req.query.scoreDiff ?? '0'),
+        String(req.query.timeRemaining ?? '0'),
+        String(req.query.period ?? '0'),
+        String(req.query.timeoutsAvailable ?? '0'),
+      ].join('|')
     ),
 });

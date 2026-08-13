@@ -45,6 +45,8 @@ export const SQLITE_TTL = {
   STORY_TEXT: 3600,
   /** Per-game momentum timeline — 24 hours. */
   GAME_MOMENTUM: 86400,
+  /** Coach decision drill-down — 1 hour (Step 8: coachDetailCacheMiddleware). */
+  COACH_DETAIL: 3600,
   /** Timeout recommendations — 30 days (scenarios are static per game state). */
   TIMEOUT_RECOMMENDATIONS: 2592000,
   /** Whole-season data (raw plays, logs) — 7 days. */

@@ -103,6 +103,17 @@ export function timeoutKey(sport: string, scenarioKey: string): string {
   return `timeout:${sport}:${scenarioKey}`;
 }
 
+/** "coach:{coachId}" — e.g. coach:1042 (coach decision drill-down, Step 8). */
+export function coachDetailKey(coachId: number | string): string {
+  return `coach:${coachId}`;
+}
+
+/** "momentum:comparison:{season}" — e.g. momentum:comparison:2024-25; missing
+ *  season falls back to 'all' (multi-sport comparison panel, Step 8). */
+export function momentumComparisonKey(season?: string | null): string {
+  return `momentum:comparison:${season ?? 'all'}`;
+}
+
 // ---------------------------------------------------------------------------
 // Story log keys (StoryLogs table)
 // ---------------------------------------------------------------------------
