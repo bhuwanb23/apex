@@ -331,6 +331,15 @@ export class ExternalAPIError extends AppError {
     this.apiStatus = options.apiStatus;
     this.retryAfter = options.retryAfter;
   }
+
+  override toResponse(): ErrorResponsePayload {
+    return {
+      ...super.toResponse(),
+      ...(this.apiName !== undefined ? { apiName: this.apiName } : {}),
+      ...(this.apiStatus !== undefined ? { apiStatus: this.apiStatus } : {}),
+      ...(this.retryAfter !== undefined ? { retryAfter: this.retryAfter } : {}),
+    };
+  }
 }
 
 export interface RateLimitErrorOptions {
@@ -358,6 +367,14 @@ export class RateLimitError extends AppError {
     });
     this.retryAfter = options.retryAfter;
     this.limit = options.limit;
+  }
+
+  override toResponse(): ErrorResponsePayload {
+    return {
+      ...super.toResponse(),
+      ...(this.retryAfter !== undefined ? { retryAfter: this.retryAfter } : {}),
+      ...(this.limit !== undefined ? { limit: this.limit } : {}),
+    };
   }
 }
 
