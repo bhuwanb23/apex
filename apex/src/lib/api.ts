@@ -351,7 +351,11 @@ export const api = {
   leaderboard: (sport: string, opts?: { season?: string; decisionType?: string; gameType?: string; limit?: number }) =>
     apiFetch<LeaderboardResponse>(`/api/decisions/coaches/${sport}${qs({ ...opts, limit: opts?.limit ?? 30 })}`),
   coachDecisions: (coachId: number, opts?: { season?: string; decisionType?: string; limit?: number }) =>
-    apiFetch<{ coach: CoachScorecard; decisions: CoachDecision[] }>(
+    apiFetch<{
+      coach: CoachScorecard;
+      decisions: CoachDecision[];
+      processVsOutcome: { goodProcessGoodOutcome: number; goodProcessBadOutcome: number; badProcessGoodOutcome: number; badProcessBadOutcome: number };
+    }>(
       `/api/decisions/coach/${coachId}${qs({ ...opts, limit: opts?.limit ?? 50 })}`
     ),
   gameDecisions: (gameId: number) =>

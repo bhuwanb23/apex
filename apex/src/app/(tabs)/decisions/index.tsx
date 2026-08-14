@@ -9,19 +9,25 @@ import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, type SportId } from '@/data/mock/sports';
-import { COACHES, type Coach } from '@/data/mock/coaches';
+import { type Coach } from '@/data/mock/coaches';
 import { DECISION_GAMES } from '@/data/mock/games';
+import { useCoachLeaderboard } from '@/data/live/decisions';
 
 const DECISION_TYPES = ['All', '4th Down', 'Timeout', '2-Point'];
 const GAME_TYPES = ['Regular', 'Playoff', 'All'];
 const SEASONS = ['2025-26', '2024-25'];
 
-/** Coaches for the active filters, sorted by EV rate, ranks assigned dynamically. */
-function rankedCoaches(sport: SportId, season: string): Coach[] {
-  return COACHES.filter(c => c.sport === sport && (c.season ?? '2025-26') === season)
-    .sort((a, b) => b.evRate - a.evRate)
-    .map((c, i) => ({ ...c, rank: i + 1 }));
-}
+const DECISION_TYPE_KEYS: Record<string, string> = {
+  All: 'all',
+  '4th Down': '4th_down',
+  Timeout: 'timeout',
+  '2-Point': '2pt',
+};
+const GAME_TYPE_KEYS: Record<string, string> = {
+  Regular: 'regular',
+  Playoff: 'playoff',
+  All: 'all',
+};
 
 export default function CoachLeaderboardScreen() {
   const router = useRouter();
@@ -30,7 +36,11 @@ export default function CoachLeaderboardScreen() {
   const [decisionType, setDecisionType] = useState('All');
   const [gameType, setGameType] = useState('All');
 
-  const coaches = rankedCoaches(sport, season);
+  const { coaches } = useCoachLeaderboard(sport, {
+    season,
+    decisionType: DECISION_TYPE_KEYS[decisionType],
+    gameType: GAME_TYPE_KEYS[gameType],
+  });
   const podium = coaches.slice(0, 3);
   const rest = coaches.slice(3);
 

@@ -7,8 +7,9 @@ import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { QualityBadge, TypeChip } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
-import { GAMES, type Game } from '@/data/mock/games';
-import { DECISIONS, type Decision } from '@/data/mock/coaches';
+import { type Game } from '@/data/mock/games';
+import { type Decision } from '@/data/mock/coaches';
+import { useGameDecisions } from '@/data/live/decisions';
 
 const PERIOD_BASE: Record<string, number> = { Q1: 0, Q2: 0.25, Q3: 0.5, Q4: 0.75, OT: 1 };
 
@@ -99,8 +100,8 @@ function LegendDot({ color, label }: { color: string; label: string }) {
 export default function GameDecisionsScreen() {
   const router = useRouter();
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
-  const game = GAMES.find(g => g.id === gameId) ?? GAMES.find(g => g.id === 'g3')!;
-  const decisions = DECISIONS.filter(d => d.gameId === game.id).sort((a, b) => decisionX(a) - decisionX(b));
+  const { game, decisions: gameDecisions } = useGameDecisions(gameId, 'NFL');
+  const decisions = gameDecisions.slice().sort((a, b) => decisionX(a) - decisionX(b));
 
   const biggestMistake =
     decisions.find(d => !d.isOptimal && !d.outcomeSuccess) ??

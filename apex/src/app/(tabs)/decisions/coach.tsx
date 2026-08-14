@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { QualityBadge, TypeChip } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
-import { COACHES, DECISIONS, type OutcomeCell } from '@/data/mock/coaches';
+import { type OutcomeCell } from '@/data/mock/coaches';
+import { useCoachDetail } from '@/data/live/decisions';
 
 const MATRIX_CELLS: { key: OutcomeCell; label: string; color: string; soft: string }[] = [
   { key: 'good-good', label: 'Good process · Good outcome', color: '#1F8A52', soft: '#E3F6EC' },
@@ -22,13 +23,11 @@ type DecisionFilter = 'all' | 'optimal' | 'suboptimal';
 export default function CoachDetailScreen() {
   const router = useRouter();
   const { coachId } = useLocalSearchParams<{ coachId: string }>();
-  const coach = COACHES.find(c => c.id === coachId) ?? COACHES[0];
+  const { coach, decisions: coachDecisions } = useCoachDetail(coachId, 'NFL');
   const [filter, setFilter] = useState<DecisionFilter>('all');
   const [cellFilter, setCellFilter] = useState<OutcomeCell | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [opponentFilter, setOpponentFilter] = useState<string | null>(null);
-
-  const coachDecisions = DECISIONS.filter(d => d.coachId === coach.id);
   const decisionTypes = [...new Set(coachDecisions.map(d => d.type))];
   const opponents = [...new Set(coachDecisions.map(d => d.opponent))];
 
