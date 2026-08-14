@@ -1,9 +1,16 @@
 import { View, StyleSheet, Text } from 'react-native';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
 export interface ChartPoint {
   x: number; // 0..1
   y: number; // 0..1 (0 = top)
+}
+
+/** Horizontal band behind the lines (normalized y: y0 = top edge, y1 = bottom edge). */
+export interface ChartBand {
+  y0: number;
+  y1: number;
+  color: string;
 }
 
 interface LineChartProps {
@@ -14,6 +21,12 @@ interface LineChartProps {
   /** X position 0..1 of a scrubber line. */
   scrubber?: number;
   showDots?: boolean;
+  /** Risk-zone bands drawn behind the lines (soft fills). */
+  bands?: ChartBand[];
+  /** Tap a dot → report its series/point index. */
+  onPointPress?: (seriesIndex: number, pointIndex: number) => void;
+  /** Highlighted dot (series index, point index). */
+  selectedPoint?: { series: number; point: number } | null;
 }
 
 function toPath(points: ChartPoint[]): string {
@@ -34,12 +47,26 @@ export function LineChart({
   gridLabels = [],
   scrubber,
   showDots = false,
+  bands = [],
+  onPointPress,
+  selectedPoint,
 }: LineChartProps) {
   const width = 100;
 
   return (
     <View style={{ height }}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        {bands.map((band, i) => (
+          <Rect
+            key={i}
+            x={0}
+            y={band.y0 * height}
+            width={width}
+            height={Math.max(0, (band.y1 - band.y0) * height)}
+            fill={band.color}
+            fillOpacity={0.09}
+          />
+        ))}
         {showGrid
           ? [0.25, 0.5, 0.75].map(t => (
               <Line
@@ -66,18 +93,22 @@ export function LineChart({
           />
         ))}
         {showDots
-          ? series.map(s =>
-              s.points.map((p, i) => (
-                <Circle
-                  key={`${s.name}-${i}`}
-                  cx={p.x * 100}
-                  cy={p.y * 100}
-                  r={2.4}
-                  fill={s.color}
-                  stroke="#FFFFFF"
-                  strokeWidth={1}
-                />
-              ))
+          ? series.map((s, si) =>
+              s.points.map((p, pi) => {
+                const isSelected = selectedPoint?.series === si && selectedPoint?.point === pi;
+                return (
+                  <Circle
+                    key={`${s.name}-${pi}`}
+                    cx={p.x * 100}
+                    cy={p.y * 100}
+                    r={isSelected ? 5 : 2.6}
+                    fill={isSelected ? '#14121F' : s.color}
+                    stroke="#FFFFFF"
+                    strokeWidth={1.5}
+                    onPress={onPointPress ? () => onPointPress(si, pi) : undefined}
+                  />
+                );
+              })
             )
           : null}
         {scrubber != null ? (
