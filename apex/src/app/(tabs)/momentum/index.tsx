@@ -12,13 +12,21 @@ import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
 import { SPORTS, MOMENTUM_VERDICTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 
+const PLAIN_EXPLANATION: Record<string, string> = {
+  real: 'Momentum is real here — after a scoring run, that team is measurably more likely to score again. The numbers back it up.',
+  inconclusive: 'The numbers hint at momentum, but the effect is too weak to call it real. Treat it as a story for now.',
+  myth: 'Scoring runs do not actually change who scores next. In this sport, momentum is a story fans tell — not a real effect.',
+};
+
 export default function MomentumOverviewScreen() {
   const router = useRouter();
   const { sport: sportParam } = useLocalSearchParams<{ sport?: string }>();
-  const { activeSport } = useOnboarding();
+  const { activeSport, role, storyLanguage } = useOnboarding();
   const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? activeSport);
+  const [statsOpen, setStatsOpen] = useState(role === 'analyst');
   const verdict = MOMENTUM_VERDICTS.find(v => v.sport === sport)!;
   const isReal = verdict.verdict === 'real';
+  const isAnalystDepth = role === 'analyst' || storyLanguage === 'technical';
 
   const stats = [
     { label: 'Hazard Coefficient', value: verdict.hazardCoefficient.toFixed(2), note: '> 1 means scoring increases opponent hazard' },
@@ -57,21 +65,33 @@ export default function MomentumOverviewScreen() {
           <AppIcon name="sparkles" size={15} color="#5856D6" />
           <Text style={styles.explainTitle}>In plain English</Text>
         </View>
-        <Text style={styles.explainText}>{verdict.explanation}</Text>
+        <Text style={styles.explainText}>
+          {isAnalystDepth ? verdict.explanation : PLAIN_EXPLANATION[verdict.verdict]}
+        </Text>
+        <Text style={styles.explainDepth}>
+          {isAnalystDepth
+            ? 'Full statistical depth shown — switch to Simple in Settings for a plainer read.'
+            : 'Simplified for your role — switch to Technical in Settings for the full numbers.'}
+        </Text>
       </Card>
 
-      {/* Statistics */}
+      {/* Statistics (collapsible for non-analysts) */}
       <View>
-        <Text style={styles.sectionTitle}>The Numbers</Text>
-        <View style={styles.statsGrid}>
-          {stats.map(stat => (
-            <Card key={stat.label} style={styles.statCard}>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-              <Text style={styles.statNote}>{stat.note}</Text>
-            </Card>
-          ))}
-        </View>
+        <Pressable style={styles.collapseHeader} onPress={() => setStatsOpen(prev => !prev)}>
+          <Text style={styles.sectionTitle}>The Numbers</Text>
+          <AppIcon name={statsOpen ? 'chevron.down' : 'chevron.right'} size={16} color="#6E7280" />
+        </Pressable>
+        {statsOpen ? (
+          <View style={styles.statsGrid}>
+            {stats.map(stat => (
+              <Card key={stat.label} style={styles.statCard}>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
+                <Text style={styles.statNote}>{stat.note}</Text>
+              </Card>
+            ))}
+          </View>
+        ) : null}
         <Text style={styles.gamesContext}>
           Based on analysis of {verdict.gamesAnalyzed.toLocaleString()} games from the {verdict.season} {verdict.sport} season
         </Text>
@@ -157,10 +177,20 @@ const styles = StyleSheet.create({
     color: '#3A3852',
     lineHeight: 21,
   },
+  explainDepth: {
+    fontSize: 11.5,
+    color: '#9AA0B5',
+    lineHeight: 16,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#14121F',
+  },
+  collapseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   statsGrid: {
     flexDirection: 'row',
