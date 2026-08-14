@@ -11,9 +11,12 @@ import { LineChart } from '@/components/ui/chart';
 import { AppIcon } from '@/components/ui/icon';
 import { GradientView } from '@/components/ui/gradient';
 import { PLAYERS, type Player } from '@/data/mock/players';
+import { SPORT_BY_ID } from '@/data/mock/sports';
 
 type ZoneFilter = 'all' | 'red' | 'yellow' | 'green';
-type SortKey = 'risk' | 'name';
+type SortKey = 'risk' | 'name' | 'position';
+
+const SORT_LABEL: Record<SortKey, string> = { risk: 'Risk Score', name: 'Name', position: 'Position' };
 
 export default function TeamRiskScreen() {
   const router = useRouter();
@@ -21,8 +24,11 @@ export default function TeamRiskScreen() {
   const teamName = team ?? 'Lakers';
   const [filter, setFilter] = useState<ZoneFilter>('all');
   const [sort, setSort] = useState<SortKey>('risk');
+  const [chartOpen, setChartOpen] = useState(true);
 
   const roster = PLAYERS.filter(p => p.team === teamName);
+  const sport = SPORT_BY_ID[roster[0]?.sport ?? 'NBA'];
+
   const counts = {
     red: roster.filter(p => p.zone === 'red').length,
     yellow: roster.filter(p => p.zone === 'yellow').length,
@@ -31,36 +37,44 @@ export default function TeamRiskScreen() {
 
   const visible = roster
     .filter(p => (filter === 'all' ? true : p.zone === filter))
-    .sort((a, b) => (sort === 'risk' ? (b.riskScore ?? 0) - (a.riskScore ?? 0) : a.lastName.localeCompare(b.lastName)));
+    .sort((a, b) => {
+      if (sort === 'risk') return (b.riskScore ?? 0) - (a.riskScore ?? 0);
+      if (sort === 'name') return a.lastName.localeCompare(b.lastName);
+      return a.position.localeCompare(b.position);
+    });
 
-  const trend: { x: number; y: number }[] = [0.3, 0.35, 0.28, 0.42, 0.38, 0.5, 0.46, 0.58, 0.52, 0.6, 0.55, 0.64].map(
-    (y, i) => ({ x: i / 11, y })
-  );
+  const trend = [0.3, 0.35, 0.28, 0.42, 0.38, 0.5, 0.46, 0.58, 0.52, 0.6, 0.55, 0.64].map((y, i) => ({
+    x: i / 11,
+    y,
+  }));
 
   return (
     <Screen>
       <StackHeader title="Team Risk" subtitle={teamName} />
 
       {/* Team banner */}
-      <GradientView colors={['#5856D6', '#8E7BFF']} style={styles.banner}>
+      <GradientView colors={sport.gradient} style={styles.banner}>
         <View style={styles.bannerRow}>
           <View style={styles.bannerLogo}>
             <Text style={styles.bannerLogoText}>{teamName.slice(0, 1)}</Text>
           </View>
           <View style={styles.bannerInfo}>
             <Text style={styles.bannerTeam}>{teamName}</Text>
-            <Text style={styles.bannerMeta}>{roster.length} players tracked · updated 2h ago</Text>
+            <Text style={styles.bannerMeta}>
+              {sport.short} · {roster.length} players tracked
+            </Text>
           </View>
         </View>
+        <Text style={styles.bannerUpdated}>Risk scores updated 2 hours ago</Text>
       </GradientView>
 
       {/* Traffic light summary */}
       <Card style={styles.countsCard}>
-        <CountBlock label="Red" value={counts.red} color="#E5484D" onPress={() => setFilter(filter === 'red' ? 'all' : 'red')} />
+        <CountBlock label="Red zone" value={counts.red} color="#E5484D" active={filter === 'red'} onPress={() => setFilter(filter === 'red' ? 'all' : 'red')} />
         <View style={styles.countDivider} />
-        <CountBlock label="Yellow" value={counts.yellow} color="#F5A623" onPress={() => setFilter(filter === 'yellow' ? 'all' : 'yellow')} />
+        <CountBlock label="Yellow zone" value={counts.yellow} color="#F5A623" active={filter === 'yellow'} onPress={() => setFilter(filter === 'yellow' ? 'all' : 'yellow')} />
         <View style={styles.countDivider} />
-        <CountBlock label="Green" value={counts.green} color="#2FA36B" onPress={() => setFilter(filter === 'green' ? 'all' : 'green')} />
+        <CountBlock label="Green zone" value={counts.green} color="#2FA36B" active={filter === 'green'} onPress={() => setFilter(filter === 'green' ? 'all' : 'green')} />
       </Card>
 
       {/* Filters + sort */}
@@ -70,18 +84,18 @@ export default function TeamRiskScreen() {
             <Chip key={z} label={z === 'all' ? 'All' : z[0].toUpperCase() + z.slice(1)} small selected={filter === z} onPress={() => setFilter(z)} />
           ))}
         </View>
-        <Pressable style={styles.sortBtn} onPress={() => setSort(sort === 'risk' ? 'name' : 'risk')}>
+        <Pressable
+          style={styles.sortBtn}
+          onPress={() => setSort(prev => (prev === 'risk' ? 'name' : prev === 'name' ? 'position' : 'risk'))}>
           <AppIcon name="chart.bar.fill" size={13} color="#5856D6" />
-          <Text style={styles.sortText}>Sort: {sort === 'risk' ? 'Risk' : 'Name'}</Text>
+          <Text style={styles.sortText}>Sort: {SORT_LABEL[sort]}</Text>
         </Pressable>
       </View>
 
       {/* Roster */}
       <Card style={styles.rosterCard} padded={false}>
         {visible.map((p, i) => (
-          <Pressable
-            key={p.id}
-            onPress={() => router.push({ pathname: '/injury/player', params: { playerId: p.id } })}>
+          <Pressable key={p.id} onPress={() => router.push({ pathname: '/injury/player', params: { playerId: p.id } })}>
             <RosterRow player={p} last={i === visible.length - 1} />
           </Pressable>
         ))}
@@ -92,21 +106,27 @@ export default function TeamRiskScreen() {
         ) : null}
       </Card>
 
-      {/* Team chart */}
-      <View>
-        <Text style={styles.sectionTitle}>Risk distribution</Text>
-        <Card style={styles.chartCard}>
-          <DistributionBar
-            segments={[
-              { color: '#E5484D', value: counts.red, label: 'red' },
-              { color: '#F5A623', value: counts.yellow, label: 'yellow' },
-              { color: '#2FA36B', value: counts.green, label: 'green' },
-            ]}
-          />
-          <Text style={styles.trendTitle}>Risk over last 30 days</Text>
-          <LineChart series={[{ name: 'Team risk', color: '#5856D6', points: trend }]} height={100} gridLabels={['30d', '20d', '10d', 'Now']} />
-        </Card>
-      </View>
+      {/* Team chart (collapsible) */}
+      <Card style={styles.chartCard}>
+        <Pressable style={styles.chartHeader} onPress={() => setChartOpen(prev => !prev)}>
+          <Text style={styles.chartHeaderTitle}>Team risk analysis</Text>
+          <AppIcon name={chartOpen ? 'chevron.down' : 'chevron.right'} size={16} color="#6E7280" />
+        </Pressable>
+        {chartOpen ? (
+          <View style={styles.chartBody}>
+            <Text style={styles.chartLabel}>Risk distribution</Text>
+            <DistributionBar
+              segments={[
+                { color: '#E5484D', value: counts.red, label: 'red' },
+                { color: '#F5A623', value: counts.yellow, label: 'yellow' },
+                { color: '#2FA36B', value: counts.green, label: 'green' },
+              ]}
+            />
+            <Text style={styles.chartLabel}>Risk over last 30 days</Text>
+            <LineChart series={[{ name: 'Team risk', color: '#5856D6', points: trend }]} height={100} gridLabels={['30d', '20d', '10d', 'Now']} />
+          </View>
+        ) : null}
+      </Card>
 
       <Pressable style={styles.exportBtn}>
         <AppIcon name="doc.fill" size={15} color="#5856D6" />
@@ -116,11 +136,11 @@ export default function TeamRiskScreen() {
   );
 }
 
-function CountBlock({ label, value, color, onPress }: { label: string; value: number; color: string; onPress: () => void }) {
+function CountBlock({ label, value, color, active, onPress }: { label: string; value: number; color: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable style={styles.countBlock} onPress={onPress}>
+    <Pressable style={[styles.countBlock, active && styles.countBlockActive]} onPress={onPress}>
       <Text style={[styles.countValue, { color }]}>{value}</Text>
-      <Text style={styles.countLabel}>{label} zone</Text>
+      <Text style={styles.countLabel}>{label}</Text>
     </Pressable>
   );
 }
@@ -134,14 +154,17 @@ function RosterRow({ player, last }: { player: Player; last: boolean }) {
       <Text style={styles.jersey}>{player.jersey}</Text>
       <View style={styles.rosterBody}>
         <Text style={styles.rosterName}>{player.name}</Text>
-        <Text style={styles.rosterPos}>{player.position}</Text>
+        <View style={[styles.positionBadge, { backgroundColor: `${color}14` }]}>
+          <Text style={[styles.positionText, { color }]}>{player.position}</Text>
+        </View>
       </View>
       {player.zone !== 'green' ? (
-        <View style={styles.triggerChip}>
+        <View style={[styles.triggerChip, { backgroundColor: `${color}12` }]}>
           <Text style={[styles.triggerChipText, { color }]}>{player.triggerMetric}</Text>
         </View>
       ) : null}
       <Text style={[styles.rosterScore, { color }]}>{player.riskScore}</Text>
+      <AppIcon name="chevron.right" size={13} color="#D5D7E0" />
     </View>
   );
 }
@@ -150,6 +173,7 @@ const styles = StyleSheet.create({
   banner: {
     borderRadius: 20,
     padding: 20,
+    gap: 10,
   },
   bannerRow: {
     flexDirection: 'row',
@@ -178,25 +202,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   bannerMeta: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  bannerUpdated: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11.5,
   },
   countsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
   },
   countBlock: {
     flex: 1,
     alignItems: 'center',
     gap: 2,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  countBlockActive: {
+    backgroundColor: '#F0F1F5',
   },
   countValue: {
     fontSize: 26,
     fontWeight: '800',
   },
   countLabel: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#6E7280',
     fontWeight: '600',
   },
@@ -224,7 +258,7 @@ const styles = StyleSheet.create({
     height: 32,
   },
   sortText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#5856D6',
   },
@@ -254,20 +288,25 @@ const styles = StyleSheet.create({
   },
   rosterBody: {
     flex: 1,
-    gap: 1,
+    gap: 3,
   },
   rosterName: {
     fontSize: 14.5,
     fontWeight: '700',
     color: '#14121F',
   },
-  rosterPos: {
-    fontSize: 11.5,
-    color: '#6E7280',
+  positionBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  positionText: {
+    fontSize: 10.5,
+    fontWeight: '800',
   },
   triggerChip: {
-    backgroundColor: '#F0F1F5',
-    borderRadius: 8,
+    borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -289,16 +328,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6E7280',
   },
-  sectionTitle: {
-    fontSize: 16,
+  chartCard: {
+    gap: 4,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chartHeaderTitle: {
+    fontSize: 15,
     fontWeight: '700',
     color: '#14121F',
   },
-  chartCard: {
-    gap: 12,
+  chartBody: {
+    gap: 10,
+    marginTop: 10,
   },
-  trendTitle: {
-    fontSize: 13,
+  chartLabel: {
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#14121F',
   },
