@@ -35,6 +35,10 @@ export default function DecisionDrillDownScreen() {
   const decision = DECISIONS.find(d => d.id === decisionId) ?? DECISIONS[0];
   const options = buildOptions(decision);
   const best = options[0];
+  const chosen = options.find(o => o.action === decision.chosenAction) ?? options[0];
+  const wpAfter = decision.outcomeSuccess ? chosen.wpIfSucceed : chosen.wpIfFail;
+
+  const contextLines = decision.situation.split(', ');
 
   const insight = decision.isOptimal
     ? 'This was the correct decision even if the play didn’t work. The process was right — the outcome is noise.'
@@ -49,20 +53,22 @@ export default function DecisionDrillDownScreen() {
         <Text style={styles.contextGame}>
           {decision.team} vs {decision.opponent} · {decision.date}
         </Text>
-        <Text style={styles.contextSituation}>{decision.situation}</Text>
-        <View style={styles.contextRow}>
-          <View style={styles.contextStat}>
-            <Text style={styles.contextStatValue}>{decision.period}</Text>
-            <Text style={styles.contextStatLabel}>Period</Text>
+        <View style={styles.contextBullets}>
+          {contextLines.map(line => (
+            <View key={line} style={styles.contextBullet}>
+              <View style={styles.contextBulletDot} />
+              <Text style={styles.contextBulletText}>{line}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={styles.wpBeforeRow}>
+          <View style={styles.wpBeforeInfo}>
+            <Text style={styles.wpBeforeLabel}>Win probability before this decision</Text>
+            <Text style={styles.wpBeforeContext}>
+              {decision.team} {decision.chosenAction.toLowerCase()} with {decision.period} {decision.clock} left
+            </Text>
           </View>
-          <View style={styles.contextStat}>
-            <Text style={styles.contextStatValue}>{decision.clock}</Text>
-            <Text style={styles.contextStatLabel}>Clock</Text>
-          </View>
-          <View style={styles.contextStat}>
-            <Text style={styles.contextStatValue}>54%</Text>
-            <Text style={styles.contextStatLabel}>Win prob before</Text>
-          </View>
+          <Text style={styles.wpBeforeValue}>54%</Text>
         </View>
       </Card>
 
@@ -121,6 +127,10 @@ export default function DecisionDrillDownScreen() {
             </Text>
           </View>
           <Text style={styles.outcomeText}>{decision.outcome}</Text>
+          <View style={styles.outcomeStats}>
+            <OutcomeStat label="Win probability after this play" value={`${Math.round(wpAfter * 100)}%`} color={wpAfter >= 0.5 ? '#1F8A52' : '#E5484D'} />
+            <OutcomeStat label="Decision was" value={decision.isOptimal ? 'Optimal' : 'Suboptimal'} color={decision.isOptimal ? '#5856D6' : '#E5484D'} />
+          </View>
         </Card>
       </View>
 
@@ -145,6 +155,15 @@ function OptionStat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function OutcomeStat({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <View style={styles.outcomeStat}>
+      <Text style={[styles.outcomeStatValue, { color }]}>{value}</Text>
+      <Text style={styles.outcomeStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   contextCard: {
     gap: 10,
@@ -154,33 +173,54 @@ const styles = StyleSheet.create({
     color: '#6E7280',
     fontWeight: '600',
   },
-  contextSituation: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#14121F',
-    lineHeight: 23,
+  contextBullets: {
+    gap: 6,
   },
-  contextRow: {
+  contextBullet: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 8,
   },
-  contextStat: {
-    flex: 1,
-    backgroundColor: '#F0F1F5',
-    borderRadius: 12,
-    padding: 10,
-    gap: 2,
-    alignItems: 'center',
+  contextBulletDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#5856D6',
+    marginTop: 7,
   },
-  contextStatValue: {
-    fontSize: 15,
-    fontWeight: '800',
+  contextBulletText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#14121F',
+    lineHeight: 20,
+  },
+  wpBeforeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F1F5',
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+  },
+  wpBeforeInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  wpBeforeLabel: {
+    fontSize: 13,
+    fontWeight: '700',
     color: '#14121F',
   },
-  contextStatLabel: {
-    fontSize: 10.5,
+  wpBeforeContext: {
+    fontSize: 11.5,
     color: '#6E7280',
-    textAlign: 'center',
+    lineHeight: 16,
+  },
+  wpBeforeValue: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#5856D6',
   },
   chosenCard: {
     gap: 8,
@@ -301,6 +341,28 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: '#3A3852',
     lineHeight: 20,
+  },
+  outcomeStats: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 2,
+  },
+  outcomeStat: {
+    flex: 1,
+    backgroundColor: '#F0F1F5',
+    borderRadius: 12,
+    padding: 10,
+    gap: 2,
+    alignItems: 'center',
+  },
+  outcomeStatValue: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  outcomeStatLabel: {
+    fontSize: 10.5,
+    color: '#6E7280',
+    textAlign: 'center',
   },
   insightCard: {
     backgroundColor: '#EFEEFB',
