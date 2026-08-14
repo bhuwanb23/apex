@@ -38,7 +38,12 @@ export default function SportPreferencesScreen() {
         ))}
       </View>
 
-      <PillButton label="Save changes" size="lg" disabled={selected.length === 0} onPress={save} />
+      <PillButton
+        label={selected.length > 0 ? `Save changes · ${selected.length} selected` : 'Save changes'}
+        size="lg"
+        disabled={selected.length === 0}
+        onPress={save}
+      />
     </View>
   );
 }
