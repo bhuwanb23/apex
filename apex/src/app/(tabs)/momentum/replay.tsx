@@ -1,12 +1,11 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
-import { Chip } from '@/components/ui/chip';
-import { LineChart, type ChartPoint } from '@/components/ui/chart';
+import { LineChart, type ChartPoint, type ChartMarker } from '@/components/ui/chart';
 import { Slider } from '@/components/ui/slider';
 import { AppIcon } from '@/components/ui/icon';
 import { GAMES, type Game } from '@/data/mock/games';
@@ -18,41 +17,56 @@ export default function GameReplayScreen() {
   const [selectedId, setSelectedId] = useState(gameId ?? GAMES[0].id);
   const [progress, setProgress] = useState(1); // 0..1 through the game
   const [playing, setPlaying] = useState(false);
+  const [gameQuery, setGameQuery] = useState('');
+  const [peaksOpen, setPeaksOpen] = useState(true);
 
   const game = GAMES.find(g => g.id === selectedId) ?? GAMES[0];
   const lastTime = game.timeline[game.timeline.length - 1].time;
+  const filteredGames = GAMES.filter(g =>
+    (g.homeTeam + ' ' + g.awayTeam).toLowerCase().includes(gameQuery.toLowerCase())
+  );
 
-  const series = useMemo(() => {
-    const toPoints = (key: 'home' | 'away'): ChartPoint[] =>
-      game.timeline.map(p => ({
-        x: p.time / lastTime,
-        y: 0.5 - (Math.max(-MAX_MOMENTUM, Math.min(MAX_MOMENTUM, p[key])) / (2 * MAX_MOMENTUM)),
-      }));
-    return [
-      { name: game.homeTeam, color: '#5856D6', points: toPoints('home') },
-      { name: game.awayTeam, color: '#FF5C8A', points: toPoints('away') },
-    ];
-  }, [game, lastTime]);
-
-  const currentTime = progress * lastTime;
-
-  const interpolate = (key: 'home' | 'away'): number => {
+  const interpAt = (key: 'home' | 'away', time: number): number => {
     const pts = game.timeline;
-    if (progress >= 1) return pts[pts.length - 1][key];
-    if (progress <= 0) return pts[0][key];
+    if (time <= pts[0].time) return pts[0][key];
+    if (time >= pts[pts.length - 1].time) return pts[pts.length - 1][key];
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i];
       const b = pts[i + 1];
-      if (currentTime >= a.time && currentTime <= b.time) {
-        const t = (currentTime - a.time) / Math.max(1, b.time - a.time);
+      if (time >= a.time && time <= b.time) {
+        const t = (time - a.time) / Math.max(1, b.time - a.time);
         return a[key] + t * (b[key] - a[key]);
       }
     }
     return pts[pts.length - 1][key];
   };
 
-  const homeMomentum = Math.round(interpolate('home'));
-  const awayMomentum = Math.round(interpolate('away'));
+  const normY = (value: number) =>
+    0.5 - Math.max(-MAX_MOMENTUM, Math.min(MAX_MOMENTUM, value)) / (2 * MAX_MOMENTUM);
+
+  const series = useMemo<{ name: string; color: string; points: ChartPoint[] }[]>(
+    () => [
+      { name: game.homeTeam, color: '#5856D6', points: game.timeline.map(p => ({ x: p.time / lastTime, y: normY(p.home) })) },
+      { name: game.awayTeam, color: '#FF5C8A', points: game.timeline.map(p => ({ x: p.time / lastTime, y: normY(p.away) })) },
+    ],
+    [game, lastTime]
+  );
+
+  const markers = useMemo<ChartMarker[]>(
+    () =>
+      game.events.map(ev => ({
+        x: ev.time / lastTime,
+        y: normY(interpAt(ev.team, ev.time)),
+        color: ev.team === 'home' ? '#5856D6' : '#FF5C8A',
+        selected: Math.abs(progress - ev.time / lastTime) < 0.02,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [game, lastTime, progress]
+  );
+
+  const currentTime = progress * lastTime;
+  const homeMomentum = Math.round(interpAt('home', currentTime));
+  const awayMomentum = Math.round(interpAt('away', currentTime));
   const leader = homeMomentum > awayMomentum ? 'home' : 'away';
 
   const pastEvents = game.events.filter(e => e.time <= currentTime);
@@ -83,13 +97,23 @@ export default function GameReplayScreen() {
     <Screen>
       <StackHeader title="Game Replay" subtitle="Momentum in motion" />
 
-      {/* Game selector */}
+      {/* Game selector with search */}
+      <View style={styles.searchBar}>
+        <AppIcon name="magnifyingglass" size={15} color="#9AA0B5" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Find a game…"
+          placeholderTextColor="#9AA0B5"
+          value={gameQuery}
+          onChangeText={setGameQuery}
+        />
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gameRow}>
-        {GAMES.map(g => (
-          <Chip
+        {filteredGames.map(g => (
+          <ChipLabel
             key={g.id}
             label={`${g.homeTeam} vs ${g.awayTeam}`}
-            small
+            date={g.date}
             selected={selectedId === g.id}
             onPress={() => {
               setSelectedId(g.id);
@@ -123,8 +147,11 @@ export default function GameReplayScreen() {
         <LineChart
           series={series}
           height={190}
-          gridLabels={['Start', 'Half', 'End']}
+          gridLabels={['Q1', 'Q2', 'Q3', 'Q4']}
+          yLabels={['+50', '0', '-50']}
           scrubber={progress}
+          markers={markers}
+          onMarkerPress={i => jumpTo(game.events[i].time)}
         />
         <Slider value={progress} min={0} max={1} step={0.01} onChange={setProgress} />
         <View style={styles.playRow}>
@@ -132,6 +159,7 @@ export default function GameReplayScreen() {
             <AppIcon name={playing ? 'pause.fill' : 'play.fill'} size={15} color="#FFFFFF" />
           </Pressable>
           <Text style={styles.playText}>{currentLabel}</Text>
+          <Text style={styles.playHint}>Tap a dot on the chart to see what happened</Text>
         </View>
       </Card>
 
@@ -161,32 +189,37 @@ export default function GameReplayScreen() {
         )}
       </Card>
 
-      {/* Peak moments */}
+      {/* Peak moments (collapsible) */}
       <View>
-        <Text style={styles.sectionTitle}>Peak Moments</Text>
-        <View style={styles.listGap}>
-          {[...game.events].sort((a, b) => b.swing - a.swing).map(event => (
-            <Pressable key={event.label} onPress={() => jumpTo(event.time)}>
-              <Card style={styles.peakCard}>
-                <View style={styles.peakLeft}>
-                  <View style={[styles.peakIcon, { backgroundColor: event.team === 'home' ? '#EFEEFB' : '#FDEBEC' }]}>
-                    <AppIcon name="bolt.fill" size={14} color={event.team === 'home' ? '#5856D6' : '#FF5C8A'} />
+        <Pressable style={styles.collapseHeader} onPress={() => setPeaksOpen(prev => !prev)}>
+          <Text style={styles.sectionTitle}>Peak Moments</Text>
+          <AppIcon name={peaksOpen ? 'chevron.down' : 'chevron.right'} size={16} color="#6E7280" />
+        </Pressable>
+        {peaksOpen ? (
+          <View style={styles.listGap}>
+            {[...game.events].sort((a, b) => b.swing - a.swing).map(event => (
+              <Pressable key={event.label} onPress={() => jumpTo(event.time)}>
+                <Card style={styles.peakCard}>
+                  <View style={styles.peakLeft}>
+                    <View style={[styles.peakIcon, { backgroundColor: event.team === 'home' ? '#EFEEFB' : '#FDEBEC' }]}>
+                      <AppIcon name="bolt.fill" size={14} color={event.team === 'home' ? '#5856D6' : '#FF5C8A'} />
+                    </View>
+                    <View style={styles.peakBody}>
+                      <Text style={styles.peakTime}>{event.label}</Text>
+                      <Text style={styles.peakDesc}>{event.description}</Text>
+                    </View>
                   </View>
-                  <View style={styles.peakBody}>
-                    <Text style={styles.peakTime}>{event.label}</Text>
-                    <Text style={styles.peakDesc}>{event.description}</Text>
+                  <View style={styles.peakSwing}>
+                    <Text style={[styles.peakSwingValue, { color: event.team === 'home' ? '#5856D6' : '#FF5C8A' }]}>
+                      +{event.swing}
+                    </Text>
+                    <Text style={styles.peakSwingLabel}>swing</Text>
                   </View>
-                </View>
-                <View style={styles.peakSwing}>
-                  <Text style={[styles.peakSwingValue, { color: event.team === 'home' ? '#5856D6' : '#FF5C8A' }]}>
-                    +{event.swing}
-                  </Text>
-                  <Text style={styles.peakSwingLabel}>swing</Text>
-                </View>
-              </Card>
-            </Pressable>
-          ))}
-        </View>
+                </Card>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       {/* Summary stats */}
@@ -200,6 +233,17 @@ export default function GameReplayScreen() {
         <Text style={styles.verdict}>{game.verdict}</Text>
       </View>
     </Screen>
+  );
+}
+
+function ChipLabel({ label, date, selected, onPress }: { label: string; date: string; selected: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.gameChip, selected && styles.gameChipSelected]}>
+      <Text style={[styles.gameChipText, selected && styles.gameChipTextSelected]}>{label}</Text>
+      <Text style={[styles.gameChipDate, selected && styles.gameChipDateSelected]}>{date}</Text>
+    </Pressable>
   );
 }
 
@@ -248,9 +292,51 @@ function scoreAt(game: Game, time: number): string {
 }
 
 const styles = StyleSheet.create({
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 42,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#14121F',
+  },
   gameRow: {
     gap: 8,
     paddingRight: 8,
+  },
+  gameChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 1,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  gameChipSelected: {
+    backgroundColor: '#EFEEFB',
+    borderColor: '#5856D6',
+  },
+  gameChipText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#14121F',
+  },
+  gameChipTextSelected: {
+    color: '#5856D6',
+  },
+  gameChipDate: {
+    fontSize: 10,
+    color: '#9AA0B5',
+  },
+  gameChipDateSelected: {
+    color: '#8E84E8',
   },
   headerCard: {
     alignItems: 'center',
@@ -314,6 +400,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flexWrap: 'wrap',
   },
   playBtn: {
     width: 34,
@@ -327,6 +414,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#14121F',
+  },
+  playHint: {
+    fontSize: 11.5,
+    color: '#9AA0B5',
+    marginLeft: 'auto',
   },
   momentCard: {
     gap: 12,
@@ -388,6 +480,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#14121F',
+  },
+  collapseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   listGap: {
     gap: 10,
