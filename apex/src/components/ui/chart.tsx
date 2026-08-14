@@ -13,16 +13,29 @@ export interface ChartBand {
   color: string;
 }
 
+/** Standalone marker on the chart (e.g. a scoring event) at a normalized x/y. */
+export interface ChartMarker {
+  x: number;
+  y: number;
+  color: string;
+  selected?: boolean;
+}
+
 interface LineChartProps {
   series: { name: string; color: string; points: ChartPoint[] }[];
   height?: number;
   showGrid?: boolean;
   gridLabels?: string[];
+  /** Left-side y-axis labels (top → bottom). */
+  yLabels?: string[];
   /** X position 0..1 of a scrubber line. */
   scrubber?: number;
   showDots?: boolean;
   /** Risk-zone bands drawn behind the lines (soft fills). */
   bands?: ChartBand[];
+  /** Standalone markers (scoring events) drawn on top of the lines. */
+  markers?: ChartMarker[];
+  onMarkerPress?: (index: number) => void;
   /** Tap a dot → report its series/point index. */
   onPointPress?: (seriesIndex: number, pointIndex: number) => void;
   /** Highlighted dot (series index, point index). */
@@ -45,9 +58,12 @@ export function LineChart({
   height = 160,
   showGrid = true,
   gridLabels = [],
+  yLabels = [],
   scrubber,
   showDots = false,
   bands = [],
+  markers = [],
+  onMarkerPress,
   onPointPress,
   selectedPoint,
 }: LineChartProps) {
@@ -111,10 +127,31 @@ export function LineChart({
               })
             )
           : null}
+        {markers.map((m, i) => (
+          <Circle
+            key={`marker-${i}`}
+            cx={m.x * 100}
+            cy={m.y * height}
+            r={m.selected ? 6 : 4}
+            fill={m.color}
+            stroke={m.selected ? '#14121F' : '#FFFFFF'}
+            strokeWidth={1.5}
+            onPress={onMarkerPress ? () => onMarkerPress(i) : undefined}
+          />
+        ))}
         {scrubber != null ? (
           <Line x1={scrubber * 100} x2={scrubber * 100} y1={0} y2={height} stroke="#5856D6" strokeWidth={2} />
         ) : null}
       </Svg>
+      {yLabels.length > 0 ? (
+        <View style={styles.yLabels}>
+          {yLabels.map(label => (
+            <Text key={label} style={styles.yLabel}>
+              {label}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       {gridLabels.length > 0 ? (
         <View style={styles.labelsRow}>
           {gridLabels.map(label => (
@@ -139,5 +176,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#9AA0B5',
     fontWeight: '500',
+  },
+  yLabels: {
+    position: 'absolute',
+    left: 2,
+    top: 2,
+    bottom: 2,
+    justifyContent: 'space-between',
+  },
+  yLabel: {
+    fontSize: 9,
+    color: '#C6C8D2',
+    fontWeight: '600',
   },
 });
