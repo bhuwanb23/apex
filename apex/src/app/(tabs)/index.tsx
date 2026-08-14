@@ -10,7 +10,9 @@ import { VerdictBadge, QualityBadge } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
+import { Skeleton, SkeletonRow, SkeletonCard, SkeletonGames } from '@/components/ui/skeleton';
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useHomeData } from '@/data/live/home';
 
@@ -22,8 +24,16 @@ function relativeNightLabel(nightsAgo: number): string {
 export default function HomeScreen() {
   const router = useRouter();
   const { role, cycleActiveSport } = useOnboarding();
+  const { status } = useBackend();
   const { sport, injury, decision, momentum, games } = useHomeData();
   const sportInfo = SPORT_BY_ID[sport];
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showInjurySkeleton = injury.loading && !backendOffline;
+  const showDecisionSkeleton = decision.loading && !backendOffline;
+  const showMomentumSkeleton = momentum.loading && !backendOffline;
+  const showGamesSkeleton = games.loading && !backendOffline;
 
   const redZone = injury.players;
   const { decision: bestDecision, coach: bestCoach } = decision;
@@ -100,88 +110,108 @@ export default function HomeScreen() {
           onAction={() => router.push('/injury/alerts')}
         />
         <View style={styles.sectionGap}>
-          {redZone.map(player => (
-            <Pressable
-              key={player.id}
-              onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
-              <Card style={styles.alertRow}>
-                <View style={styles.alertAvatar}>
-                  <Text style={styles.alertAvatarText}>{player.lastName.slice(0, 1)}</Text>
-                </View>
-                <View style={styles.alertBody}>
-                  <View style={styles.alertNameRow}>
-                    <Text style={styles.alertName}>{player.name}</Text>
-                    <Text style={styles.alertTeam}>{player.team}</Text>
+          {showInjurySkeleton ? (
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
+          ) : (
+            redZone.map(player => (
+              <Pressable
+                key={player.id}
+                onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
+                <Card style={styles.alertRow}>
+                  <View style={styles.alertAvatar}>
+                    <Text style={styles.alertAvatarText}>{player.lastName.slice(0, 1)}</Text>
                   </View>
-                  <Text style={styles.alertTrigger}>{player.triggerMetric}</Text>
-                </View>
-                <View style={styles.alertScoreBadge}>
-                  <Text style={styles.alertScoreText}>{player.riskScore}</Text>
-                </View>
-              </Card>
-            </Pressable>
-          ))}
+                  <View style={styles.alertBody}>
+                    <View style={styles.alertNameRow}>
+                      <Text style={styles.alertName}>{player.name}</Text>
+                      <Text style={styles.alertTeam}>{player.team}</Text>
+                    </View>
+                    <Text style={styles.alertTrigger}>{player.triggerMetric}</Text>
+                  </View>
+                  <View style={styles.alertScoreBadge}>
+                    <Text style={styles.alertScoreText}>{player.riskScore}</Text>
+                  </View>
+                </Card>
+              </Pressable>
+            ))
+          )}
         </View>
       </View>
 
       {/* Best decision spotlight */}
       <View>
         <SectionHeader title="Best Decision This Week" emoji="🧠" actionLabel="Leaderboard" onAction={() => router.push('/decisions')} />
-        <Card style={styles.spotlight}>
-          <View style={styles.spotlightTop}>
-            <QualityBadge optimal={bestDecision.isOptimal} />
-            <Text style={styles.spotlightCoach}>
-              {bestCoach.name} · {bestCoach.team}
+        {showDecisionSkeleton ? (
+          <SkeletonCard lines={3} />
+        ) : (
+          <Card style={styles.spotlight}>
+            <View style={styles.spotlightTop}>
+              <QualityBadge optimal={bestDecision.isOptimal} />
+              <Text style={styles.spotlightCoach}>
+                {bestCoach.name} · {bestCoach.team}
+              </Text>
+            </View>
+            <Text style={styles.spotlightTitle}>
+              {bestDecision.type === '4th_down' ? 'Go for it on 4th and 2' : bestDecision.chosenAction}
             </Text>
-          </View>
-          <Text style={styles.spotlightTitle}>
-            {bestDecision.type === '4th_down' ? 'Go for it on 4th and 2' : bestDecision.chosenAction}
-          </Text>
-          <Text style={styles.spotlightDesc}>{bestDecision.situation}</Text>
-          <Text style={styles.spotlightOutcome}>{bestDecision.outcome}</Text>
-        </Card>
+            <Text style={styles.spotlightDesc}>{bestDecision.situation}</Text>
+            <Text style={styles.spotlightOutcome}>{bestDecision.outcome}</Text>
+          </Card>
+        )}
       </View>
 
       {/* Momentum check */}
       <View>
         <SectionHeader title="Momentum Check" emoji="⚡" actionLabel="Explore" onAction={() => router.push({ pathname: '/momentum', params: { sport } })} />
-        <Card style={styles.momentumCard}>
-          <VerdictBadge verdict={verdict.verdict} />
-          <Text style={styles.momentumText}>{verdict.explanation}</Text>
-        </Card>
+        {showMomentumSkeleton ? (
+          <SkeletonCard lines={2} />
+        ) : (
+          <Card style={styles.momentumCard}>
+            <VerdictBadge verdict={verdict.verdict} />
+            <Text style={styles.momentumText}>{verdict.explanation}</Text>
+          </Card>
+        )}
       </View>
 
       {/* Last night's games */}
       <View>
         <SectionHeader title="Last Night's Games" emoji="🏀" actionLabel="Replays" onAction={() => router.push('/momentum')} />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gamesRow}>
-          {recentGames.map(game => (
-            <Pressable
-              key={game.id}
-              onPress={() => router.push({ pathname: '/momentum/replay', params: { gameId: game.id } })}>
-              <Card style={styles.gameCard}>
-                <View style={styles.gameHeader}>
-                  <Text style={styles.gameDate}>{relativeNightLabel(game.nightsAgo)}</Text>
-                  <View style={styles.gameSportTag}>
-                    <Text style={styles.gameSportTagText}>{game.sport}</Text>
+        {showGamesSkeleton ? (
+          <SkeletonGames />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gamesRow}>
+            {recentGames.map(game => (
+              <Pressable
+                key={game.id}
+                onPress={() => router.push({ pathname: '/momentum/replay', params: { gameId: game.id } })}>
+                <Card style={styles.gameCard}>
+                  <View style={styles.gameHeader}>
+                    <Text style={styles.gameDate}>{relativeNightLabel(game.nightsAgo)}</Text>
+                    <View style={styles.gameSportTag}>
+                      <Text style={styles.gameSportTagText}>{game.sport}</Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.gameLine}>
-                  <Text style={styles.gameTeam}>{game.homeTeam}</Text>
-                  <Text style={styles.gameScore}>{game.homeScore}</Text>
-                </View>
-                <View style={styles.gameLine}>
-                  <Text style={styles.gameTeam}>{game.awayTeam}</Text>
-                  <Text style={styles.gameScore}>{game.awayScore}</Text>
-                </View>
-                <View style={styles.gameMeta}>
-                  <AppIcon name="bolt.fill" size={12} color="#FFA058" />
-                  <Text style={styles.gameMetaText}>{game.momentumShifts} momentum shifts</Text>
-                </View>
-              </Card>
-            </Pressable>
-          ))}
-        </ScrollView>
+                  <View style={styles.gameLine}>
+                    <Text style={styles.gameTeam}>{game.homeTeam}</Text>
+                    <Text style={styles.gameScore}>{game.homeScore}</Text>
+                  </View>
+                  <View style={styles.gameLine}>
+                    <Text style={styles.gameTeam}>{game.awayTeam}</Text>
+                    <Text style={styles.gameScore}>{game.awayScore}</Text>
+                  </View>
+                  <View style={styles.gameMeta}>
+                    <AppIcon name="bolt.fill" size={12} color="#FFA058" />
+                    <Text style={styles.gameMetaText}>{game.momentumShifts} momentum shifts</Text>
+                  </View>
+                </Card>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {anyDemo ? (

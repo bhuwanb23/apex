@@ -190,10 +190,10 @@ export function useHomeGames(sport: SportId) {
 
 export interface HomeData {
   sport: SportId;
-  injury: { players: Player[]; source: DataSource };
-  decision: { decision: Decision; coach: Coach; source: DataSource };
-  momentum: { verdict: (typeof MOMENTUM_VERDICTS)[number]; source: DataSource };
-  games: { games: Game[]; source: DataSource };
+  injury: { players: Player[]; source: DataSource; loading: boolean };
+  decision: { decision: Decision; coach: Coach; source: DataSource; loading: boolean };
+  momentum: { verdict: (typeof MOMENTUM_VERDICTS)[number]; source: DataSource; loading: boolean };
+  games: { games: Game[]; source: DataSource; loading: boolean };
 }
 
 export function useHomeData(): HomeData {
@@ -205,9 +205,9 @@ export function useHomeData(): HomeData {
 
   return {
     sport: activeSport,
-    injury: { players: injury.data, source: injury.source },
-    decision: { decision: decision.data.decision, coach: decision.data.coach, source: decision.source },
-    momentum: { verdict: momentum.data, source: momentum.source },
-    games: { games: games.data, source: games.source },
+    injury: { players: injury.data, source: injury.source, loading: injury.loading },
+    decision: { decision: decision.data.decision, coach: decision.data.coach, source: decision.source, loading: decision.loading },
+    momentum: { verdict: momentum.data, source: momentum.source, loading: momentum.loading },
+    games: { games: games.data, source: games.source, loading: games.loading },
   };
 }
