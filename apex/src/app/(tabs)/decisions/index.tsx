@@ -1,0 +1,245 @@
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { StackHeader } from '@/components/stack-header';
+import { Screen } from '@/components/ui/screen';
+import { Card } from '@/components/ui/card';
+import { Chip } from '@/components/ui/chip';
+import { AppIcon } from '@/components/ui/icon';
+import { COACHES, type Coach } from '@/data/mock/coaches';
+
+const DECISION_TYPES = ['All', '4th Down', 'Timeout', '2-Point'];
+const GAME_TYPES = ['Regular', 'Playoff', 'All'];
+
+export default function CoachLeaderboardScreen() {
+  const router = useRouter();
+  const [decisionType, setDecisionType] = useState('All');
+  const [gameType, setGameType] = useState('All');
+
+  const podium = COACHES.slice(0, 3);
+  const rest = COACHES.slice(3);
+
+  return (
+    <Screen tabInset={false}>
+      <StackHeader title="Coach Leaderboard" subtitle="Decision quality · EV Rate" />
+
+      {/* Filters */}
+      <View style={styles.filters}>
+        <View style={styles.chipRow}>
+          {DECISION_TYPES.map(dt => (
+            <Chip key={dt} label={dt} small selected={decisionType === dt} onPress={() => setDecisionType(dt)} />
+          ))}
+        </View>
+        <View style={styles.chipRow}>
+          {GAME_TYPES.map(gt => (
+            <Chip key={gt} label={gt} small selected={gameType === gt} onPress={() => setGameType(gt)} />
+          ))}
+        </View>
+      </View>
+
+      {/* Podium */}
+      <View style={styles.podiumRow}>
+        <PodiumSpot coach={podium[1]} rank={2} onPress={() => open(router, podium[1])} />
+        <PodiumSpot coach={podium[0]} rank={1} onPress={() => open(router, podium[0])} />
+        <PodiumSpot coach={podium[2]} rank={3} onPress={() => open(router, podium[2])} />
+      </View>
+
+      {/* Full list */}
+      <Card style={styles.listCard} padded={false}>
+        {rest.map((coach, i) => (
+          <Pressable key={coach.id} onPress={() => open(router, coach)}>
+            <View style={[styles.row, i !== rest.length - 1 && styles.rowBorder]}>
+              <Text style={styles.rank}>{coach.rank}</Text>
+              <View style={styles.rowBody}>
+                <Text style={styles.coachName}>{coach.name}</Text>
+                <Text style={styles.coachTeam}>{coach.team}</Text>
+              </View>
+              <Text style={styles.decisions}>{coach.totalDecisions} dec.</Text>
+              <Text style={[styles.evRate, { color: evColor(coach.evRate) }]}>{coach.evRate}%</Text>
+              <TrendArrow trend={coach.trend} />
+            </View>
+          </Pressable>
+        ))}
+      </Card>
+
+      <View style={styles.note}>
+        <AppIcon name="info.circle.fill" size={13} color="#9AA0B5" />
+        <Text style={styles.noteText}>EV Rate measures how often a coach chose the statistically optimal decision</Text>
+      </View>
+    </Screen>
+  );
+}
+
+function open(router: ReturnType<typeof useRouter>, coach: Coach) {
+  router.push({ pathname: '/decisions/coach', params: { coachId: coach.id } });
+}
+
+function PodiumSpot({ coach, rank, onPress }: { coach: Coach; rank: 1 | 2 | 3; onPress: () => void }) {
+  const height = rank === 1 ? 132 : 96;
+  const medal = rank === 1 ? '#D9A21B' : rank === 2 ? '#9AA0B5' : '#C98A5E';
+  return (
+    <Pressable style={styles.podiumSpot} onPress={onPress}>
+      <View style={styles.podiumAvatarWrap}>
+        <View style={[styles.podiumAvatar, { backgroundColor: rank === 1 ? '#EFEEFB' : '#F0F1F5' }]}>
+          <Text style={[styles.podiumInitial, { color: rank === 1 ? '#5856D6' : '#6E7280' }]}>
+            {coach.name.split(' ').map(w => w[0]).join('')}
+          </Text>
+        </View>
+        <View style={[styles.medal, { backgroundColor: medal }]}>
+          <Text style={styles.medalText}>{rank}</Text>
+        </View>
+      </View>
+      <Text style={styles.podiumName} numberOfLines={1}>
+        {coach.name.split(' ').pop()}
+      </Text>
+      <Text style={styles.podiumTeam}>{coach.team}</Text>
+      <View style={[styles.podiumBar, { height, backgroundColor: rank === 1 ? '#5856D6' : '#B9B4F0' }]}>
+        <Text style={styles.podiumRate}>{coach.evRate}%</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function TrendArrow({ trend }: { trend: Coach['trend'] }) {
+  if (trend === 'flat') return <Text style={styles.flatTrend}>—</Text>;
+  return <AppIcon name={trend === 'up' ? 'arrow.up.right' : 'arrow.down.right'} size={15} color={trend === 'up' ? '#2FA36B' : '#E5484D'} />;
+}
+
+function evColor(rate: number): string {
+  if (rate >= 70) return '#1F8A52';
+  if (rate >= 50) return '#B7791F';
+  return '#E5484D';
+}
+
+const styles = StyleSheet.create({
+  filters: {
+    gap: 8,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  podiumRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
+  },
+  podiumSpot: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  podiumAvatarWrap: {
+    position: 'relative',
+  },
+  podiumAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  podiumInitial: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  medal: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medalText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  podiumName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#14121F',
+  },
+  podiumTeam: {
+    fontSize: 11,
+    color: '#6E7280',
+    marginBottom: 8,
+  },
+  podiumBar: {
+    width: 84,
+    borderRadius: 14,
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  podiumRate: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  listCard: {
+    paddingVertical: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  rowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F1F5',
+  },
+  rank: {
+    width: 26,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#9AA0B5',
+    textAlign: 'center',
+  },
+  rowBody: {
+    flex: 1,
+    gap: 1,
+  },
+  coachName: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#14121F',
+  },
+  coachTeam: {
+    fontSize: 12,
+    color: '#6E7280',
+  },
+  decisions: {
+    fontSize: 12,
+    color: '#9AA0B5',
+    fontWeight: '600',
+  },
+  evRate: {
+    fontSize: 17,
+    fontWeight: '800',
+    minWidth: 52,
+    textAlign: 'right',
+  },
+  flatTrend: {
+    color: '#9AA0B5',
+    fontSize: 14,
+  },
+  note: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  noteText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#9AA0B5',
+    lineHeight: 16,
+  },
+});
