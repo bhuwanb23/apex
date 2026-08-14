@@ -221,31 +221,6 @@ export const GAMES: Game[] = [
     decisions: [],
   },
 ];
-    homeScore: 27,
-    awayScore: 24,
-    date: 'Jan 18, 2026',
-    season: '2025-26',
-    homeCoach: 'Mike Brennan',
-    awayCoach: 'Greg Fowler',
-    homeEvRate: 78.4,
-    awayEvRate: 61.3,
-    momentumShifts: 8,
-    longestStreak: 'Cowboys · 6 min',
-    momentumLeader: 'Eagles',
-    verdict: 'Eagles won the 4th quarter decisions — two optimal calls sealed the game.',
-    timeline: [
-      { time: 0, label: 'Q1 - 15:00', home: 10, away: -5 },
-      { time: 900, label: 'Q2 - 0:00', home: -15, away: 20 },
-      { time: 1800, label: 'Q3 - 0:00', home: 5, away: -2 },
-      { time: 2400, label: 'Q4 - 8:00', home: 18, away: -6 },
-      { time: 3600, label: 'Q4 - 0:00', home: 42, away: -30 },
-    ],
-    events: [
-      { time: 850, label: 'Q2 - 6:00', description: 'Cowboys pick-six flips momentum entirely.', team: 'away', swing: 30 },
-      { time: 2800, label: 'Q4 - 4:22', description: 'Brennan goes for it on 4th and 2 — converts, drives for the lead.', team: 'home', swing: 26 },
-    ],
-    decisions: [],
-  },
-];
 
 export const HOME_GAMES = GAMES.slice(0, 2);
+export const DECISION_GAMES = GAMES.filter(g => g.sport === 'NFL');

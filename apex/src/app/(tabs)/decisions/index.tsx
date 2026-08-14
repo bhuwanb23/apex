@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
 import { COACHES, type Coach } from '@/data/mock/coaches';
+import { DECISION_GAMES } from '@/data/mock/games';
 
 const DECISION_TYPES = ['All', '4th Down', 'Timeout', '2-Point'];
 const GAME_TYPES = ['Regular', 'Playoff', 'All'];
@@ -66,6 +67,27 @@ export default function CoachLeaderboardScreen() {
       <View style={styles.note}>
         <AppIcon name="info.circle.fill" size={13} color="#9AA0B5" />
         <Text style={styles.noteText}>EV Rate measures how often a coach chose the statistically optimal decision</Text>
+      </View>
+
+      {/* Game reviews */}
+      <View>
+        <Text style={styles.gameSectionTitle}>Game decision reviews</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gameRow}>
+          {DECISION_GAMES.map(game => (
+            <Pressable key={game.id} onPress={() => router.push({ pathname: '/decisions/game', params: { gameId: game.id } })}>
+              <Card style={styles.gameCard}>
+                <Text style={styles.gameDate}>{game.date}</Text>
+                <Text style={styles.gameTeams} numberOfLines={1}>
+                  {game.homeTeam} {game.homeScore} – {game.awayScore} {game.awayTeam}
+                </Text>
+                <View style={styles.gameMetaRow}>
+                  <Text style={styles.gameMetaText}>{game.homeEvRate}% vs {game.awayEvRate}% EV rate</Text>
+                  <AppIcon name="chevron.right" size={13} color="#9AA0B5" />
+                </View>
+              </Card>
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
     </Screen>
   );
@@ -229,6 +251,38 @@ const styles = StyleSheet.create({
   flatTrend: {
     color: '#9AA0B5',
     fontSize: 14,
+  },
+  gameSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#14121F',
+  },
+  gameRow: {
+    gap: 12,
+    paddingRight: 8,
+  },
+  gameCard: {
+    width: 210,
+    gap: 6,
+  },
+  gameDate: {
+    fontSize: 11.5,
+    color: '#6E7280',
+    fontWeight: '600',
+  },
+  gameTeams: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#14121F',
+  },
+  gameMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gameMetaText: {
+    fontSize: 11.5,
+    color: '#9AA0B5',
   },
   note: {
     flexDirection: 'row',
