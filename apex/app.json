@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "apex",
-    "slug": "apex",
+    "name": "AQX Sports Intelligence",
+    "slug": "aqx",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "apex",
-    "userInterfaceStyle": "automatic",
+    "scheme": "aqx",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -28,7 +28,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#F0F1F5",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
