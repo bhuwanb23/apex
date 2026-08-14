@@ -60,7 +60,7 @@ export default function PlayerRiskScreen() {
   const backToBackDays = [1, 3, 5, 6, 8, 10, 12];
 
   return (
-    <Screen tabInset={false}>
+    <Screen>
       <StackHeader title={player.name} subtitle={`${player.team} · ${player.position}`} />
 
       {/* Header card */}

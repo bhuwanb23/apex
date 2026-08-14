@@ -38,7 +38,7 @@ export default function TeamRiskScreen() {
   );
 
   return (
-    <Screen tabInset={false}>
+    <Screen>
       <StackHeader title="Team Risk" subtitle={teamName} />
 
       {/* Team banner */}
