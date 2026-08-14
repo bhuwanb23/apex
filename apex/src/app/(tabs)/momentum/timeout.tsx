@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
+import { fetchTimeoutRecommendation } from '@/data/live/momentum';
 
 const PERIODS = ['Q1', 'Q2', 'Q3', 'Q4', 'OT'];
 
@@ -30,9 +31,22 @@ export default function TimeoutOptimizerScreen() {
   const [minutes, setMinutes] = useState(5);
   const [period, setPeriod] = useState('Q4');
   const [timeouts, setTimeouts] = useState(2);
-  const [recommendation, setRecommendation] = useState<null | { should: boolean; withTimeout: number; without: number; note: string }>(null);
+  const [recommendation, setRecommendation] = useState<null | { should: boolean; withTimeout: number; without: number; note: string; confidence: string; demo: boolean }>(null);
 
-  const getRecommendation = () => {
+  /** Ask the backend; fall back to the local heuristic when it has no scenario. */
+  const getRecommendation = async () => {
+    const live = await fetchTimeoutRecommendation(sport, { consecutiveScores: consecutive, scoreDiff, minutes, period, timeoutsAvailable: timeouts });
+    if (live) {
+      setRecommendation({
+        should: live.shouldCallTimeout,
+        withTimeout: live.stopProbabilityWith,
+        without: live.stopProbabilityWithout,
+        note: live.recommendationText,
+        confidence: `${live.confidenceLevel} confidence — based on ${live.basedOnSampleSize} similar situations`,
+        demo: false,
+      });
+      return;
+    }
     const urgency = period === 'Q4' || period === 'OT' ? 1.15 : 1;
     const baseWith = 0.48 + Math.min(0.28, consecutive * 0.05) + (scoreDiff < 0 ? 0.06 : 0) + (timeouts > 0 ? 0.04 : 0);
     const baseWithout = baseWith - 0.09 - Math.min(0.08, consecutive * 0.015);
@@ -45,6 +59,8 @@ export default function TimeoutOptimizerScreen() {
       withTimeout,
       without,
       note: `After ${consecutive}+ consecutive opponent scores with under ${Math.round(minutes)} minutes remaining in ${period}, calling timeout has historically improved stop probability by ${Math.max(0, diff)}%.`,
+      confidence: 'High confidence — based on 847 similar situations',
+      demo: true,
     });
   };
 
@@ -124,7 +140,10 @@ export default function TimeoutOptimizerScreen() {
           <View style={styles.recNoteBox}>
             <Text style={styles.recNote}>{recommendation.note}</Text>
           </View>
-          <Text style={styles.recConfidence}>High confidence — based on 847 similar situations</Text>
+          <Text style={styles.recConfidence}>
+            {recommendation.confidence}
+            {recommendation.demo ? ' · demo data' : ''}
+          </Text>
         </GradientView>
       ) : (
         <PillButton label="Get Recommendation" size="lg" onPress={getRecommendation} icon={<AppIcon name="sparkles" size={17} color="#FFFFFF" />} />

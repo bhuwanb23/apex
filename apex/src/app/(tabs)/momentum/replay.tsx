@@ -9,18 +9,22 @@ import { LineChart, type ChartPoint, type ChartMarker } from '@/components/ui/ch
 import { Slider } from '@/components/ui/slider';
 import { AppIcon } from '@/components/ui/icon';
 import { GAMES, type Game } from '@/data/mock/games';
+import { useGameMomentum } from '@/data/live/momentum';
+import { useOnboarding } from '@/context/onboarding';
 
 const MAX_MOMENTUM = 70; // clamp chart domain to ±70 for readability
 
 export default function GameReplayScreen() {
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
+  const { activeSport } = useOnboarding();
   const [selectedId, setSelectedId] = useState(gameId ?? GAMES[0].id);
   const [progress, setProgress] = useState(1); // 0..1 through the game
   const [playing, setPlaying] = useState(false);
   const [gameQuery, setGameQuery] = useState('');
   const [peaksOpen, setPeaksOpen] = useState(true);
 
-  const game = GAMES.find(g => g.id === selectedId) ?? GAMES[0];
+  const { data: gameData } = useGameMomentum(selectedId, activeSport);
+  const game = gameData ?? GAMES.find(g => g.id === selectedId) ?? GAMES[0];
   const lastTime = game.timeline[game.timeline.length - 1].time;
   const filteredGames = GAMES.filter(g =>
     (g.homeTeam + ' ' + g.awayTeam).toLowerCase().includes(gameQuery.toLowerCase())

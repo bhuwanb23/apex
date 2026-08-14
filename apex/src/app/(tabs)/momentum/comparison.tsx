@@ -9,7 +9,8 @@ import { Chip } from '@/components/ui/chip';
 import { VerdictBadge } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { GradientView } from '@/components/ui/gradient';
-import { MOMENTUM_VERDICTS, SPORT_BY_ID } from '@/data/mock/sports';
+import { SPORT_BY_ID } from '@/data/mock/sports';
+import { useMomentumComparison } from '@/data/live/momentum';
 
 const SEASONS = ['2024-25', '2023-24', '2022-23'];
 
@@ -17,8 +18,16 @@ export default function SportComparisonScreen() {
   const router = useRouter();
   const [season, setSeason] = useState(SEASONS[0]);
 
-  const ranked = [...MOMENTUM_VERDICTS].sort((a, b) => b.effectSize - a.effectSize);
-  const maxEffect = Math.max(...ranked.map(v => v.effectSize));
+  const { data: rankedData } = useMomentumComparison(season);
+  const ranked = (rankedData ?? []).map(v => ({
+    sport: v.sport,
+    verdict: v.verdict,
+    effectSize: v.effectSize,
+    pValue: v.pValue,
+    season,
+    explanation: v.shortExplanation,
+  }));
+  const maxEffect = Math.max(...ranked.map(v => v.effectSize), 0.01);
 
   return (
     <Screen>

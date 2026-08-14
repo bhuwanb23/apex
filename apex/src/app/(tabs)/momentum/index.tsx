@@ -10,7 +10,8 @@ import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
-import { SPORTS, MOMENTUM_VERDICTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
+import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
+import { useMomentumAnalysis } from '@/data/live/momentum';
 
 const PLAIN_EXPLANATION: Record<string, string> = {
   real: 'Momentum is real here — after a scoring run, that team is measurably more likely to score again. The numbers back it up.',
@@ -24,7 +25,8 @@ export default function MomentumOverviewScreen() {
   const { activeSport, role, storyLanguage } = useOnboarding();
   const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? activeSport);
   const [statsOpen, setStatsOpen] = useState(role === 'analyst');
-  const verdict = MOMENTUM_VERDICTS.find(v => v.sport === sport)!;
+  const { data: verdictData } = useMomentumAnalysis(sport);
+  const verdict = verdictData as unknown as (typeof import('@/data/mock/sports').MOMENTUM_VERDICTS)[number];
   const isReal = verdict.verdict === 'real';
   const isAnalystDepth = role === 'analyst' || storyLanguage === 'technical';
 
