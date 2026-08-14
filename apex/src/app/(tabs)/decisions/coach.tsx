@@ -25,8 +25,14 @@ export default function CoachDetailScreen() {
   const coach = COACHES.find(c => c.id === coachId) ?? COACHES[0];
   const [filter, setFilter] = useState<DecisionFilter>('all');
   const [cellFilter, setCellFilter] = useState<OutcomeCell | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [opponentFilter, setOpponentFilter] = useState<string | null>(null);
 
-  const decisions = DECISIONS.filter(d => d.coachId === coach.id).filter(d => {
+  const coachDecisions = DECISIONS.filter(d => d.coachId === coach.id);
+  const decisionTypes = [...new Set(coachDecisions.map(d => d.type))];
+  const opponents = [...new Set(coachDecisions.map(d => d.opponent))];
+
+  const decisions = coachDecisions.filter(d => {
     if (cellFilter === 'good-good') return d.isOptimal && d.outcomeSuccess;
     if (cellFilter === 'good-bad') return d.isOptimal && !d.outcomeSuccess;
     if (cellFilter === 'bad-good') return !d.isOptimal && d.outcomeSuccess;
@@ -34,7 +40,9 @@ export default function CoachDetailScreen() {
     if (filter === 'optimal') return d.isOptimal;
     if (filter === 'suboptimal') return !d.isOptimal;
     return true;
-  });
+  })
+    .filter(d => (typeFilter ? d.type === typeFilter : true))
+    .filter(d => (opponentFilter ? d.opponent === opponentFilter : true));
 
   const total = Math.max(1, coach.matrix['good-good'] + coach.matrix['good-bad'] + coach.matrix['bad-good'] + coach.matrix['bad-bad']);
 
@@ -105,6 +113,20 @@ export default function CoachDetailScreen() {
             ))}
           </View>
         </View>
+        {decisionTypes.length > 0 ? (
+          <View style={styles.filterRow}>
+            {decisionTypes.map(t => (
+              <Chip key={t} label={t.replace('_', ' ')} small selected={typeFilter === t} onPress={() => setTypeFilter(typeFilter === t ? null : t)} />
+            ))}
+          </View>
+        ) : null}
+        {opponents.length > 0 ? (
+          <View style={styles.filterRow}>
+            {opponents.map(opp => (
+              <Chip key={opp} label={`vs ${opp}`} small selected={opponentFilter === opp} onPress={() => setOpponentFilter(opponentFilter === opp ? null : opp)} />
+            ))}
+          </View>
+        ) : null}
         <View style={styles.listGap}>
           {decisions.map(decision => (
             <Pressable
@@ -285,6 +307,11 @@ const styles = StyleSheet.create({
   },
   filterChips: {
     flexDirection: 'row',
+    gap: 6,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
   listGap: {
