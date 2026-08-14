@@ -18,7 +18,14 @@ export interface ApiDataState<T> {
   loading: boolean;
   /** Last error message, if any. */
   error: string | null;
-  refetch: () => void;
+  /** Re-run the fetcher. Pass { recalculate: true } to force a fresh backend
+   *  computation (bypasses the cache via ?recalculate=true). */
+  refetch: (opts?: { recalculate?: boolean }) => void;
+}
+
+/** Extra options passed to fetchers on refetch. */
+export interface FetchOptions {
+  recalculate?: boolean;
 }
 
 /** True when a backend result is "empty" for the purposes of fallback. */
@@ -42,7 +49,7 @@ function isEmpty(result: unknown): boolean {
  * @param deps     Re-run when these change.
  */
 export function useApiData<T>(
-  fetcher: () => Promise<T | null>,
+  fetcher: (opts?: FetchOptions) => Promise<T | null>,
   fallback: T,
   deps: unknown[] = []
 ): ApiDataState<T> {
@@ -53,11 +60,11 @@ export function useApiData<T>(
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (opts?: FetchOptions) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetcherRef.current();
+      const result = await fetcherRef.current(opts);
       if (result == null || isEmpty(result)) {
         setData(fallback);
         setSource('demo');

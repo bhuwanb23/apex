@@ -14,7 +14,8 @@ import { PillButton } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
-import { useLeaguePlayers } from '@/data/live/injury';
+import { useLeaguePlayers, useTeamRoster } from '@/data/live/injury';
+import { timeAgo } from '@/lib/time';
 
 export default function InjuryDashboardScreen() {
   const router = useRouter();
@@ -35,12 +36,20 @@ export default function InjuryDashboardScreen() {
   const teamNames = SPORT_BY_ID[sport].teams;
   const activeTeam = selectedTeam ?? teamNames[0] ?? null;
   const filteredTeams = teamNames.filter(t => t.toLowerCase().includes(teamQuery.toLowerCase()));
-  const roster = activeTeam ? sportPlayers.filter(p => p.team === activeTeam) : [];
+
+  // Team view hits the backend team endpoint directly — the full roster with
+  // every player's zone (green included), not the league alert list.
+  const team = useTeamRoster(activeTeam ?? undefined, sport);
+  const roster = team.players;
 
   const refresh = () => {
     setRefreshing(true);
+    league.refetch({ recalculate: true });
+    team.refetch({ recalculate: true });
     setTimeout(() => setRefreshing(false), 900);
   };
+
+  const lastUpdated = view === 'league' ? league.lastUpdated : team.lastUpdated;
 
   const selectSport = (id: SportId) => {
     setSport(id);
@@ -200,7 +209,11 @@ export default function InjuryDashboardScreen() {
       <Pressable onPress={refresh} style={styles.updatedRow}>
         <AppIcon name="clock.fill" size={13} color="#9AA0B5" />
         <Text style={styles.updatedText}>
-          {refreshing ? 'Refreshing risk scores…' : 'Risk scores updated 2 hours ago — tap to force refresh'}
+          {refreshing
+            ? 'Refreshing risk scores…'
+            : lastUpdated
+              ? `Risk scores updated ${timeAgo(lastUpdated)} — tap to force refresh`
+              : 'Risk scores updated — tap to force refresh'}
         </Text>
       </Pressable>
     </Screen>

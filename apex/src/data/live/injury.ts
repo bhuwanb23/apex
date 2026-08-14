@@ -83,6 +83,7 @@ export interface LeaguePlayers {
   counts: { red: number; yellow: number; green: number };
   source: DataSource;
   lastUpdated: string | null;
+  refetch: () => void;
 }
 
 const FALLBACK_LEAGUE: Player[] = PLAYERS;
@@ -95,27 +96,51 @@ function countsOf(players: Player[]): { red: number; yellow: number; green: numb
   };
 }
 
-/** All flagged (red+yellow) players for a sport, plus zone counts. */
+interface LeaguePayload {
+  players: Player[];
+  counts: { red: number; yellow: number; green: number };
+  generatedAt: string | null;
+}
+
+/**
+ * League view: red + yellow alerts from the backend, zone counts, and the
+ * backend's generatedAt timestamp. Green count = roster minus flagged.
+ */
 export function useLeaguePlayers(sport: SportId) {
-  const fallback = useMemo(() => FALLBACK_LEAGUE.filter(p => p.sport === sport), [sport]);
-  const result = useApiData<Player[]>(
-    async () => {
-      const [red, yellow] = await Promise.all([
-        api.leagueAlerts(sport, 'red', 50),
-        api.leagueAlerts(sport, 'yellow', 50),
+  const fallback = useMemo<LeaguePayload>(
+    () => ({ players: FALLBACK_LEAGUE.filter(p => p.sport === sport), counts: countsOf(FALLBACK_LEAGUE.filter(p => p.sport === sport)), generatedAt: null }),
+    [sport]
+  );
+  const result = useApiData<LeaguePayload>(
+    async opts => {
+      const recalc = opts?.recalculate ?? false;
+      const [red, yellow, players] = await Promise.all([
+        api.leagueAlerts(sport, 'red', 50, recalc),
+        api.leagueAlerts(sport, 'yellow', 50, recalc),
+        api.players(sport).catch(() => null),
       ]);
-      const players = [...red.alerts, ...yellow.alerts].map(a => alertToPlayer(a, sport));
-      if (players.length === 0) return null;
-      return players;
+      const alertPlayers = [...red.alerts, ...yellow.alerts].map(a => alertToPlayer(a, sport));
+      if (alertPlayers.length === 0) return null;
+      const total = players?.length ?? red.totalAlerts + yellow.totalAlerts;
+      return {
+        players: alertPlayers,
+        counts: {
+          red: red.totalAlerts,
+          yellow: yellow.totalAlerts,
+          green: Math.max(0, total - red.totalAlerts - yellow.totalAlerts),
+        },
+        generatedAt: red.generatedAt,
+      };
     },
     fallback,
     [sport]
   );
   return {
-    players: result.data,
-    counts: countsOf(result.data),
+    players: result.data.players,
+    counts: result.data.counts,
     source: result.source,
-    lastUpdated: result.source === 'live' ? new Date().toISOString() : null,
+    lastUpdated: result.source === 'live' ? result.data.generatedAt : null,
+    refetch: result.refetch,
   } satisfies LeaguePlayers;
 }
 
@@ -165,24 +190,39 @@ export function usePlayerRisk(playerId: string | undefined, sport: SportId) {
 // Team roster
 // ---------------------------------------------------------------------------
 
-/** Resolve a team name → backend teamId, then fetch its roster. */
+export interface TeamRosterResult {
+  players: Player[];
+  source: DataSource;
+  lastUpdated: string | null;
+  refetch: () => void;
+}
+
+/**
+ * Team view: resolve team name → backend teamId, fetch the full roster with
+ * every player's zone (green included) and the backend's lastUpdated time.
+ */
 export function useTeamRoster(teamName: string | undefined, sport: SportId) {
-  const fallback = useMemo(
-    () => PLAYERS.filter(p => p.team === teamName),
-    [teamName]
-  );
-  const result = useApiData<Player[]>(
-    async () => {
+  const fallback = useMemo(() => PLAYERS.filter(p => p.team === teamName), [teamName]);
+  const result = useApiData<{ players: Player[]; lastUpdated: string | null }>(
+    async opts => {
       if (!teamName) return null;
       const teams = await api.teams(sport);
       const team = teams.teams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
       if (!team) return null;
-      const roster = await api.teamRisk(team.id);
+      const roster = await api.teamRisk(team.id, opts?.recalculate ?? false);
       if (roster.players.length === 0) return null;
-      return roster.players.map(p => profileToPlayer(p, sport));
+      return {
+        players: roster.players.map(p => profileToPlayer(p, sport)),
+        lastUpdated: roster.lastUpdated,
+      };
     },
-    fallback,
+    { players: fallback, lastUpdated: null },
     [teamName, sport]
   );
-  return result;
+  return {
+    players: result.data.players,
+    source: result.source,
+    lastUpdated: result.source === 'live' ? result.data.lastUpdated : null,
+    refetch: result.refetch,
+  } satisfies TeamRosterResult;
 }

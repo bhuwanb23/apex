@@ -337,13 +337,14 @@ export const api = {
     apiFetch<PlayerInfo[]>(`/api/sports/${sport}/players${qs({ teamId, limit: 100 })}`),
 
   // Injury
-  leagueAlerts: (sport: string, zone: 'red' | 'yellow' = 'red', limit = 20) =>
+  leagueAlerts: (sport: string, zone: 'red' | 'yellow' = 'red', limit = 20, recalculate = false) =>
     apiFetch<{ sport: string; zone: string; alerts: RiskAlert[]; totalAlerts: number; generatedAt: string }>(
-      `/api/injury/alerts/${sport}${qs({ zone, limit })}`
+      `/api/injury/alerts/${sport}${qs({ zone, limit, recalculate: recalculate || undefined })}`
     ),
   playerRisk: (playerId: string | number, recalculate = false) =>
     apiFetch<PlayerRiskResponse>(`/api/injury/player/${playerId}${qs({ recalculate })}`),
-  teamRisk: (teamId: number) => apiFetch<TeamRiskResponse>(`/api/injury/team/${teamId}`),
+  teamRisk: (teamId: number, recalculate = false) =>
+    apiFetch<TeamRiskResponse>(`/api/injury/team/${teamId}${qs({ recalculate: recalculate || undefined })}`),
   playerRiskHistory: (playerId: string | number, days = 60) =>
     apiFetch<RiskHistoryResponse>(`/api/injury/player/${playerId}/history${qs({ days })}`),
 

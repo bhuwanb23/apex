@@ -10,18 +10,7 @@ import { Chip } from '@/components/ui/chip';
 import { ROLES, useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { api, type CacheStatsResponse, type JobsStatusResponse } from '@/lib/api';
-
-/** Rough "2 hours ago" formatting for sync timestamps. */
-function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  if (ms < 60_000) return 'just now';
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
-}
+import { timeAgo } from '@/lib/time';
 
 type HealthStatus = 'ok' | 'degraded' | 'down';
 
