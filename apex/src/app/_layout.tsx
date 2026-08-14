@@ -3,6 +3,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
 import { AqxSplashOverlay } from '@/components/aqx-splash';
+import { BackendProvider } from '@/context/backend';
 import { OnboardingProvider, useOnboarding } from '@/context/onboarding';
 
 SplashScreen.preventAutoHideAsync();
@@ -37,11 +38,13 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <ThemeProvider value={AqxTheme}>
-      <OnboardingProvider>
-        <StatusBar style="dark" />
-        <AqxSplashOverlay />
-        <RootNavigator />
-      </OnboardingProvider>
+      <BackendProvider>
+        <OnboardingProvider>
+          <StatusBar style="dark" />
+          <AqxSplashOverlay />
+          <RootNavigator />
+        </OnboardingProvider>
+      </BackendProvider>
     </ThemeProvider>
   );
 }

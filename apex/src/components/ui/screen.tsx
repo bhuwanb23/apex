@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type ScrollViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ConnectivityBanner } from '@/components/connectivity-banner';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 
 interface ScreenProps extends ScrollViewProps {
@@ -34,7 +35,10 @@ export function Screen({
         ]}
         showsVerticalScrollIndicator={false}
         {...rest}>
-        <View style={styles.inner}>{children}</View>
+        <View style={styles.inner}>
+          <ConnectivityBanner />
+          {children}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
