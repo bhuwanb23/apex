@@ -10,7 +10,8 @@ import { ZoneBadge, type Zone } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, type SportId } from '@/data/mock/sports';
-import { PLAYERS, type Player } from '@/data/mock/players';
+import { type Player } from '@/data/mock/players';
+import { useLeagueAlerts } from '@/data/live/injury';
 
 type ZoneFilter = 'all' | 'red' | 'yellow';
 type SortKey = 'risk' | 'team' | 'position';
@@ -26,14 +27,14 @@ export default function LeagueAlertsScreen() {
   const [position, setPosition] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const sportPlayers = PLAYERS.filter(p => p.sport === sport);
+  const alerts = useLeagueAlerts(sport, zone);
+  const sportPlayers = alerts.data;
   const positions = useMemo(
     () => [...new Set(sportPlayers.map(p => p.position))].sort(),
     [sportPlayers]
   );
 
   const visible = sportPlayers
-    .filter(p => (zone === 'all' ? p.zone !== 'green' : p.zone === zone))
     .filter(p => (position ? p.position === position : true))
     .sort((a, b) => {
       if (sort === 'risk') return b.riskScore - a.riskScore;

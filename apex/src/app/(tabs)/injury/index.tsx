@@ -13,7 +13,8 @@ import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
-import { PLAYERS, type Player } from '@/data/mock/players';
+import { type Player } from '@/data/mock/players';
+import { useLeaguePlayers } from '@/data/live/injury';
 
 export default function InjuryDashboardScreen() {
   const router = useRouter();
@@ -24,10 +25,11 @@ export default function InjuryDashboardScreen() {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const sportPlayers = PLAYERS.filter(p => p.sport === sport);
-  const redCount = sportPlayers.filter(p => p.zone === 'red').length;
-  const yellowCount = sportPlayers.filter(p => p.zone === 'yellow').length;
-  const greenCount = sportPlayers.filter(p => p.zone === 'green').length;
+  const league = useLeaguePlayers(sport);
+  const sportPlayers = league.players;
+  const redCount = league.counts.red;
+  const yellowCount = league.counts.yellow;
+  const greenCount = league.counts.green;
   const topRed = sportPlayers.filter(p => p.zone === 'red').slice(0, 5);
 
   const teamNames = SPORT_BY_ID[sport].teams;

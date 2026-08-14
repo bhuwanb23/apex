@@ -10,8 +10,10 @@ import { DistributionBar } from '@/components/ui/bar';
 import { LineChart } from '@/components/ui/chart';
 import { AppIcon } from '@/components/ui/icon';
 import { GradientView } from '@/components/ui/gradient';
-import { PLAYERS, type Player } from '@/data/mock/players';
+import { type Player } from '@/data/mock/players';
 import { SPORT_BY_ID } from '@/data/mock/sports';
+import { useTeamRoster } from '@/data/live/injury';
+import { useOnboarding } from '@/context/onboarding';
 
 type ZoneFilter = 'all' | 'red' | 'yellow' | 'green';
 type SortKey = 'risk' | 'name' | 'position';
@@ -25,9 +27,10 @@ export default function TeamRiskScreen() {
   const [filter, setFilter] = useState<ZoneFilter>('all');
   const [sort, setSort] = useState<SortKey>('risk');
   const [chartOpen, setChartOpen] = useState(true);
+  const { activeSport } = useOnboarding();
 
-  const roster = PLAYERS.filter(p => p.team === teamName);
-  const sport = SPORT_BY_ID[roster[0]?.sport ?? 'NBA'];
+  const { data: roster } = useTeamRoster(teamName, activeSport);
+  const sport = SPORT_BY_ID[roster[0]?.sport ?? activeSport];
 
   const counts = {
     red: roster.filter(p => p.zone === 'red').length,

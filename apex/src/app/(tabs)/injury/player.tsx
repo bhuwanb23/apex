@@ -10,7 +10,8 @@ import { ZoneBadge, type Zone } from '@/components/ui/badge';
 import { LineChart, type ChartPoint } from '@/components/ui/chart';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PLAYERS } from '@/data/mock/players';
+import { usePlayerRisk } from '@/data/live/injury';
+import { useOnboarding } from '@/context/onboarding';
 
 type MetricKey = 'minutes' | 'distance' | 'intensity';
 
@@ -29,7 +30,8 @@ function noise(i: number): number {
 export default function PlayerRiskScreen() {
   const router = useRouter();
   const { playerId } = useLocalSearchParams<{ playerId: string }>();
-  const player = PLAYERS.find(p => p.id === playerId) ?? PLAYERS[0];
+  const { activeSport } = useOnboarding();
+  const { data: player } = usePlayerRisk(playerId, activeSport);
   const [metric, setMetric] = useState<MetricKey>('minutes');
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
 
