@@ -6,24 +6,31 @@ import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { StatTile } from '@/components/ui/stat';
 import { SectionHeader } from '@/components/ui/section-header';
-import { ZoneBadge, VerdictBadge, QualityBadge } from '@/components/ui/badge';
+import { VerdictBadge, QualityBadge } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
+import { GradientView } from '@/components/ui/gradient';
 import { useOnboarding } from '@/context/onboarding';
-import { MOMENTUM_VERDICTS, SPORT_BY_ID } from '@/data/mock/sports';
+import { MOMENTUM_VERDICTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { PLAYERS } from '@/data/mock/players';
 import { DECISIONS, COACHES } from '@/data/mock/coaches';
-import { HOME_GAMES } from '@/data/mock/games';
+import { GAMES } from '@/data/mock/games';
+
+function relativeNightLabel(nightsAgo: number): string {
+  if (nightsAgo <= 1) return 'Last night';
+  return `${nightsAgo} nights ago`;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { role, sports } = useOnboarding();
-  const activeSport = SPORT_BY_ID[sports[0] ?? 'NBA'];
+  const { role, activeSport, cycleActiveSport } = useOnboarding();
+  const sport = SPORT_BY_ID[activeSport];
 
-  const redZone = PLAYERS.filter(p => p.zone === 'red').slice(0, 3);
+  const redZone = PLAYERS.filter(p => p.sport === activeSport && p.zone === 'red').slice(0, 3);
   const bestDecision = DECISIONS.find(d => d.isOptimal && d.outcomeSuccess) ?? DECISIONS[0];
   const bestCoach = COACHES[0];
-  const nbaVerdict = MOMENTUM_VERDICTS[1]; // NBA
+  const verdict = MOMENTUM_VERDICTS.find(v => v.sport === activeSport) ?? MOMENTUM_VERDICTS[0];
+  const recentGames = GAMES.filter(g => g.nightsAgo <= 2).slice(0, 3);
 
   const greeting = (() => {
     const hour = new Date().getHours();
@@ -47,10 +54,11 @@ export default function HomeScreen() {
       <View style={styles.topBar}>
         <AqxLogo size={38} />
         <View style={styles.topActions}>
-          <Pressable style={styles.iconButton} onPress={() => router.push('/settings/sport-preferences')}>
-            <View style={styles.sportBadge}>
-              <Text style={styles.sportBadgeText}>{activeSport.short}</Text>
-            </View>
+          <Pressable onPress={cycleActiveSport} style={styles.sportBadgeWrap} accessibilityLabel={`Active sport: ${sport.short}. Tap to change`}>
+            <GradientView colors={sport.gradient} style={styles.sportBadge}>
+              <Text style={styles.sportBadgeText}>{sport.short}</Text>
+              <AppIcon name="chevron.down" size={11} color="#FFFFFF" />
+            </GradientView>
           </Pressable>
           <Pressable style={styles.iconButton} onPress={() => router.push('/search')}>
             <AppIcon name="magnifyingglass" size={20} color="#14121F" />
@@ -72,7 +80,7 @@ export default function HomeScreen() {
         </Text>
         <Text style={styles.greetingSub}>
           {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} ·{' '}
-          {activeSport.short} 2025-26 season
+          {sport.short} 2025-26 season
         </Text>
       </View>
 
@@ -80,7 +88,7 @@ export default function HomeScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsRow}>
         <StatTile icon="flame.fill" value={`${redZone.length}`} label="Red zone players this week" accent="#E5484D" />
         <StatTile icon="flag.checkered" value="4th & 2" label="Riskiest call today · Go for it" accent="#5856D6" />
-        <StatTile icon="bolt.fill" value={nbaVerdict.verdict === 'real' ? 'Real' : 'Myth'} label="Momentum verdict · NBA" accent="#FFA058" />
+        <StatTile icon="bolt.fill" value={verdict.verdict === 'real' ? 'Real' : verdict.verdict === 'myth' ? 'Myth' : 'TBD'} label={`Momentum verdict · ${sport.short}`} accent="#FFA058" />
         <StatTile icon="chart.bar.fill" value="24" label="Games analyzed today" accent="#3C87F7" />
       </ScrollView>
 
@@ -108,9 +116,8 @@ export default function HomeScreen() {
                   </View>
                   <Text style={styles.alertTrigger}>{player.triggerMetric}</Text>
                 </View>
-                <View style={styles.alertScore}>
+                <View style={styles.alertScoreBadge}>
                   <Text style={styles.alertScoreText}>{player.riskScore}</Text>
-                  <AppIcon name="chevron.right" size={14} color="#9AA0B5" />
                 </View>
               </Card>
             </Pressable>
@@ -138,10 +145,10 @@ export default function HomeScreen() {
 
       {/* Momentum check */}
       <View>
-        <SectionHeader title="Momentum Check" emoji="⚡" actionLabel="Explore" onAction={() => router.push('/momentum')} />
+        <SectionHeader title="Momentum Check" emoji="⚡" actionLabel="Explore" onAction={() => router.push({ pathname: '/momentum', params: { sport: activeSport } })} />
         <Card style={styles.momentumCard}>
-          <VerdictBadge verdict={nbaVerdict.verdict} />
-          <Text style={styles.momentumText}>{nbaVerdict.explanation}</Text>
+          <VerdictBadge verdict={verdict.verdict} />
+          <Text style={styles.momentumText}>{verdict.explanation}</Text>
         </Card>
       </View>
 
@@ -149,12 +156,17 @@ export default function HomeScreen() {
       <View>
         <SectionHeader title="Last Night's Games" emoji="🏀" actionLabel="Replays" onAction={() => router.push('/momentum')} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gamesRow}>
-          {HOME_GAMES.map(game => (
+          {recentGames.map(game => (
             <Pressable
               key={game.id}
               onPress={() => router.push({ pathname: '/momentum/replay', params: { gameId: game.id } })}>
               <Card style={styles.gameCard}>
-                <Text style={styles.gameDate}>{game.date}</Text>
+                <View style={styles.gameHeader}>
+                  <Text style={styles.gameDate}>{relativeNightLabel(game.nightsAgo)}</Text>
+                  <View style={styles.gameSportTag}>
+                    <Text style={styles.gameSportTagText}>{game.sport}</Text>
+                  </View>
+                </View>
                 <View style={styles.gameLine}>
                   <Text style={styles.gameTeam}>{game.homeTeam}</Text>
                   <Text style={styles.gameScore}>{game.homeScore}</Text>
@@ -175,10 +187,10 @@ export default function HomeScreen() {
 
       {/* Story mode */}
       <PillButton
-        label="Tell me what's happening today"
+        label="📖 Tell me what's happening today"
         variant="primary"
         size="lg"
-        onPress={() => router.push({ pathname: '/story', params: { module: 'home', sport: activeSport.short } })}
+        onPress={() => router.push({ pathname: '/story', params: { module: 'home', sport: activeSport } })}
         icon={<AppIcon name="sparkles" size={18} color="#FFFFFF" />}
       />
     </Screen>
@@ -204,15 +216,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  sportBadgeWrap: {
+    marginRight: 6,
+  },
   sportBadge: {
-    backgroundColor: '#5856D6',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    height: 34,
   },
   sportBadgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -289,13 +306,17 @@ const styles = StyleSheet.create({
     color: '#E5484D',
     fontWeight: '600',
   },
-  alertScore: {
-    flexDirection: 'row',
+  alertScoreBadge: {
+    minWidth: 44,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: '#FDEBEC',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   alertScoreText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: '#E5484D',
   },
@@ -344,10 +365,26 @@ const styles = StyleSheet.create({
     width: 200,
     gap: 6,
   },
+  gameHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   gameDate: {
     fontSize: 12,
     color: '#6E7280',
     fontWeight: '600',
+  },
+  gameSportTag: {
+    backgroundColor: '#EFEEFB',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  gameSportTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#5856D6',
   },
   gameLine: {
     flexDirection: 'row',

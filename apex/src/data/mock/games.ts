@@ -26,6 +26,8 @@ export interface Game {
   homeScore: number;
   awayScore: number;
   date: string;
+  /** How many nights ago the game happened — drives "Last night" labels. */
+  nightsAgo: number;
   season: string;
   homeCoach: string;
   awayCoach: string;
@@ -40,6 +42,13 @@ export interface Game {
   decisions: Decision[];
 }
 
+/** Date string `n` nights ago (so "last night's games" stay current for demos). */
+function nightsAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export const GAMES: Game[] = [
   {
     id: 'g1',
@@ -48,7 +57,8 @@ export const GAMES: Game[] = [
     awayTeam: 'Warriors',
     homeScore: 112,
     awayScore: 108,
-    date: 'Feb 8, 2026',
+    date: nightsAgo(1),
+    nightsAgo: 1,
     season: '2025-26',
     homeCoach: 'Darvin Ramsey',
     awayCoach: 'Steve Kerrman',
@@ -85,7 +95,8 @@ export const GAMES: Game[] = [
     awayTeam: 'Bucks',
     homeScore: 121,
     awayScore: 115,
-    date: 'Feb 7, 2026',
+    date: nightsAgo(2),
+    nightsAgo: 2,
     season: '2025-26',
     homeCoach: 'Joe Mazzulla',
     awayCoach: 'Doc Rivers',
@@ -114,7 +125,8 @@ export const GAMES: Game[] = [
     awayTeam: 'Cowboys',
     homeScore: 27,
     awayScore: 24,
-    date: 'Jan 18, 2026',
+    date: nightsAgo(1),
+    nightsAgo: 1,
     season: '2025-26',
     homeCoach: 'Mike Brennan',
     awayCoach: 'Greg Fowler',
@@ -144,7 +156,8 @@ export const GAMES: Game[] = [
     awayTeam: 'Chargers',
     homeScore: 31,
     awayScore: 33,
-    date: 'Jan 14, 2026',
+    date: nightsAgo(3),
+    nightsAgo: 3,
     season: '2025-26',
     homeCoach: 'Steve Callahan',
     awayCoach: 'Jim Harbaugh',
@@ -173,7 +186,8 @@ export const GAMES: Game[] = [
     awayTeam: 'Bengals',
     homeScore: 20,
     awayScore: 23,
-    date: 'Jan 17, 2026',
+    date: nightsAgo(2),
+    nightsAgo: 2,
     season: '2025-26',
     homeCoach: 'Tony Marchetti',
     awayCoach: 'Paul Deering',
@@ -200,7 +214,8 @@ export const GAMES: Game[] = [
     awayTeam: 'Steelers',
     homeScore: 17,
     awayScore: 24,
-    date: 'Jan 15, 2026',
+    date: nightsAgo(4),
+    nightsAgo: 4,
     season: '2025-26',
     homeCoach: 'Paul Deering',
     awayCoach: 'Mike Tomlin',

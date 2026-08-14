@@ -17,6 +17,7 @@ export type IconName =
   | 'calendar'
   | 'chevron.right'
   | 'chevron.left'
+  | 'chevron.down'
   | 'arrow.up.right'
   | 'arrow.down.right'
   | 'arrow.right'
@@ -65,6 +66,7 @@ const SF_NAMES: Record<IconName, string> = {
   calendar: 'calendar',
   'chevron.right': 'chevron.right',
   'chevron.left': 'chevron.left',
+  'chevron.down': 'chevron.down',
   'arrow.up.right': 'arrow.up.right',
   'arrow.down.right': 'arrow.down.right',
   'arrow.right': 'arrow.right',
@@ -114,6 +116,7 @@ const MATERIAL_NAMES: Record<IconName, string> = {
   calendar: 'calendar_month',
   'chevron.right': 'chevron_right',
   'chevron.left': 'chevron_left',
+  'chevron.down': 'expand_more',
   'arrow.up.right': 'north_east',
   'arrow.down.right': 'south_east',
   'arrow.right': 'arrow_forward',
