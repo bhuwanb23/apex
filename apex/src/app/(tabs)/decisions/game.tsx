@@ -1,19 +1,106 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { QualityBadge, TypeChip } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
-import { GAMES } from '@/data/mock/games';
-import { DECISIONS } from '@/data/mock/coaches';
+import { GAMES, type Game } from '@/data/mock/games';
+import { DECISIONS, type Decision } from '@/data/mock/coaches';
+
+const PERIOD_BASE: Record<string, number> = { Q1: 0, Q2: 0.25, Q3: 0.5, Q4: 0.75, OT: 1 };
+
+/** Normalized position (0..1) of a decision on the game timeline. */
+function decisionX(decision: Decision): number {
+  const base = PERIOD_BASE[decision.period] ?? 0;
+  if (decision.period === 'OT' || !decision.clock) return base;
+  const [m, s] = decision.clock.split(':').map(Number);
+  const seconds = (m ?? 0) * 60 + (s ?? 0);
+  const periodSeconds = decision.sport === 'NFL' ? 900 : 720;
+  const frac = Math.max(0, Math.min(1, 1 - seconds / periodSeconds));
+  return base + frac * 0.25;
+}
+
+/** Cumulative score at the end of each quarter, ending at the final score. */
+function scorePath(final: number): number[] {
+  const weights = [0.22, 0.28, 0.26, 0.24];
+  let acc = 0;
+  return weights.map(w => {
+    acc += Math.round(final * w);
+    return acc;
+  });
+}
+
+function toLine(points: { x: number; y: number }[]): string {
+  return points.map(p => `${p.x},${p.y}`).join(' ');
+}
+
+/** Thin score-progression strip with decision markers overlaid. */
+function ScoreStrip({ game, decisions }: { game: Game; decisions: Decision[] }) {
+  const height = 44;
+  const maxScore = Math.max(game.homeScore, game.awayScore, 1);
+  const home = scorePath(game.homeScore);
+  const away = scorePath(game.awayScore);
+  const toY = (v: number) => height - 8 - (v / maxScore) * (height - 16);
+
+  const homePoints = home.map((v, i) => ({ x: (i / 4) * 100, y: toY(v) }));
+  const awayPoints = away.map((v, i) => ({ x: (i / 4) * 100, y: toY(v) }));
+
+  return (
+    <View style={styles.stripWrap}>
+      <View style={styles.stripLegend}>
+        <LegendDot color="#5856D6" label={game.homeTeam} />
+        <LegendDot color="#FF5C8A" label={game.awayTeam} />
+      </View>
+      <Svg width="100%" height={height}>
+        {[0.25, 0.5, 0.75].map(t => (
+          <Line key={t} x1={t * 100} x2={t * 100} y1={0} y2={height} stroke="#F0F1F5" strokeWidth={1} />
+        ))}
+        <Polyline points={toLine(homePoints)} fill="none" stroke="#5856D6" strokeWidth={2.5} strokeLinejoin="round" />
+        <Polyline points={toLine(awayPoints)} fill="none" stroke="#FF5C8A" strokeWidth={2.5} strokeLinejoin="round" />
+        {/* Decisions overlaid on the score line */}
+        {decisions.map(d => (
+          <Circle key={d.id} cx={decisionX(d) * 100} cy={7} r={4} fill={d.isOptimal ? '#2FA36B' : '#E5484D'} stroke="#FFFFFF" strokeWidth={1.5} />
+        ))}
+        {home.map((v, i) => (
+          <SvgText key={`h${i}`} x={(i / 4) * 100 + 3} y={toY(v) - 4} fontSize={8} fontWeight="700" fill="#5856D6">
+            {v}
+          </SvgText>
+        ))}
+        {away.map((v, i) => (
+          <SvgText key={`a${i}`} x={(i / 4) * 100 + 3} y={toY(v) + 9} fontSize={8} fontWeight="700" fill="#FF5C8A">
+            {v}
+          </SvgText>
+        ))}
+      </Svg>
+      <View style={styles.quarterRow}>
+        {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
+          <Text key={q} style={styles.quarterLabel}>
+            {q}
+          </Text>
+        ))}
+      </View>
+      <Text style={styles.stripNote}>Score progression — green/red dots mark optimal and suboptimal decisions</Text>
+    </View>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      <Text style={styles.legendText}>{label}</Text>
+    </View>
+  );
+}
 
 export default function GameDecisionsScreen() {
   const router = useRouter();
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
   const game = GAMES.find(g => g.id === gameId) ?? GAMES.find(g => g.id === 'g3')!;
-  const decisions = DECISIONS.filter(d => d.gameId === game.id);
+  const decisions = DECISIONS.filter(d => d.gameId === game.id).sort((a, b) => decisionX(a) - decisionX(b));
 
   const biggestMistake =
     decisions.find(d => !d.isOptimal && !d.outcomeSuccess) ??
@@ -22,19 +109,30 @@ export default function GameDecisionsScreen() {
 
   return (
     <Screen>
-      <StackHeader title="Game Decisions" subtitle={game.date} />
+      <StackHeader title="Game Decisions" subtitle={`${game.date} · Regular season`} />
 
       {/* Game header */}
       <Card style={styles.gameCard}>
         <View style={styles.scoreRow}>
           <TeamBlock name={game.homeTeam} score={game.homeScore} winner={game.homeScore > game.awayScore} />
-          <Text style={styles.finalLabel}>FINAL</Text>
+          <View style={styles.finalWrap}>
+            <Text style={styles.finalLabel}>FINAL</Text>
+            <Text style={styles.gameType}>Regular season</Text>
+          </View>
           <TeamBlock name={game.awayTeam} score={game.awayScore} winner={game.awayScore > game.homeScore} alignRight />
         </View>
         <Text style={styles.coaches}>
           {game.homeCoach} vs {game.awayCoach} · {game.season}
         </Text>
       </Card>
+
+      {/* Score progression */}
+      <View>
+        <Text style={styles.sectionTitle}>Score progression</Text>
+        <Card style={styles.stripCard}>
+          <ScoreStrip game={game} decisions={decisions} />
+        </Card>
+      </View>
 
       {/* Summary */}
       <View style={styles.summaryRow}>
@@ -62,7 +160,7 @@ export default function GameDecisionsScreen() {
             <Text style={styles.mistakeTitle}>Biggest mistake</Text>
           </View>
           <Text style={styles.mistakeText}>
-            {biggestMistake.coachName} — {biggestMistake.situation}
+            {biggestMistake.coachName} ({biggestMistake.team}) — {biggestMistake.situation}
           </Text>
         </Card>
       ) : null}
@@ -74,12 +172,7 @@ export default function GameDecisionsScreen() {
           {decisions.map((decision, i) => (
             <View key={decision.id} style={styles.timelineItem}>
               <View style={styles.timelineRail}>
-                <View
-                  style={[
-                    styles.timelineDot,
-                    { backgroundColor: decision.isOptimal ? '#2FA36B' : '#E5484D' },
-                  ]}
-                />
+                <View style={[styles.timelineDot, { backgroundColor: decision.isOptimal ? '#2FA36B' : '#E5484D' }]} />
                 {i !== decisions.length - 1 ? <View style={styles.timelineLine} /> : null}
               </View>
               <TimelineBody decision={decision} onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id } })} />
@@ -107,9 +200,9 @@ function TeamBlock({ name, score, winner, alignRight = false }: { name: string; 
   );
 }
 
-function TimelineBody({ decision, onPress }: { decision: (typeof DECISIONS)[number]; onPress: () => void }) {
+function TimelineBody({ decision, onPress }: { decision: Decision; onPress: () => void }) {
   return (
-    <View style={styles.timelineBody}>
+    <Pressable style={styles.timelineBody} onPress={onPress}>
       <View style={styles.timelineTop}>
         <Text style={styles.timelineClock}>
           {decision.period} {decision.clock}
@@ -118,13 +211,13 @@ function TimelineBody({ decision, onPress }: { decision: (typeof DECISIONS)[numb
         <QualityBadge optimal={decision.isOptimal} />
       </View>
       <Text style={styles.timelineCoach}>
-        {decision.coachName} chose to {decision.chosenAction.toLowerCase()}
+        {decision.coachName} · {decision.team}
       </Text>
       <Text style={styles.timelineSituation}>{decision.situation}</Text>
       <Text style={[styles.timelineOutcome, { color: decision.outcomeSuccess ? '#1F8A52' : '#E5484D' }]}>
         {decision.outcome}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -162,6 +255,10 @@ const styles = StyleSheet.create({
   teamScoreWinner: {
     color: '#14121F',
   },
+  finalWrap: {
+    alignItems: 'center',
+    gap: 2,
+  },
   finalLabel: {
     fontSize: 10,
     fontWeight: '800',
@@ -169,10 +266,60 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     paddingHorizontal: 12,
   },
+  gameType: {
+    fontSize: 10,
+    color: '#9AA0B5',
+    fontWeight: '600',
+  },
   coaches: {
     fontSize: 12.5,
     color: '#6E7280',
     textAlign: 'center',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#14121F',
+  },
+  stripCard: {
+    gap: 6,
+    padding: 16,
+  },
+  stripWrap: {
+    gap: 4,
+  },
+  stripLegend: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+  },
+  legendText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#14121F',
+  },
+  quarterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+  },
+  quarterLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#9AA0B5',
+  },
+  stripNote: {
+    fontSize: 11,
+    color: '#9AA0B5',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -217,11 +364,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#7A2B2E',
     lineHeight: 19,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#14121F',
   },
   timelineCard: {
     paddingVertical: 8,
