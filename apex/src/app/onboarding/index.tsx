@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { AqxOrb } from '@/components/aqx-logo';
 import { AppIcon, type IconName } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { GradientView } from '@/components/ui/gradient';
 import { useOnboarding } from '@/context/onboarding';
 
 const VALUE_PROPS: { icon: IconName; title: string; color: string }[] = [
@@ -37,41 +39,53 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
-        <AqxOrb size={88} />
-        <Text style={styles.title}>
-          Sports{' '}
-          <Text style={styles.purple}>
-            Intelligence
+        <Animated.View entering={FadeIn.duration(700)} style={styles.orbWrap}>
+          <View style={styles.orbGlow} />
+          <AqxOrb size={96} />
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(180).duration(550)} style={styles.titleWrap}>
+          <Text style={styles.title}>
+            Sports <Text style={styles.purple}>Intelligence</Text>
             {'\n'}
+            <Text style={styles.title}>Personalized</Text>
+            <Text style={styles.purple}>.</Text>
           </Text>
-          <Text style={styles.title}>Personalized</Text>
-          <Text style={styles.purple}>.</Text>
-        </Text>
-        <Text style={styles.tagline}>Your smart assistant for every game, every decision, every risk.</Text>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(320).duration(550)}>
+          <Text style={styles.tagline}>
+            AQX turns injury risk, coaching decisions, and momentum into clear personal insights.
+          </Text>
+          <Text style={styles.taglineSub}>Built for trainers, coaches, analysts, and fans.</Text>
+        </Animated.View>
       </View>
 
       <View style={styles.props}>
-        {VALUE_PROPS.map(prop => (
-          <Card key={prop.title} style={styles.propCard}>
-            <View style={[styles.propIcon, { backgroundColor: `${prop.color}18` }]}>
-              <AppIcon name={prop.icon} size={20} color={prop.color} />
-            </View>
-            <Text style={styles.propText}>{prop.title}</Text>
-          </Card>
+        {VALUE_PROPS.map((prop, i) => (
+          <Animated.View key={prop.title} entering={FadeInDown.delay(420 + i * 120).duration(500)}>
+            <Card style={styles.propCard}>
+              <View style={[styles.propIcon, { backgroundColor: `${prop.color}18` }]}>
+                <AppIcon name={prop.icon} size={20} color={prop.color} />
+              </View>
+              <Text style={styles.propText}>{prop.title}</Text>
+            </Card>
+          </Animated.View>
         ))}
       </View>
 
-      <View style={styles.footer}>
+      <Animated.View entering={FadeInDown.delay(780).duration(550)} style={styles.footer}>
         <PillButton
           label="Get started"
           size="lg"
+          variant="light"
           onPress={() => router.push('/onboarding/sport-select')}
-          icon={<AppIcon name="arrow.right" size={18} color="#FFFFFF" />}
+          icon={<AppIcon name="arrow.right" size={18} color="#5856D6" />}
         />
         <Text style={styles.skip} onPress={skip}>
           Already set up? Skip
         </Text>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -81,35 +95,59 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F1F5',
     paddingHorizontal: 24,
-    paddingTop: 72,
-    paddingBottom: 40,
+    paddingTop: 56,
+    paddingBottom: 36,
   },
   hero: {
     alignItems: 'center',
-    gap: 18,
+    gap: 16,
+  },
+  orbWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 140,
+    height: 140,
+  },
+  orbGlow: {
+    position: 'absolute',
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    backgroundColor: 'rgba(88, 86, 214, 0.18)',
+  },
+  titleWrap: {
+    alignItems: 'center',
   },
   title: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '800',
     color: '#14121F',
     textAlign: 'center',
-    lineHeight: 40,
+    lineHeight: 38,
   },
   purple: {
     color: '#5856D6',
   },
   tagline: {
-    fontSize: 15,
+    fontSize: 14.5,
     color: '#6E7280',
     textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 300,
+    lineHeight: 21,
+    maxWidth: 320,
+  },
+  taglineSub: {
+    fontSize: 13.5,
+    color: '#9AA0B5',
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 320,
+    marginTop: 2,
   },
   props: {
     flex: 1,
     justifyContent: 'center',
     gap: 12,
-    paddingVertical: 24,
+    paddingVertical: 20,
   },
   propCard: {
     flexDirection: 'row',

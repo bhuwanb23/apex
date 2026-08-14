@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { RoleCard } from '@/components/role-card';
 import { StackHeader } from '@/components/stack-header';
+import { StepIndicator } from '@/components/step-indicator';
 import { PillButton } from '@/components/ui/button';
 import { useOnboarding, type RoleId } from '@/context/onboarding';
 import type { IconName } from '@/components/ui/icon';
@@ -47,6 +48,7 @@ export default function RoleSelectScreen() {
   const [role, setRole] = useState<RoleId | null>(null);
 
   const sportIds = (sportsParam ?? 'NBA,NFL').split(',') as SportId[];
+  const roleLabel = ROLE_OPTIONS.find(r => r.id === role)?.title;
 
   const finish = () => {
     if (!role) return;
@@ -57,6 +59,8 @@ export default function RoleSelectScreen() {
   return (
     <View style={styles.container}>
       <StackHeader title="" onBack={() => router.back()} />
+      <StepIndicator step={2} total={2} />
+
       <View style={styles.header}>
         <Text style={styles.title}>How will you use AQX?</Text>
         <Text style={styles.subtitle}>This personalizes your dashboard</Text>
@@ -77,7 +81,12 @@ export default function RoleSelectScreen() {
       </View>
 
       <View style={styles.footer}>
-        <PillButton label="Continue" size="lg" disabled={!role} onPress={finish} />
+        <PillButton
+          label={role ? `Continue as ${roleLabel}` : 'Continue'}
+          size="lg"
+          disabled={!role}
+          onPress={finish}
+        />
       </View>
     </View>
   );
@@ -88,10 +97,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F1F5',
     paddingHorizontal: 20,
+    gap: 16,
   },
   header: {
-    paddingTop: 16,
-    paddingBottom: 20,
     gap: 6,
   },
   title: {
@@ -107,6 +115,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   footer: {
-    paddingVertical: 24,
+    paddingVertical: 16,
   },
 });

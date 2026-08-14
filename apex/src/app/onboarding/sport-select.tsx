@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { SportCard } from '@/components/sport-card';
 import { StackHeader } from '@/components/stack-header';
+import { StepIndicator } from '@/components/step-indicator';
 import { PillButton } from '@/components/ui/button';
 import { SPORTS, type SportId } from '@/data/mock/sports';
 
@@ -15,9 +16,14 @@ export default function SportSelectScreen() {
     setSelected(prev => (prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]));
   };
 
+  const continueLabel =
+    selected.length === 0 ? 'Continue' : selected.length === 1 ? 'Continue' : `Continue · ${selected.length} selected`;
+
   return (
     <View style={styles.container}>
       <StackHeader title="" onBack={() => router.back()} />
+      <StepIndicator step={1} total={2} />
+
       <View style={styles.header}>
         <Text style={styles.title}>Which sport do you follow?</Text>
         <Text style={styles.subtitle}>You can change this anytime in settings</Text>
@@ -36,7 +42,7 @@ export default function SportSelectScreen() {
 
       <View style={styles.footer}>
         <PillButton
-          label="Continue"
+          label={continueLabel}
           size="lg"
           disabled={selected.length === 0}
           onPress={() =>
@@ -56,10 +62,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F1F5',
     paddingHorizontal: 20,
+    gap: 16,
   },
   header: {
-    paddingTop: 16,
-    paddingBottom: 20,
     gap: 6,
   },
   title: {
@@ -78,6 +83,6 @@ const styles = StyleSheet.create({
     rowGap: 14,
   },
   footer: {
-    paddingVertical: 24,
+    paddingVertical: 16,
   },
 });
