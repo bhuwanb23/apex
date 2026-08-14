@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useOnboarding } from '@/context/onboarding';
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
@@ -14,7 +15,8 @@ import { SPORTS, MOMENTUM_VERDICTS, SPORT_BY_ID, type SportId } from '@/data/moc
 export default function MomentumOverviewScreen() {
   const router = useRouter();
   const { sport: sportParam } = useLocalSearchParams<{ sport?: string }>();
-  const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? 'NBA');
+  const { activeSport } = useOnboarding();
+  const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? activeSport);
   const verdict = MOMENTUM_VERDICTS.find(v => v.sport === sport)!;
   const isReal = verdict.verdict === 'real';
 

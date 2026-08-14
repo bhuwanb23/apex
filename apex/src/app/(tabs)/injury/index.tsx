@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useOnboarding } from '@/context/onboarding';
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
@@ -16,7 +17,8 @@ import { PLAYERS } from '@/data/mock/players';
 
 export default function InjuryDashboardScreen() {
   const router = useRouter();
-  const [sport, setSport] = useState<SportId>('NBA');
+  const { activeSport } = useOnboarding();
+  const [sport, setSport] = useState<SportId>(activeSport);
   const [view, setView] = useState<'league' | 'team'>('league');
   const [teamQuery, setTeamQuery] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('Lakers');
