@@ -159,7 +159,14 @@ export default function InjuryDashboardScreen() {
           <Card style={styles.rosterCard}>
             <View style={styles.rosterHeader}>
               <Text style={styles.rosterTeam}>{activeTeam ?? 'Select a team'}</Text>
-              <AppIcon name="chevron.right" size={15} color="#9AA0B5" />
+              {activeTeam ? (
+                <Pressable
+                  onPress={() => router.push({ pathname: '/injury/team', params: { team: activeTeam } })}
+                  style={styles.reportLink}>
+                  <Text style={styles.reportLinkText}>Full team report</Text>
+                  <AppIcon name="chevron.right" size={13} color="#5856D6" />
+                </Pressable>
+              ) : null}
             </View>
 
             {/* Team summary bar */}
@@ -429,6 +436,16 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     color: '#14121F',
+  },
+  reportLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reportLinkText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#5856D6',
   },
   summaryBar: {
     flexDirection: 'row',
