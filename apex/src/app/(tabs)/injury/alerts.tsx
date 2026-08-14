@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
@@ -19,7 +19,8 @@ const SORT_LABEL: Record<SortKey, string> = { risk: 'Risk Score', team: 'Team', 
 
 export default function LeagueAlertsScreen() {
   const router = useRouter();
-  const [sport, setSport] = useState<SportId>('NBA');
+  const { sport: sportParam } = useLocalSearchParams<{ sport?: string }>();
+  const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? 'NBA');
   const [zone, setZone] = useState<ZoneFilter>('all');
   const [sort, setSort] = useState<SortKey>('risk');
   const [position, setPosition] = useState<string | null>(null);
