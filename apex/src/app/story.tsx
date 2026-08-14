@@ -7,11 +7,27 @@ import { Card } from '@/components/ui/card';
 import { MOMENTUM_VERDICTS } from '@/data/mock/sports';
 import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
-import { useOnboarding } from '@/context/onboarding';
+import { useOnboarding, type RoleId } from '@/context/onboarding';
 
-function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'technical') {
+type DetailRoute =
+  | { pathname: '/injury/player'; params: { playerId: string } }
+  | { pathname: '/injury/alerts'; params: { sport: string } }
+  | { pathname: '/decisions/coach'; params: { coachId: string } }
+  | { pathname: '/momentum'; params: { sport: string } }
+  | { pathname: '/injury' };
+
+interface Story {
+  headline: string;
+  paragraph: string;
+  metrics: string[];
+  /** Route to push when the user taps "Read more" — null hides the button. */
+  detailRoute?: DetailRoute;
+}
+
+function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'technical', role: RoleId): Story {
   const red = PLAYERS.filter(p => p.sport === sport && p.zone === 'red');
   const verdict = MOMENTUM_VERDICTS.find(v => v.sport === sport);
+  const deep = storyLanguage === 'technical' || role === 'analyst';
 
   if (module === 'injury') {
     const top = red[0];
@@ -23,15 +39,27 @@ function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'te
       : `Workload across the ${sport} league is within normal ranges. ${red.length} players are in the elevated zone — a step away from red.`;
     const metrics = top
       ? [`${top.riskScore}/100 risk score`, top.triggerMetric, `${top.daysInZone}d in red zone`]
-      : [`0 red zone players`, 'All metrics normal'];
-    return { headline, paragraph, metrics };
+      : ['0 red zone players', 'All metrics normal'];
+    return {
+      headline,
+      paragraph,
+      metrics,
+      detailRoute: top
+        ? { pathname: '/injury/player', params: { playerId: top.id } }
+        : { pathname: '/injury/alerts', params: { sport } },
+    };
   }
 
   if (module === 'decisions') {
-    const best = COACHES[0];
+    const best = COACHES.find(c => c.sport === sport) ?? COACHES[0];
     const headline = `${best.name} leads ${sport} coaches on decision quality`;
     const paragraph = `${best.name} of the ${best.team} has made the statistically optimal call ${best.evRate}% of the time this season — ${best.optimalDecisions} of ${best.totalDecisions} decisions. On average he leaves just ${best.avgEvLeft}% of expected value on the table, the lowest among all ${sport} coaches.`;
-    return { headline, paragraph, metrics: [`${best.evRate}% EV rate`, `${best.optimalDecisions} optimal calls`, `#${best.rank} ranked`] };
+    return {
+      headline,
+      paragraph,
+      metrics: [`${best.evRate}% EV rate`, `${best.optimalDecisions} optimal calls`, `#${best.rank} ranked`],
+      detailRoute: { pathname: '/decisions/coach', params: { coachId: best.id } },
+    };
   }
 
   if (module === 'momentum') {
@@ -43,24 +71,34 @@ function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'te
           ? `In ${sport}, momentum is a myth`
           : `Momentum in ${sport} is still unproven`;
     const paragraph = `${v.explanation} This verdict comes from analyzing ${v.gamesAnalyzed.toLocaleString()} ${v.sport} games from the ${v.season} season with a Cox proportional hazard model${
-      storyLanguage === 'technical' ? ` (hazard coefficient ${v.hazardCoefficient.toFixed(2)}, p = ${v.pValue < 0.001 ? '< 0.001' : v.pValue.toFixed(3)})` : ''
+      deep ? ` (hazard coefficient ${v.hazardCoefficient.toFixed(2)}, p = ${v.pValue < 0.001 ? '< 0.001' : v.pValue.toFixed(3)})` : ''
     }.`;
-    return { headline, paragraph, metrics: [`p = ${v.pValue < 0.001 ? '< 0.001' : v.pValue.toFixed(3)}`, `${v.gamesAnalyzed.toLocaleString()} games`, `${v.effectSize.toFixed(2)} effect size`] };
+    return {
+      headline,
+      paragraph,
+      metrics: [`p = ${v.pValue < 0.001 ? '< 0.001' : v.pValue.toFixed(3)}`, `${v.gamesAnalyzed.toLocaleString()} games`, `${v.effectSize.toFixed(2)} effect size`],
+      detailRoute: { pathname: '/momentum', params: { sport } },
+    };
   }
 
   // home / default
   const top = red[0];
   const headline = top ? `${top.name} tops today's injury watch` : 'A quiet day across the league';
-  const paragraph = `Good ${new Date().getHours() < 12 ? 'morning' : 'evening'} — here's the day in ${sport}. ${top ? `${top.name} is the highest-risk player at ${top.riskScore}/100, driven by ${top.triggerMetric.toLowerCase().replace('↑ ', '')}. ` : 'No players entered the red zone overnight. '}${COACHES[0].name} keeps the best decision record in the league, and momentum analysis says ${verdict?.verdict === 'real' ? `it's real in ${sport}` : `${sport} shows no momentum effect`}.`;
-  return { headline, paragraph, metrics: top ? [`${top.riskScore}/100 risk`, `${COACHES[0].evRate}% EV rate`] : ['No new alerts', `${COACHES[0].evRate}% EV rate`] };
+  const paragraph = `Good ${new Date().getHours() < 12 ? 'morning' : 'evening'} — here's the day in ${sport}. ${top ? `${top.name} is the highest-risk player at ${top.riskScore}/100, driven by ${top.triggerMetric.toLowerCase().replace('↑ ', '')}. ` : 'No players entered the red zone overnight. '}${COACHES.find(c => c.sport === sport)?.name ?? COACHES[0].name} keeps the best decision record in the league, and momentum analysis says ${verdict?.verdict === 'real' ? `it's real in ${sport}` : `${sport} shows no momentum effect`}.`;
+  return {
+    headline,
+    paragraph,
+    metrics: top ? [`${top.riskScore}/100 risk`, `${COACHES.find(c => c.sport === sport)?.evRate ?? COACHES[0].evRate}% EV rate`] : ['No new alerts', `${COACHES.find(c => c.sport === sport)?.evRate ?? COACHES[0].evRate}% EV rate`],
+    detailRoute: top ? { pathname: '/injury/player', params: { playerId: top.id } } : { pathname: '/injury' },
+  };
 }
 
 export default function StoryModal() {
   const router = useRouter();
   const { module, sport } = useLocalSearchParams<{ module?: string; sport?: string }>();
-  const { storyLanguage } = useOnboarding();
+  const { storyLanguage, role } = useOnboarding();
 
-  const story = buildStory(module ?? 'home', sport ?? 'NBA', storyLanguage);
+  const story = buildStory(module ?? 'home', sport ?? 'NBA', storyLanguage, role ?? 'fan');
 
   const share = () => {
     Share.share({
@@ -103,19 +141,24 @@ export default function StoryModal() {
             <AppIcon name="square.and.arrow.up" size={16} color="#5856D6" />
             <Text style={styles.actionSecondaryText}>Share story</Text>
           </Pressable>
-          <Pressable
-            style={[styles.actionBtn, styles.actionPrimary]}
-            onPress={() => {
-              router.back();
-            }}>
-            <AppIcon name="arrow.right" size={16} color="#FFFFFF" />
-            <Text style={styles.actionPrimaryText}>Read more</Text>
-          </Pressable>
+          {story.detailRoute ? (
+            <Pressable
+              style={[styles.actionBtn, styles.actionPrimary]}
+              onPress={() => {
+                router.back();
+                setTimeout(() => {
+                  router.push(story.detailRoute!);
+                }, 250);
+              }}>
+              <AppIcon name="arrow.right" size={16} color="#FFFFFF" />
+              <Text style={styles.actionPrimaryText}>Read more</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <View style={styles.badgeRow}>
           <View style={styles.generatedBadge}>
-            <Text style={styles.generatedText}>template · AI enhanced</Text>
+            <Text style={styles.generatedText}>{storyLanguage === 'technical' ? 'AI enhanced' : 'template'}</Text>
           </View>
         </View>
       </View>
