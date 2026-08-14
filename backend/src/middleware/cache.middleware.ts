@@ -477,6 +477,9 @@ export const alertsCacheMiddleware = createCacheMiddleware({
   staleThreshold: STALE_WHILE_REVALIDATE.ALERTS_STALE_AFTER,
   keyBuilder: req => alertsKey(String(req.params.sport), String(req.query.zone ?? 'red')),
   varyBy: ['limit'],
+  // ?recalculate=true — a manual refresh from the app forces a fresh read so
+  // the dashboard can show the newest ML-computed scores immediately.
+  skipRead: req => String(req.query.recalculate) === 'true',
 });
 
 /** Coach leaderboard (Step 6.2 — both layers, 24h, stale after 12h). */
@@ -560,6 +563,8 @@ export const teamRiskCacheMiddleware = createCacheMiddleware({
   staleThreshold: 10_800, // 3h — same pattern as the risk score route
   dataType: CacheDataType.RISK_SCORES,
   keyBuilder: req => teamRiskKey(String(req.params.teamId)),
+  // ?recalculate=true — manual refresh from the app forces a fresh read.
+  skipRead: req => String(req.query.recalculate) === 'true',
 });
 
 /** Coach decision drill-down (Step 8 — 1 hour TTL, both layers). */

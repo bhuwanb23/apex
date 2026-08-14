@@ -453,6 +453,15 @@ export async function getLeagueAlerts(
     prisma.injuryRiskScores.count({ where }),
   ]);
 
+  // The real freshness signal: when the ML service last computed scores for
+  // this sport — not the request time. The app shows "Risk scores updated X
+  // hours ago" from this field.
+  const latestComputed = await prisma.injuryRiskScores.findFirst({
+    where: { isLatest: true, player: { sportId: sportRow.id } },
+    orderBy: { computedAt: 'desc' },
+    select: { computedAt: true },
+  });
+
   return {
     sport,
     zone,
@@ -467,7 +476,7 @@ export async function getLeagueAlerts(
       explanation: a.explanation,
     })),
     totalAlerts: total,
-    generatedAt: new Date().toISOString(),
+    generatedAt: (latestComputed?.computedAt ?? new Date()).toISOString(),
   };
 }
 
