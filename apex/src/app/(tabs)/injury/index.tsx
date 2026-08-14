@@ -8,12 +8,12 @@ import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { DistributionBar } from '@/components/ui/bar';
-import { ZoneBadge } from '@/components/ui/badge';
+import { ZoneBadge, type Zone } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
-import { PLAYERS } from '@/data/mock/players';
+import { PLAYERS, type Player } from '@/data/mock/players';
 
 export default function InjuryDashboardScreen() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function InjuryDashboardScreen() {
   const [sport, setSport] = useState<SportId>(activeSport);
   const [view, setView] = useState<'league' | 'team'>('league');
   const [teamQuery, setTeamQuery] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState('Lakers');
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const sportPlayers = PLAYERS.filter(p => p.sport === sport);
@@ -31,15 +31,19 @@ export default function InjuryDashboardScreen() {
   const topRed = sportPlayers.filter(p => p.zone === 'red').slice(0, 5);
 
   const teamNames = SPORT_BY_ID[sport].teams;
+  const activeTeam = selectedTeam ?? teamNames[0] ?? null;
   const filteredTeams = teamNames.filter(t => t.toLowerCase().includes(teamQuery.toLowerCase()));
-  const roster = sportPlayers.filter(p => p.team === selectedTeam);
-  const rosterRed = roster.filter(p => p.zone === 'red').length;
-  const rosterYellow = roster.filter(p => p.zone === 'yellow').length;
-  const rosterGreen = roster.filter(p => p.zone === 'green').length;
+  const roster = activeTeam ? sportPlayers.filter(p => p.team === activeTeam) : [];
 
   const refresh = () => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 900);
+  };
+
+  const selectSport = (id: SportId) => {
+    setSport(id);
+    setSelectedTeam(null);
+    setTeamQuery('');
   };
 
   return (
@@ -55,12 +59,10 @@ export default function InjuryDashboardScreen() {
       />
 
       {/* Sport filter + view toggle */}
-      <View style={styles.filterRow}>
-        <View style={styles.sportTabs}>
-          {SPORTS.map(s => (
-            <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => setSport(s.id)} />
-          ))}
-        </View>
+      <View style={styles.sportTabs}>
+        {SPORTS.map(s => (
+          <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => selectSport(s.id)} />
+        ))}
       </View>
       <View style={styles.segment}>
         {(['league', 'team'] as const).map(v => (
@@ -77,7 +79,9 @@ export default function InjuryDashboardScreen() {
           <Card style={styles.summaryCard}>
             <View style={styles.summaryTop}>
               <Text style={styles.summaryTitle}>Risk distribution</Text>
-              <Text style={styles.summaryCount}>{redCount + yellowCount + greenCount} players</Text>
+              <Text style={styles.summaryCount}>
+                {redCount + yellowCount + greenCount} players tracked
+              </Text>
             </View>
             <DistributionBar
               segments={[
@@ -93,36 +97,39 @@ export default function InjuryDashboardScreen() {
             </View>
           </Card>
 
-          <Text style={styles.sectionLabel}>Top red zone players</Text>
-          <View style={styles.listGap}>
-            {topRed.map(player => (
-              <Pressable
-                key={player.id}
-                onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
-                <Card style={styles.playerRow}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{player.lastName.slice(0, 1)}</Text>
-                  </View>
-                  <View style={styles.playerBody}>
-                    <Text style={styles.playerName}>{player.name}</Text>
-                    <Text style={styles.playerMeta}>
-                      {player.team} · {player.position}
-                    </Text>
-                  </View>
-                  <View style={styles.triggerWrap}>
-                    <Text style={styles.triggerText}>{player.triggerMetric}</Text>
-                  </View>
-                  <Text style={styles.score}>{player.riskScore}</Text>
-                </Card>
-              </Pressable>
-            ))}
-          </View>
-
-          <PillButton
-            label={`View all ${redCount} red zone players`}
-            variant="outline"
-            onPress={() => router.push('/injury/alerts')}
-          />
+          {sportPlayers.length === 0 ? (
+            <EmptyState
+              icon="heart.text.square.fill"
+              title={`No player data for ${sport} yet`}
+              subtitle="Risk scores appear here once game logs are available for this league."
+              accent="#5856D6"
+            />
+          ) : (
+            <>
+              <Text style={styles.sectionLabel}>Top red zone players</Text>
+              <View style={styles.listGap}>
+                {topRed.map(player => (
+                  <Pressable
+                    key={player.id}
+                    onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
+                    <LeagueRow player={player} />
+                  </Pressable>
+                ))}
+              </View>
+              {topRed.length === 0 ? (
+                <EmptyState
+                  icon="checkmark"
+                  title="No players in the red zone"
+                  subtitle="Everyone in this league is within their normal workload range."
+                />
+              ) : null}
+              <PillButton
+                label={`View all ${redCount} red zone players`}
+                variant="outline"
+                onPress={() => router.push('/injury/alerts')}
+              />
+            </>
+          )}
         </>
       ) : (
         <>
@@ -136,57 +143,106 @@ export default function InjuryDashboardScreen() {
               onChangeText={setTeamQuery}
             />
           </View>
-          <ScrollViewHorizontal teams={filteredTeams} selected={selectedTeam} onSelect={setSelectedTeam} />
+
+          {teamNames.length > 0 ? (
+            <View style={styles.teamChips}>
+              {filteredTeams.length > 0 ? (
+                filteredTeams.map(team => (
+                  <Chip key={team} label={team} small selected={activeTeam === team} onPress={() => setSelectedTeam(team)} />
+                ))
+              ) : (
+                <Text style={styles.noTeam}>No team matches “{teamQuery}”</Text>
+              )}
+            </View>
+          ) : null}
 
           <Card style={styles.rosterCard}>
             <View style={styles.rosterHeader}>
-              <Text style={styles.rosterTeam}>{selectedTeam}</Text>
-              <View style={styles.rosterCounts}>
-                <CountPill color="#E5484D" count={rosterRed} />
-                <CountPill color="#F5A623" count={rosterYellow} />
-                <CountPill color="#2FA36B" count={rosterGreen} />
+              <Text style={styles.rosterTeam}>{activeTeam ?? 'Select a team'}</Text>
+              <AppIcon name="chevron.right" size={15} color="#9AA0B5" />
+            </View>
+
+            {/* Team summary bar */}
+            <View style={styles.summaryBar}>
+              <SummaryBlock label="Red" value={roster.filter(p => p.zone === 'red').length} color="#E5484D" />
+              <SummaryBlock label="Yellow" value={roster.filter(p => p.zone === 'yellow').length} color="#F5A623" />
+              <SummaryBlock label="Green" value={roster.filter(p => p.zone === 'green').length} color="#2FA36B" />
+            </View>
+
+            {roster.length === 0 ? (
+              <View style={styles.emptyRoster}>
+                <Text style={styles.emptyRosterText}>No players tracked for this team yet</Text>
               </View>
-            </View>
-            <View style={styles.rosterList}>
-              {roster.map(player => (
-                <Pressable
-                  key={player.id}
-                  onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
-                  <View style={styles.rosterRow}>
-                    <View style={[styles.zoneDot, { backgroundColor: zoneColor(player.zone) }]} />
-                    <Text style={styles.jersey}>{player.jersey}</Text>
-                    <Text style={styles.rosterName}>{player.name}</Text>
-                    <Text style={styles.rosterPos}>{player.position}</Text>
-                    <Text style={[styles.rosterScore, { color: zoneColor(player.zone) }]}>{player.riskScore}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
+            ) : (
+              <View style={styles.rosterList}>
+                {roster.map(player => (
+                  <Pressable
+                    key={player.id}
+                    onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
+                    <RosterRow player={player} />
+                  </Pressable>
+                ))}
+              </View>
+            )}
           </Card>
         </>
       )}
 
-      <View style={styles.updatedRow}>
+      <Pressable onPress={refresh} style={styles.updatedRow}>
         <AppIcon name="clock.fill" size={13} color="#9AA0B5" />
         <Text style={styles.updatedText}>
-          {refreshing ? 'Refreshing…' : 'Risk scores updated 2 hours ago — tap refresh to force'}
+          {refreshing ? 'Refreshing risk scores…' : 'Risk scores updated 2 hours ago — tap to force refresh'}
         </Text>
-      </View>
+      </Pressable>
     </Screen>
   );
 }
 
-function zoneColor(zone: string): string {
-  switch (zone) {
-    case 'red':
-      return '#E5484D';
-    case 'yellow':
-      return '#F5A623';
-    case 'green':
-      return '#2FA36B';
-    default:
-      return '#9AA0B5';
-  }
+/** League-view row: avatar, name/team, zone badge, trigger chip, colored score. */
+function LeagueRow({ player }: { player: Player }) {
+  const zoneColor = player.zone === 'red' ? '#E5484D' : player.zone === 'yellow' ? '#F5A623' : '#2FA36B';
+  return (
+    <Card style={styles.playerRow}>
+      <View style={[styles.avatar, { backgroundColor: `${zoneColor}16` }]}>
+        <Text style={[styles.avatarText, { color: zoneColor }]}>{player.lastName.slice(0, 1)}</Text>
+      </View>
+      <View style={styles.playerBody}>
+        <Text style={styles.playerName}>{player.name}</Text>
+        <Text style={styles.playerMeta}>
+          {player.team} · {player.position}
+        </Text>
+        <View style={styles.playerTags}>
+          <ZoneBadge zone={player.zone as Zone} />
+          <View style={[styles.triggerChip, { backgroundColor: `${zoneColor}12` }]}>
+            <Text style={[styles.triggerText, { color: zoneColor }]}>{player.triggerMetric}</Text>
+          </View>
+        </View>
+      </View>
+      <Text style={[styles.score, { color: zoneColor }]}>{player.riskScore}</Text>
+    </Card>
+  );
+}
+
+/** Team-view row: traffic-light dot, jersey, name, position, trigger, score. */
+function RosterRow({ player }: { player: Player }) {
+  const color =
+    player.zone === 'red' ? '#E5484D' : player.zone === 'yellow' ? '#F5A623' : player.zone === 'green' ? '#2FA36B' : '#9AA0B5';
+  return (
+    <View style={styles.rosterRow}>
+      <View style={[styles.zoneDot, { backgroundColor: color }]} />
+      <Text style={styles.jersey}>{player.jersey}</Text>
+      <View style={styles.rosterBody}>
+        <Text style={styles.rosterName}>{player.name}</Text>
+        <Text style={styles.rosterPos}>{player.position}</Text>
+      </View>
+      {player.zone !== 'green' ? (
+        <View style={[styles.triggerChip, { backgroundColor: `${color}12` }]}>
+          <Text style={[styles.triggerText, { color }]}>{player.triggerMetric}</Text>
+        </View>
+      ) : null}
+      <Text style={[styles.rosterScore, { color }]}>{player.riskScore}</Text>
+    </View>
+  );
 }
 
 function LegendItem({ color, label }: { color: string; label: string }) {
@@ -198,43 +254,19 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-function CountPill({ color, count }: { color: string; count: number }) {
+function SummaryBlock({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <View style={[styles.countPill, { backgroundColor: `${color}18` }]}>
-      <Text style={[styles.countPillText, { color }]}>{count}</Text>
-    </View>
-  );
-}
-
-function ScrollViewHorizontal({
-  teams,
-  selected,
-  onSelect,
-}: {
-  teams: string[];
-  selected: string;
-  onSelect: (team: string) => void;
-}) {
-  return (
-    <View style={styles.teamChips}>
-      {teams.length === 0 ? (
-        <Text style={styles.noTeam}>No team matches “{selected}”</Text>
-      ) : (
-        teams.map(team => (
-          <Chip key={team} label={team} small selected={selected === team} onPress={() => onSelect(team)} />
-        ))
-      )}
+    <View style={styles.summaryBlock}>
+      <Text style={[styles.summaryValue, { color }]}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  filterRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
   sportTabs: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 8,
   },
   segment: {
@@ -318,24 +350,22 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FDEBEC',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '800',
-    color: '#E5484D',
   },
   playerBody: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   playerName: {
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '700',
     color: '#14121F',
   },
@@ -343,22 +373,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6E7280',
   },
-  triggerWrap: {
-    backgroundColor: '#F0F1F5',
-    borderRadius: 8,
+  playerTags: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  triggerChip: {
+    borderRadius: 999,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   triggerText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#E5484D',
+    fontWeight: '700',
   },
   score: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
-    color: '#E5484D',
-    minWidth: 30,
+    minWidth: 34,
     textAlign: 'right',
   },
   searchBar: {
@@ -385,7 +418,7 @@ const styles = StyleSheet.create({
     color: '#6E7280',
   },
   rosterCard: {
-    gap: 12,
+    gap: 14,
   },
   rosterHeader: {
     flexDirection: 'row',
@@ -397,21 +430,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#14121F',
   },
-  rosterCounts: {
+  summaryBar: {
     flexDirection: 'row',
-    gap: 6,
+    backgroundColor: '#F0F1F5',
+    borderRadius: 14,
+    paddingVertical: 10,
   },
-  countPill: {
-    minWidth: 26,
-    height: 22,
-    borderRadius: 11,
+  summaryBlock: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 7,
+    gap: 1,
   },
-  countPillText: {
-    fontSize: 12,
+  summaryValue: {
+    fontSize: 20,
     fontWeight: '800',
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: '#6E7280',
+    fontWeight: '600',
   },
   rosterList: {
     gap: 2,
@@ -434,20 +471,30 @@ const styles = StyleSheet.create({
     color: '#9AA0B5',
     width: 22,
   },
-  rosterName: {
+  rosterBody: {
     flex: 1,
+    gap: 1,
+  },
+  rosterName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#14121F',
   },
   rosterPos: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#6E7280',
-    width: 30,
   },
   rosterScore: {
     fontSize: 15,
     fontWeight: '800',
+  },
+  emptyRoster: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyRosterText: {
+    fontSize: 13,
+    color: '#6E7280',
   },
   updatedRow: {
     flexDirection: 'row',
