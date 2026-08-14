@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppIcon } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
+import { useRecentSearches } from '@/hooks/use-recent-searches';
 import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
 
@@ -14,14 +15,14 @@ export default function SearchScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('All');
-  const [recent, setRecent] = useState<string[]>(['LeBron James', 'Chiefs', '4th down']);
+  const { recent, addRecentSearch } = useRecentSearches();
 
   const popular = PLAYERS.slice(0, 3);
 
-  const submit = () => {
-    const q = query.trim();
+  const submit = (value?: string) => {
+    const q = (value ?? query).trim();
     if (!q) return;
-    setRecent(prev => [q, ...prev.filter(r => r !== q)].slice(0, 5));
+    addRecentSearch(q);
     router.push({ pathname: '/search/results', params: { q, type: category } });
   };
 
@@ -35,7 +36,7 @@ export default function SearchScreen() {
           placeholderTextColor="#9AA0B5"
           value={query}
           onChangeText={setQuery}
-          onSubmitEditing={submit}
+          onSubmitEditing={() => submit()}
           returnKeyType="search"
           autoFocus
         />
@@ -55,12 +56,7 @@ export default function SearchScreen() {
           <Text style={styles.sectionTitle}>Recent searches</Text>
           <View style={styles.listGap}>
             {recent.map(item => (
-              <Pressable
-                key={item}
-                onPress={() => {
-                  setQuery(item);
-                  router.push({ pathname: '/search/results', params: { q: item, type: category } });
-                }}>
+              <Pressable key={item} onPress={() => submit(item)}>
                 <Card style={styles.recentRow}>
                   <View style={styles.recentIcon}>
                     <AppIcon name="clock.fill" size={15} color="#9AA0B5" />
@@ -78,12 +74,7 @@ export default function SearchScreen() {
         <Text style={styles.sectionTitle}>Popular right now</Text>
         <View style={styles.listGap}>
           {popular.map(player => (
-            <Pressable
-              key={player.id}
-              onPress={() => {
-                setQuery(player.name);
-                router.push({ pathname: '/search/results', params: { q: player.name, type: 'Players' } });
-              }}>
+            <Pressable key={player.id} onPress={() => submit(player.name)}>
               <Card style={styles.popularRow}>
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{player.lastName.slice(0, 1)}</Text>

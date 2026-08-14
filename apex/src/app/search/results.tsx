@@ -5,38 +5,57 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppIcon } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useRecentSearches } from '@/hooks/use-recent-searches';
 import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
 import { GAMES } from '@/data/mock/games';
 import { SPORTS } from '@/data/mock/sports';
 
+type Category = 'All' | 'Players' | 'Teams' | 'Coaches' | 'Games';
+
+/** Look up which sport a team belongs to (for team rows + games). */
+function sportForTeam(team: string): string {
+  const sport = SPORTS.find(s => s.teams.includes(team));
+  return sport ? sport.short : '';
+}
+
 export default function SearchResultsScreen() {
   const router = useRouter();
   const { q, type } = useLocalSearchParams<{ q?: string; type?: string }>();
   const [query, setQuery] = useState(q ?? '');
+  const { addRecentSearch } = useRecentSearches();
 
+  const scope: Category = (type as Category) ?? 'All';
   const term = query.trim().toLowerCase();
 
   const results = useMemo(() => {
     if (!term) return { players: [], teams: [], coaches: [], games: [] };
-    const players = PLAYERS.filter(
-      p => p.name.toLowerCase().includes(term) || p.team.toLowerCase().includes(term)
-    );
-    const teams = SPORTS.flatMap(s => s.teams).filter(t => t.toLowerCase().includes(term));
-    const coaches = COACHES.filter(
-      c => c.name.toLowerCase().includes(term) || c.team.toLowerCase().includes(term)
-    );
-    const games = GAMES.filter(g =>
-      (g.homeTeam + g.awayTeam).toLowerCase().includes(term)
-    );
+    const players =
+      scope === 'All' || scope === 'Players'
+        ? PLAYERS.filter(p => p.name.toLowerCase().includes(term) || p.team.toLowerCase().includes(term))
+        : [];
+    const teams =
+      scope === 'All' || scope === 'Teams'
+        ? SPORTS.flatMap(s => s.teams).filter(t => t.toLowerCase().includes(term))
+        : [];
+    const coaches =
+      scope === 'All' || scope === 'Coaches'
+        ? COACHES.filter(c => c.name.toLowerCase().includes(term) || c.team.toLowerCase().includes(term))
+        : [];
+    const games =
+      scope === 'All' || scope === 'Games'
+        ? GAMES.filter(g => (g.homeTeam + g.awayTeam).toLowerCase().includes(term))
+        : [];
     return { players, teams, coaches, games };
-  }, [term]);
+  }, [term, scope]);
 
   const total = results.players.length + results.teams.length + results.coaches.length + results.games.length;
 
   const submit = () => {
-    if (query.trim()) {
-      router.setParams({ q: query.trim() });
+    const value = query.trim();
+    if (value) {
+      addRecentSearch(value);
+      router.setParams({ q: value });
     }
   };
 
@@ -62,7 +81,7 @@ export default function SearchResultsScreen() {
       {total === 0 ? (
         <EmptyState
           icon="magnifyingglass"
-          title={`No results for "${query}"`}
+          title={term ? `No results for "${query}"` : 'Start typing to search'}
           subtitle="Try a player name, team, coach, or game — or search with fewer letters."
           accent="#5856D6"
         />
@@ -92,16 +111,14 @@ export default function SearchResultsScreen() {
           {results.teams.length > 0 ? (
             <ResultGroup title={`Teams (${results.teams.length})`}>
               {results.teams.map(team => (
-                <Pressable
-                  key={team}
-                  onPress={() => router.push({ pathname: '/injury/team', params: { team } })}>
+                <Pressable key={team} onPress={() => router.push({ pathname: '/injury/team', params: { team } })}>
                   <Card style={styles.row}>
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>{team.slice(0, 1)}</Text>
                     </View>
                     <View style={styles.rowBody}>
                       <Text style={styles.rowTitle}>{team}</Text>
-                      <Text style={styles.rowMeta}>Team risk dashboard</Text>
+                      <Text style={styles.rowMeta}>{sportForTeam(team)} · Team risk dashboard</Text>
                     </View>
                     <AppIcon name="chevron.right" size={14} color="#9AA0B5" />
                   </Card>
@@ -149,7 +166,9 @@ export default function SearchResultsScreen() {
                       <Text style={styles.rowTitle}>
                         {game.homeTeam} {game.homeScore} – {game.awayScore} {game.awayTeam}
                       </Text>
-                      <Text style={styles.rowMeta}>{game.date} · Momentum replay</Text>
+                      <Text style={styles.rowMeta}>
+                        {sportForTeam(game.homeTeam)} · {game.date} · Momentum replay
+                      </Text>
                     </View>
                     <AppIcon name="chevron.right" size={14} color="#9AA0B5" />
                   </Card>
