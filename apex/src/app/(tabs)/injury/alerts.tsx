@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
@@ -15,16 +15,25 @@ import { PLAYERS, type Player } from '@/data/mock/players';
 type ZoneFilter = 'all' | 'red' | 'yellow';
 type SortKey = 'risk' | 'team' | 'position';
 
+const SORT_LABEL: Record<SortKey, string> = { risk: 'Risk Score', team: 'Team', position: 'Position' };
+
 export default function LeagueAlertsScreen() {
   const router = useRouter();
   const [sport, setSport] = useState<SportId>('NBA');
   const [zone, setZone] = useState<ZoneFilter>('all');
   const [sort, setSort] = useState<SortKey>('risk');
+  const [position, setPosition] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const sportPlayers = PLAYERS.filter(p => p.sport === sport);
+  const positions = useMemo(
+    () => [...new Set(sportPlayers.map(p => p.position))].sort(),
+    [sportPlayers]
+  );
+
   const visible = sportPlayers
     .filter(p => (zone === 'all' ? p.zone !== 'green' : p.zone === zone))
+    .filter(p => (position ? p.position === position : true))
     .sort((a, b) => {
       if (sort === 'risk') return b.riskScore - a.riskScore;
       if (sort === 'team') return a.team.localeCompare(b.team);
@@ -36,10 +45,28 @@ export default function LeagueAlertsScreen() {
     setTimeout(() => setRefreshing(false), 900);
   };
 
-  const zoneLabel = zone === 'all' ? 'elevated or red' : zone;
+  const selectSport = (id: SportId) => {
+    setSport(id);
+    setPosition(null);
+  };
+
+  const bannerText =
+    zone === 'red'
+      ? `${visible.length} player${visible.length === 1 ? '' : 's'} currently in the red zone`
+      : zone === 'yellow'
+        ? `${visible.length} player${visible.length === 1 ? '' : 's'} currently in the elevated zone`
+        : `${visible.length} player${visible.length === 1 ? '' : 's'} currently flagged (red or elevated)`;
 
   return (
-    <Screen>
+    <Screen
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={refresh}
+          tintColor="#5856D6"
+          colors={['#5856D6']}
+        />
+      }>
       <StackHeader
         title="League Alerts"
         subtitle={sport}
@@ -50,28 +77,49 @@ export default function LeagueAlertsScreen() {
         }
       />
 
-      <View style={styles.filterRow}>
-        <View style={styles.sportTabs}>
-          {SPORTS.map(s => (
-            <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => setSport(s.id)} />
-          ))}
-        </View>
-        <View style={styles.zoneTabs}>
-          {(['all', 'red', 'yellow'] as ZoneFilter[]).map(z => (
-            <Chip key={z} label={z === 'all' ? 'All' : z[0].toUpperCase() + z.slice(1)} small selected={zone === z} onPress={() => setZone(z)} />
-          ))}
-        </View>
+      {/* Sport tabs */}
+      <View style={styles.sportTabs}>
+        {SPORTS.map(s => (
+          <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => selectSport(s.id)} />
+        ))}
       </View>
 
+      {/* Zone filter */}
+      <View style={styles.zoneTabs}>
+        {(['all', 'red', 'yellow'] as ZoneFilter[]).map(z => (
+          <Chip
+            key={z}
+            label={z === 'all' ? 'All' : z[0].toUpperCase() + z.slice(1)}
+            small
+            selected={zone === z}
+            onPress={() => setZone(z)}
+          />
+        ))}
+      </View>
+
+      {/* Count banner + sort */}
       <View style={styles.countBanner}>
-        <Text style={styles.countText}>
-          {refreshing ? 'Refreshing…' : `${visible.length} players currently in the ${zoneLabel} zone`}
-        </Text>
-        <Pressable style={styles.sortBtn} onPress={() => setSort(sort === 'risk' ? 'team' : sort === 'team' ? 'position' : 'risk')}>
+        <Text style={styles.countText}>{refreshing ? 'Refreshing…' : bannerText}</Text>
+        <Pressable
+          style={styles.sortBtn}
+          onPress={() => setSort(prev => (prev === 'risk' ? 'team' : prev === 'team' ? 'position' : 'risk'))}>
           <AppIcon name="chart.bar.fill" size={13} color="#FFFFFF" />
-          <Text style={styles.sortText}>Sort: {sort}</Text>
+          <Text style={styles.sortText}>Sort: {SORT_LABEL[sort]}</Text>
         </Pressable>
       </View>
+
+      {/* Position filter */}
+      {positions.length > 1 ? (
+        <View style={styles.positionRow}>
+          <Text style={styles.positionLabel}>Position</Text>
+          <View style={styles.positionChips}>
+            <Chip label="All" small selected={position === null} onPress={() => setPosition(null)} />
+            {positions.map(pos => (
+              <Chip key={pos} label={pos} small selected={position === pos} onPress={() => setPosition(position === pos ? null : pos)} />
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       {visible.length === 0 ? (
         <EmptyState
@@ -96,13 +144,16 @@ export default function LeagueAlertsScreen() {
 
 function AlertCard({ player }: { player: Player }) {
   const zone = (player.zone === 'green' ? 'insufficient_data' : player.zone) as Zone;
+  const zoneNoun = player.zone === 'red' ? 'red zone' : 'elevated zone';
+  const duration =
+    player.daysInZone > 0
+      ? `In ${zoneNoun} for ${player.daysInZone} day${player.daysInZone === 1 ? '' : 's'}`
+      : 'New flag';
   return (
     <Card style={styles.alertCard}>
       <View style={styles.alertTop}>
         <ZoneBadge zone={zone} />
-        <Text style={styles.alertDays}>
-          {player.daysInZone > 0 ? `In zone ${player.daysInZone}d` : 'New flag'}
-        </Text>
+        <Text style={styles.alertDays}>{duration}</Text>
       </View>
       <View style={styles.alertMiddle}>
         <View style={styles.alertInfo}>
@@ -111,7 +162,10 @@ function AlertCard({ player }: { player: Player }) {
             {player.team} · {player.position}
           </Text>
         </View>
-        <Text style={[styles.alertScore, { color: player.zone === 'red' ? '#E5484D' : '#B7791F' }]}>{player.riskScore}</Text>
+        <View style={styles.alertScoreWrap}>
+          <Text style={[styles.alertScore, { color: player.zone === 'red' ? '#E5484D' : '#B7791F' }]}>{player.riskScore}</Text>
+          <Text style={styles.alertScoreLabel}>risk</Text>
+        </View>
       </View>
       <Text style={styles.alertExplanation}>{player.explanation}</Text>
     </Card>
@@ -119,9 +173,6 @@ function AlertCard({ player }: { player: Player }) {
 }
 
 const styles = StyleSheet.create({
-  filterRow: {
-    gap: 10,
-  },
   sportTabs: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -160,7 +211,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11.5,
     fontWeight: '700',
-    textTransform: 'capitalize',
+  },
+  positionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  positionLabel: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#6E7280',
+  },
+  positionChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
   },
   listGap: {
     gap: 10,
@@ -174,7 +239,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   alertDays: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: '#9AA0B5',
     fontWeight: '600',
   },
@@ -185,6 +250,7 @@ const styles = StyleSheet.create({
   },
   alertInfo: {
     gap: 2,
+    flex: 1,
   },
   alertName: {
     fontSize: 17,
@@ -195,9 +261,20 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: '#6E7280',
   },
+  alertScoreWrap: {
+    alignItems: 'center',
+    marginLeft: 10,
+  },
   alertScore: {
     fontSize: 26,
     fontWeight: '800',
+  },
+  alertScoreLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#9AA0B5',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   alertExplanation: {
     fontSize: 13,
