@@ -7,7 +7,6 @@ import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { RiskCircle } from '@/components/ui/risk-circle';
 import { ZoneBadge, type Zone } from '@/components/ui/badge';
-import { MetricBar } from '@/components/ui/bar';
 import { LineChart, type ChartPoint } from '@/components/ui/chart';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -21,7 +20,7 @@ const METRICS: { key: MetricKey; label: string; unit: string; color: string }[] 
   { key: 'intensity', label: 'High Intensity Events', unit: 'events', color: '#FF5C8A' },
 ];
 
-/** Deterministic pseudo-noise for the workload chart. */
+/** Deterministic pseudo-noise so the demo chart is stable across renders. */
 function noise(i: number): number {
   const x = Math.sin(i * 12.9898) * 43758.5453;
   return (x - Math.floor(x)) * 2 - 1;
@@ -32,24 +31,30 @@ export default function PlayerRiskScreen() {
   const { playerId } = useLocalSearchParams<{ playerId: string }>();
   const player = PLAYERS.find(p => p.id === playerId) ?? PLAYERS[0];
   const [metric, setMetric] = useState<MetricKey>('minutes');
+  const [selectedGame, setSelectedGame] = useState<number | null>(null);
 
+  const zone = player.zone as Zone;
+  const metricDef = METRICS.find(m => m.key === metric)!;
+  const recent = player[`${metric}Recent` as const];
+  const baseline = player[`${metric}Baseline` as const];
+  const z = player[`${metric}Z` as const];
+
+  /** 24-game season workload, normalized to 0..1 (high values at the top). */
   const workload = (key: MetricKey): ChartPoint[] => {
-    const recent = player[`${key}Recent` as const];
-    const baseline = player[`${key}Baseline` as const];
-    const start = baseline * 0.9;
-    return Array.from({ length: 24 }, (_, i) => ({
-      x: i / 23,
-      y: 0.12 + 0.76 * ((start + ((recent - start) * i) / 23 + noise(i) * 1.6) / (Math.max(recent, baseline) * 1.35)),
-    }));
+    const rec = player[`${key}Recent` as const];
+    const base = player[`${key}Baseline` as const];
+    const start = base * 0.92;
+    const max = Math.max(rec, base) * 1.18;
+    return Array.from({ length: 24 }, (_, i) => {
+      const value = start + ((rec - start) * i) / 23 + noise(i) * 1.4;
+      return { x: i / 23, y: Math.max(0.04, Math.min(0.96, 1 - value / max)) };
+    });
   };
 
   const riskTrend: ChartPoint[] = Array.from({ length: 12 }, (_, i) => ({
     x: i / 11,
-    y: 0.72 - i * 0.02 + noise(i) * 0.07 + (i >= 8 ? 0.12 : 0),
+    y: 0.74 - i * 0.02 + noise(i) * 0.07 + (i >= 8 ? 0.12 : 0),
   }));
-
-  const zone = player.zone as Zone;
-  const metricDef = METRICS.find(m => m.key === metric)!;
 
   const share = () => {
     Share.share({
@@ -88,35 +93,48 @@ export default function PlayerRiskScreen() {
       {/* What triggered this */}
       <View>
         <Text style={styles.sectionTitle}>What triggered this</Text>
-        <Card style={styles.metricsCard}>
-          <MetricBar
-            label="Minutes Played"
-            value={player.minutesRecent}
-            max={48}
-            baseline={player.minutesBaseline}
-            color="#5856D6"
-            formatValue={v => `${v.toFixed(1)} min`}
-          />
-          <MetricBar
-            label="Distance"
-            value={player.distanceRecent}
-            max={6}
-            baseline={player.distanceBaseline}
-            color="#3C87F7"
-            formatValue={v => `${v.toFixed(1)} km`}
-          />
-          <MetricBar
-            label="High Intensity"
-            value={player.intensityRecent}
-            max={60}
-            baseline={player.intensityBaseline}
-            color="#FF5C8A"
-            formatValue={v => `${Math.round(v)}`}
-          />
-          <Text style={styles.zScoreNote}>
-            Max z-score {Math.max(player.minutesZ, player.distanceZ, player.intensityZ).toFixed(1)} · flag threshold 1.5
-          </Text>
-        </Card>
+        <View style={styles.listGap}>
+          {METRICS.map(m => {
+            const mRecent = player[`${m.key}Recent` as const];
+            const mBaseline = player[`${m.key}Baseline` as const];
+            const mZ = player[`${m.key}Z` as const];
+            const triggered = mZ > 1.5;
+            return (
+              <Card key={m.key} style={styles.metricCard}>
+                <View style={styles.metricTop}>
+                  <Text style={styles.metricName}>{m.label}</Text>
+                  <View style={[styles.zChip, { backgroundColor: triggered ? '#FDEBEC' : '#F0F1F5' }]}>
+                    <Text style={[styles.zText, { color: triggered ? '#E5484D' : '#6E7280' }]}>
+                      z {mZ >= 0 ? '+' : ''}
+                      {mZ.toFixed(1)}
+                      {triggered ? ' ▲' : ''}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.barRow}>
+                  <View style={styles.barTrack}>
+                    <View
+                      style={[
+                        styles.barFill,
+                        { width: `${Math.min(100, (mRecent / (Math.max(mRecent, mBaseline) * 1.15)) * 100)}%`, backgroundColor: m.color },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.barBaseline,
+                        { left: `${Math.min(96, (mBaseline / (Math.max(mRecent, mBaseline) * 1.15)) * 100)}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.barLegend}>▍ baseline</Text>
+                </View>
+                <Text style={styles.metricCompare}>
+                  {mRecent.toFixed(1)} {m.unit} recent vs {mBaseline.toFixed(1)} {m.unit} baseline
+                </Text>
+              </Card>
+            );
+          })}
+        </View>
       </View>
 
       {/* Season workload */}
@@ -128,21 +146,40 @@ export default function PlayerRiskScreen() {
               <Pressable
                 key={m.key}
                 style={[styles.chartTab, metric === m.key && styles.chartTabActive]}
-                onPress={() => setMetric(m.key)}>
+                onPress={() => {
+                  setMetric(m.key);
+                  setSelectedGame(null);
+                }}>
                 <Text style={[styles.chartTabText, metric === m.key && styles.chartTabTextActive]}>
                   {m.label.split(' ')[0]}
                 </Text>
               </Pressable>
             ))}
           </View>
+
+          {selectedGame != null ? (
+            <View style={styles.tooltipChip}>
+              <AppIcon name="location.fill" size={12} color="#5856D6" />
+              <Text style={styles.tooltipText}>
+                Game {selectedGame + 1} · {recent.toFixed(1)} {metricDef.unit}
+              </Text>
+            </View>
+          ) : null}
+
           <LineChart
             series={[{ name: metricDef.label, color: metricDef.color, points: workload(metric) }]}
-            height={150}
+            height={170}
             gridLabels={['Oct', 'Nov', 'Dec', 'Jan', 'Feb']}
             showDots
+            bands={[
+              { y0: 0, y1: 0.3, color: '#E5484D' },
+              { y0: 0.3, y1: 0.5, color: '#F5A623' },
+            ]}
+            selectedPoint={selectedGame != null ? { series: 0, point: selectedGame } : null}
+            onPointPress={(_si, pi) => setSelectedGame(pi === selectedGame ? null : pi)}
           />
           <Text style={styles.chartCaption}>
-            Recent {metricDef.label.toLowerCase()} vs personal baseline — tap dots for game details
+            {metricDef.label} per game — red/yellow bands mark elevated workload zones. Tap a dot for details.
           </Text>
         </Card>
       </View>
@@ -157,7 +194,11 @@ export default function PlayerRiskScreen() {
             gridLabels={['60d', '45d', '30d', '15d', 'Now']}
             showDots
           />
-          <Text style={styles.chartCaption}>Entered the red zone {player.daysInZone} day(s) ago</Text>
+          <Text style={styles.chartCaption}>
+            {player.daysInZone > 0
+              ? `Entered the red zone ${player.daysInZone} day(s) ago — flagged by ${player.triggerMetric}`
+              : 'Risk score trending within the normal range over the last 60 days'}
+          </Text>
         </Card>
       </View>
 
@@ -168,17 +209,18 @@ export default function PlayerRiskScreen() {
           <View style={styles.scheduleRow}>
             {backToBackDays.map((day, i) => {
               const isB2B = i % 3 === 0;
+              const restAfter = i > 0 && !isB2B && backToBackDays[i - 1] % 3 === 0;
               return (
                 <View key={day} style={styles.dayCell}>
                   <View style={[styles.dayCircle, isB2B && styles.dayCircleB2B]}>
                     <Text style={[styles.dayText, isB2B && styles.dayTextB2B]}>{day}</Text>
                   </View>
-                  {isB2B ? <Text style={styles.b2bLabel}>B2B</Text> : null}
+                  {isB2B ? <Text style={styles.b2bLabel}>B2B</Text> : restAfter ? <Text style={styles.restLabel}>rest</Text> : null}
                 </View>
               );
             })}
           </View>
-          <Text style={styles.scheduleNote}>Highlighted games are back-to-back nights with limited rest</Text>
+          <Text style={styles.scheduleNote}>Highlighted games are back-to-back nights — rest days are marked between them</Text>
         </Card>
       </View>
 
@@ -251,13 +293,62 @@ const styles = StyleSheet.create({
     color: '#14121F',
     marginTop: 4,
   },
-  metricsCard: {
-    gap: 14,
+  listGap: {
+    gap: 10,
   },
-  zScoreNote: {
-    fontSize: 11.5,
+  metricCard: {
+    gap: 10,
+  },
+  metricTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metricName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#14121F',
+  },
+  zChip: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  zText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  barRow: {
+    gap: 4,
+  },
+  barTrack: {
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: '#F0F1F5',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  barBaseline: {
+    position: 'absolute',
+    top: -2,
+    bottom: -2,
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: '#9AA0B5',
+  },
+  barLegend: {
+    fontSize: 10.5,
     color: '#9AA0B5',
-    fontWeight: '500',
+    alignSelf: 'flex-end',
+  },
+  metricCompare: {
+    fontSize: 12.5,
+    color: '#6E7280',
+    fontWeight: '600',
   },
   chartCard: {
     gap: 10,
@@ -290,6 +381,21 @@ const styles = StyleSheet.create({
   },
   chartTabTextActive: {
     color: '#14121F',
+  },
+  tooltipChip: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EFEEFB',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  tooltipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#5856D6',
   },
   chartCaption: {
     fontSize: 11.5,
@@ -333,6 +439,11 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     color: '#E5484D',
+  },
+  restLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#2FA36B',
   },
   scheduleNote: {
     fontSize: 11.5,
