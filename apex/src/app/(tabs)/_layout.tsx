@@ -3,6 +3,15 @@ import { Platform, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon, type IconName } from '@/components/ui/icon';
+import { useOnboarding } from '@/context/onboarding';
+
+/** Map the stored default module to its tab route name. */
+const TAB_ROUTE: Record<string, string> = {
+  home: 'index',
+  injury: 'injury',
+  decisions: 'decisions',
+  momentum: 'momentum',
+};
 
 function tabIcon(name: IconName) {
   return function TabIcon({ color }: { color: ColorValue }) {
@@ -12,10 +21,12 @@ function tabIcon(name: IconName) {
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { defaultModule } = useOnboarding();
   const bottomInset = Platform.OS === 'android' ? Math.max(insets.bottom, 12) : insets.bottom + 8;
 
   return (
     <Tabs
+      initialRouteName={TAB_ROUTE[defaultModule] ?? 'index'}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#5856D6',
