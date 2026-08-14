@@ -7,19 +7,32 @@ import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
+import { EmptyState } from '@/components/ui/empty-state';
+import { SPORTS, type SportId } from '@/data/mock/sports';
 import { COACHES, type Coach } from '@/data/mock/coaches';
 import { DECISION_GAMES } from '@/data/mock/games';
 
 const DECISION_TYPES = ['All', '4th Down', 'Timeout', '2-Point'];
 const GAME_TYPES = ['Regular', 'Playoff', 'All'];
+const SEASONS = ['2025-26', '2024-25'];
+
+/** Coaches for the active filters, sorted by EV rate, ranks assigned dynamically. */
+function rankedCoaches(sport: SportId, season: string): Coach[] {
+  return COACHES.filter(c => c.sport === sport && (c.season ?? '2025-26') === season)
+    .sort((a, b) => b.evRate - a.evRate)
+    .map((c, i) => ({ ...c, rank: i + 1 }));
+}
 
 export default function CoachLeaderboardScreen() {
   const router = useRouter();
+  const [sport, setSport] = useState<SportId>('NFL');
+  const [season, setSeason] = useState(SEASONS[0]);
   const [decisionType, setDecisionType] = useState('All');
   const [gameType, setGameType] = useState('All');
 
-  const podium = COACHES.slice(0, 3);
-  const rest = COACHES.slice(3);
+  const coaches = rankedCoaches(sport, season);
+  const podium = coaches.slice(0, 3);
+  const rest = coaches.slice(3);
 
   return (
     <Screen>
@@ -28,41 +41,60 @@ export default function CoachLeaderboardScreen() {
       {/* Filters */}
       <View style={styles.filters}>
         <View style={styles.chipRow}>
-          {DECISION_TYPES.map(dt => (
-            <Chip key={dt} label={dt} small selected={decisionType === dt} onPress={() => setDecisionType(dt)} />
+          {SPORTS.map(s => (
+            <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => setSport(s.id)} />
           ))}
         </View>
         <View style={styles.chipRow}>
+          {SEASONS.map(se => (
+            <Chip key={se} label={se} small selected={season === se} onPress={() => setSeason(se)} />
+          ))}
+          {DECISION_TYPES.map(dt => (
+            <Chip key={dt} label={dt} small selected={decisionType === dt} onPress={() => setDecisionType(dt)} />
+          ))}
           {GAME_TYPES.map(gt => (
             <Chip key={gt} label={gt} small selected={gameType === gt} onPress={() => setGameType(gt)} />
           ))}
         </View>
       </View>
 
-      {/* Podium */}
-      <View style={styles.podiumRow}>
-        <PodiumSpot coach={podium[1]} rank={2} onPress={() => open(router, podium[1])} />
-        <PodiumSpot coach={podium[0]} rank={1} onPress={() => open(router, podium[0])} />
-        <PodiumSpot coach={podium[2]} rank={3} onPress={() => open(router, podium[2])} />
-      </View>
+      {coaches.length === 0 ? (
+        <EmptyState
+          icon="trophy.fill"
+          title={`No coach data for ${sport} · ${season}`}
+          subtitle="Decision grades are available once a season has enough games analyzed."
+          accent="#5856D6"
+        />
+      ) : (
+        <>
+          {/* Podium */}
+          <View style={styles.podiumRow}>
+            <PodiumSpot coach={podium[1]} rank={2} onPress={() => open(router, podium[1])} />
+            <PodiumSpot coach={podium[0]} rank={1} onPress={() => open(router, podium[0])} />
+            <PodiumSpot coach={podium[2]} rank={3} onPress={() => open(router, podium[2])} />
+          </View>
 
-      {/* Full list */}
-      <Card style={styles.listCard} padded={false}>
-        {rest.map((coach, i) => (
-          <Pressable key={coach.id} onPress={() => open(router, coach)}>
-            <View style={[styles.row, i !== rest.length - 1 && styles.rowBorder]}>
-              <Text style={styles.rank}>{coach.rank}</Text>
-              <View style={styles.rowBody}>
-                <Text style={styles.coachName}>{coach.name}</Text>
-                <Text style={styles.coachTeam}>{coach.team}</Text>
-              </View>
-              <Text style={styles.decisions}>{coach.totalDecisions} dec.</Text>
-              <Text style={[styles.evRate, { color: evColor(coach.evRate) }]}>{coach.evRate}%</Text>
-              <TrendArrow trend={coach.trend} />
-            </View>
-          </Pressable>
-        ))}
-      </Card>
+          {/* Full list */}
+          <Card style={styles.listCard} padded={false}>
+            {rest.map((coach, i) => (
+              <Pressable key={coach.id} onPress={() => open(router, coach)}>
+                <View style={[styles.row, i !== rest.length - 1 && styles.rowBorder]}>
+                  <Text style={styles.rank}>{coach.rank}</Text>
+                  <View style={styles.rowBody}>
+                    <Text style={styles.coachName}>{coach.name}</Text>
+                    <Text style={styles.coachTeam}>
+                      {coach.team} · {coach.sport}
+                    </Text>
+                  </View>
+                  <Text style={styles.decisions}>{coach.totalDecisions} dec.</Text>
+                  <Text style={[styles.evRate, { color: evColor(coach.evRate) }]}>{coach.evRate}%</Text>
+                  <TrendArrow trend={coach.trend} />
+                </View>
+              </Pressable>
+            ))}
+          </Card>
+        </>
+      )}
 
       <View style={styles.note}>
         <AppIcon name="info.circle.fill" size={13} color="#9AA0B5" />
@@ -140,6 +172,7 @@ const styles = StyleSheet.create({
   },
   chipRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   podiumRow: {
@@ -252,6 +285,18 @@ const styles = StyleSheet.create({
     color: '#9AA0B5',
     fontSize: 14,
   },
+  note: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  noteText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#9AA0B5',
+    lineHeight: 16,
+  },
   gameSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -283,17 +328,5 @@ const styles = StyleSheet.create({
   gameMetaText: {
     fontSize: 11.5,
     color: '#9AA0B5',
-  },
-  note: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    paddingHorizontal: 4,
-  },
-  noteText: {
-    flex: 1,
-    fontSize: 11.5,
-    color: '#9AA0B5',
-    lineHeight: 16,
   },
 });
