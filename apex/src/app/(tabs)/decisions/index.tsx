@@ -22,7 +22,7 @@ export default function CoachLeaderboardScreen() {
   const rest = COACHES.slice(3);
 
   return (
-    <Screen tabInset={false}>
+    <Screen>
       <StackHeader title="Coach Leaderboard" subtitle="Decision quality · EV Rate" />
 
       {/* Filters */}

@@ -46,7 +46,7 @@ export default function CoachDetailScreen() {
   ];
 
   return (
-    <Screen tabInset={false}>
+    <Screen>
       <StackHeader title={coach.name} subtitle={`${coach.team} · Rank #${coach.rank}`} />
 
       {/* Header card */}

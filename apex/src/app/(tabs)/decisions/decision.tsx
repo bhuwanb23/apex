@@ -14,6 +14,7 @@ interface Option {
   successProb: number;
   wpIfSucceed: number;
   wpIfFail: number;
+  isBest?: boolean;
 }
 
 function buildOptions(decision: (typeof DECISIONS)[number]): Option[] {
@@ -40,7 +41,7 @@ export default function DecisionDrillDownScreen() {
     : `There was a better option available. ${best.action} had ${Math.round((best.ev - decision.evChosen) * 100)}% higher EV.`;
 
   return (
-    <Screen tabInset={false}>
+    <Screen>
       <StackHeader title="Decision Drill Down" subtitle={`${decision.coachName} · ${decision.team}`} />
 
       {/* Context */}

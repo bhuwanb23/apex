@@ -41,7 +41,7 @@ export default function InjuryDashboardScreen() {
   };
 
   return (
-    <Screen tabInset={false}>
+    <Screen>
       <StackHeader
         title="Injury Risk"
         subtitle={sport}

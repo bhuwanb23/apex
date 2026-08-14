@@ -21,7 +21,7 @@ export default function GameDecisionsScreen() {
     null;
 
   return (
-    <Screen tabInset={false}>
+    <Screen>
       <StackHeader title="Game Decisions" subtitle={game.date} />
 
       {/* Game header */}

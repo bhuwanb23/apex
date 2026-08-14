@@ -39,7 +39,7 @@ export default function LeagueAlertsScreen() {
   const zoneLabel = zone === 'all' ? 'elevated or red' : zone;
 
   return (
-    <Screen tabInset={false}>
+    <Screen>
       <StackHeader
         title="League Alerts"
         subtitle={sport}

@@ -1,11 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon, type IconName } from '@/components/ui/icon';
 
 function tabIcon(name: IconName) {
-  return function TabIcon({ color }: { color: string }) {
+  return function TabIcon({ color }: { color: ColorValue }) {
     return <AppIcon name={name} size={22} color={color} />;
   };
 }
