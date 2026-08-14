@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
@@ -8,6 +8,20 @@ import { AppIcon, type IconName } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { ROLES, useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
+import { api, type CacheStatsResponse, type JobsStatusResponse } from '@/lib/api';
+
+/** Rough "2 hours ago" formatting for sync timestamps. */
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60_000) return 'just now';
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
 
 type HealthStatus = 'ok' | 'degraded' | 'down';
 
@@ -37,24 +51,48 @@ const STATUS_LABEL: Record<HealthStatus, string> = { ok: 'All services running',
 export default function SettingsScreen() {
   const router = useRouter();
   const { role, setDefaultModule, defaultModule, storyLanguage, setStoryLanguage, sports } = useOnboarding();
+  const { health, status, refresh } = useBackend();
   const [cleared, setCleared] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('2 hours ago');
   const [healthOpen, setHealthOpen] = useState(false);
   const [services, setServices] = useState<ServiceHealth[]>(SERVICES);
   const [aboutOpen, setAboutOpen] = useState<string | null>(null);
+  const [cacheStats, setCacheStats] = useState<CacheStatsResponse | null>(null);
+  const [jobs, setJobs] = useState<JobsStatusResponse | null>(null);
+
+  // Pull real cache + job state from the backend when it is reachable.
+  useEffect(() => {
+    if (status !== 'online') return;
+    api.cacheStats().then(setCacheStats).catch(() => {});
+    api.jobsStatus().then(setJobs).catch(() => {});
+  }, [status]);
+
+  const lastSyncLabel = jobs?.jobs?.find(j => j.jobName === 'data_sync')?.lastRunAt
+    ? `Last run ${timeAgo(jobs.jobs.find(j => j.jobName === 'data_sync')!.lastRunAt!)}`
+    : lastSync;
+
+  // Health services come from the live health ping.
+  useEffect(() => {
+    if (health) {
+      setServices([
+        { name: 'API', status: health.status === 'ok' ? 'ok' : 'degraded', detail: `Healthy · ${health.version}` },
+        { name: 'ML Service', status: health.services.mlService === 'connected' ? 'ok' : 'down', detail: health.services.mlService === 'connected' ? 'Healthy' : 'Unreachable' },
+        { name: 'Database', status: health.services.database === 'connected' ? 'ok' : 'down', detail: health.services.database === 'connected' ? 'Healthy' : 'Unreachable' },
+        { name: 'Cache', status: health.services.cache === 'connected' ? 'ok' : 'down', detail: health.services.cache === 'connected' ? 'Healthy' : 'Unreachable' },
+      ]);
+    }
+  }, [health]);
 
   const roleLabel = ROLES.find(r => r.id === role)?.label ?? 'Analyst';
-  const health = overallStatus(services);
-
-  const clearCache = () => {
-    setCleared(true);
-    setTimeout(() => setCleared(false), 1500);
-  };
+  const healthBadge = overallStatus(services);
 
   const refreshData = () => {
     if (syncing) return;
     setSyncing(true);
+    // Ask the backend to refresh — re-ping health + jobs and re-check the ping.
+    void refresh();
+    api.jobsStatus().then(setJobs).catch(() => {});
     setTimeout(() => {
       setSyncing(false);
       setLastSync('Just now');
@@ -62,10 +100,14 @@ export default function SettingsScreen() {
   };
 
   const runHealthCheck = () => {
-    // Demo check — randomly flags the ML service as degraded ~25% of the time.
-    setServices(prev =>
-      prev.map(s => (s.name === 'ML Service' ? { ...s, status: Math.random() < 0.25 ? 'degraded' : 'ok' } : s))
-    );
+    void refresh();
+  };
+
+  const clearCacheLive = () => {
+    setCleared(true);
+    setCacheStats(null);
+    api.cacheStats().then(setCacheStats).catch(() => {});
+    setTimeout(() => setCleared(false), 1500);
   };
 
   const ABOUT: { id: string; icon: IconName; title: string; body: string }[] = [
@@ -139,22 +181,26 @@ export default function SettingsScreen() {
 
       {/* Data */}
       <Section title="Data">
-        <SettingRow icon="clock.fill" label="Last data sync" value={syncing ? 'Syncing…' : lastSync} />
+        <SettingRow icon="clock.fill" label="Last data sync" value={syncing ? 'Syncing…' : lastSyncLabel} />
         <SettingRow icon="refresh" label="Refresh data now" value={syncing ? 'Working…' : 'Tap to sync'} onPress={refreshData} />
-        <SettingRow icon="calendar" label="Cache status" value={cleared ? 'Cleared ✓' : '1,284 entries'} />
-        <Pressable onPress={clearCache}>
+        <SettingRow
+          icon="calendar"
+          label="Cache status"
+          value={cleared ? 'Cleared ✓' : cacheStats ? `${cacheStats.memory.keys} memory · ${cacheStats.sqlite.totalEntries} sqlite` : 'Checking…'}
+        />
+        <Pressable onPress={clearCacheLive}>
           <SettingRow icon="xmark" label="Clear cache" value={cleared ? 'Done' : 'Tap to clear'} danger />
         </Pressable>
       </Section>
 
       {/* App */}
       <Section title="App">
-        <SettingRow icon="doc.fill" label="Version" value={Constants.expoConfig?.version ?? '1.0.0'} />
+        <SettingRow icon="doc.fill" label="Version" value={health?.version ?? Constants.expoConfig?.version ?? '1.0.0'} />
         <SettingRow icon="location.fill" label="Backend URL" value="localhost:8000" />
         <SettingRow
           icon="info.circle.fill"
           label="System health"
-          value={<HealthBadge status={health} />}
+          value={<HealthBadge status={healthBadge} />}
           onPress={() => setHealthOpen(true)}
         />
       </Section>
@@ -184,7 +230,7 @@ export default function SettingsScreen() {
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>System health</Text>
-                <HealthBadge status={health} />
+                <HealthBadge status={healthBadge} />
               </View>
               <Pressable onPress={() => setHealthOpen(false)} hitSlop={10}>
                 <AppIcon name="xmark" size={18} color="#6E7280" />
@@ -221,7 +267,7 @@ function CloseButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -241,7 +287,7 @@ function SettingRow({
 }: {
   icon: IconName;
   label: string;
-  value?: React.ReactNode;
+  value?: ReactNode;
   onPress?: () => void;
   danger?: boolean;
 }) {
@@ -257,7 +303,7 @@ function SettingRow({
   );
 }
 
-function SettingBlock({ label, children }: { label: string; children: React.ReactNode }) {
+function SettingBlock({ label, children }: { label: string; children: ReactNode }) {
   return (
     <View style={[styles.row, styles.blockRow]}>
       <Text style={styles.rowLabel}>{label}</Text>

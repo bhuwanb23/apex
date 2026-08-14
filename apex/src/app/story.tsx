@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { AqxOrb } from '@/components/aqx-logo';
@@ -8,6 +9,7 @@ import { MOMENTUM_VERDICTS } from '@/data/mock/sports';
 import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
 import { useOnboarding, type RoleId } from '@/context/onboarding';
+import { api } from '@/lib/api';
 
 type DetailRoute =
   | { pathname: '/injury/player'; params: { playerId: string } }
@@ -98,7 +100,39 @@ export default function StoryModal() {
   const { module, sport } = useLocalSearchParams<{ module?: string; sport?: string }>();
   const { storyLanguage, role } = useOnboarding();
 
-  const story = buildStory(module ?? 'home', sport ?? 'NBA', storyLanguage, role ?? 'fan');
+  const [liveStory, setLiveStory] = useState<{ headlineText: string; storyText: string; generatedBy: string; keyMetrics?: Record<string, unknown> | null } | null>(null);
+  const [liveError, setLiveError] = useState(false);
+
+  // Ask the backend for a generated story; fall back to the local template.
+  useEffect(() => {
+    let cancelled = false;
+    const mod = module === 'home' ? 'momentum' : (module ?? 'momentum');
+    api
+      .story(mod, sport ?? 'NBA', { role: role ?? 'fan' })
+      .then(res => {
+        if (cancelled) return;
+        setLiveStory({ headlineText: res.headlineText, storyText: res.storyText, generatedBy: res.generatedBy, keyMetrics: res.keyMetrics });
+      })
+      .catch(() => {
+        if (!cancelled) setLiveError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [module, sport, role]);
+
+  const localStory = buildStory(module ?? 'home', sport ?? 'NBA', storyLanguage, role ?? 'fan');
+  const story = liveStory
+    ? {
+        headline: liveStory.headlineText,
+        paragraph: liveStory.storyText,
+        metrics: (Object.entries(liveStory.keyMetrics ?? {})
+          .filter(([, v]) => typeof v === 'number' || typeof v === 'string')
+          .slice(0, 3)
+          .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1')}: ${v}`) as string[]) || localStory.metrics,
+      }
+    : localStory;
+  const generatedBy = liveStory?.generatedBy ?? (storyLanguage === 'technical' ? 'AI enhanced' : 'template');
 
   const share = () => {
     Share.share({
@@ -158,7 +192,7 @@ export default function StoryModal() {
 
         <View style={styles.badgeRow}>
           <View style={styles.generatedBadge}>
-            <Text style={styles.generatedText}>{storyLanguage === 'technical' ? 'AI enhanced' : 'template'}</Text>
+            <Text style={styles.generatedText}>{generatedBy}</Text>
           </View>
         </View>
       </View>

@@ -10,6 +10,7 @@ import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
 import { GAMES } from '@/data/mock/games';
 import { SPORTS } from '@/data/mock/sports';
+import { useBackendSearch } from '@/data/live/search';
 
 type Category = 'All' | 'Players' | 'Teams' | 'Coaches' | 'Games';
 
@@ -28,8 +29,12 @@ export default function SearchResultsScreen() {
   const scope: Category = (type as Category) ?? 'All';
   const term = query.trim().toLowerCase();
 
+  const liveSearch = useBackendSearch(term, scope);
+
   const results = useMemo(() => {
     if (!term) return { players: [], teams: [], coaches: [], games: [] };
+    if (liveSearch.source === 'live') return liveSearch.results;
+    // Demo fallback: filter the curated mock data locally (presentation only).
     const players =
       scope === 'All' || scope === 'Players'
         ? PLAYERS.filter(p => p.name.toLowerCase().includes(term) || p.team.toLowerCase().includes(term))
@@ -47,7 +52,7 @@ export default function SearchResultsScreen() {
         ? GAMES.filter(g => (g.homeTeam + g.awayTeam).toLowerCase().includes(term))
         : [];
     return { players, teams, coaches, games };
-  }, [term, scope]);
+  }, [term, scope, liveSearch.source, liveSearch.results]);
 
   const total = results.players.length + results.teams.length + results.coaches.length + results.games.length;
 
