@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
-import { ThemedText } from '@/components/themed-text';
 import { AppIcon, type IconName } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 
@@ -18,10 +17,10 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, emoji, actionLabel, onAction, actionIcon = 'chevron.right' }: SectionHeaderProps) {
   return (
     <View style={styles.row}>
-      <ThemedText type="smallBold" style={styles.title}>
+      <Text style={styles.title}>
         {emoji ? `${emoji} ` : ''}
         {title}
-      </ThemedText>
+      </Text>
       {actionLabel && onAction ? (
         <PillButton
           label={actionLabel}
@@ -57,6 +56,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
+    fontWeight: '700',
+    color: '#14121F',
   },
   heading: {
     fontSize: 18,

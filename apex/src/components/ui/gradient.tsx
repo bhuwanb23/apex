@@ -1,7 +1,8 @@
 import { StyleSheet, View, type ViewProps } from 'react-native';
 
 export interface GradientViewProps extends ViewProps {
-  colors: [string, string];
+  /** Two or more gradient stops (CSS color strings). */
+  colors: string[];
   /** Direction of the linear gradient. Defaults to a diagonal top-left → bottom-right. */
   direction?: 'diagonal' | 'vertical' | 'horizontal';
 }
@@ -22,8 +23,7 @@ export function GradientView({ colors, direction = 'diagonal', style, ...rest }:
       style={[
         styles.base,
         {
-          // @ts-expect-error -- experimental_backgroundImage is typed on ViewStyle in newer RN
-          experimental_backgroundImage: `linear-gradient(${DIRECTION_ANGLE[direction]}, ${colors[0]}, ${colors[1]})`,
+          experimental_backgroundImage: `linear-gradient(${DIRECTION_ANGLE[direction]}, ${colors.join(', ')})`,
         },
         style,
       ]}
