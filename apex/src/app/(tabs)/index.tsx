@@ -100,7 +100,7 @@ export default function HomeScreen() {
         </Text>
         <Text style={styles.greetingSub}>
           {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} ·{' '}
-          {sportInfo.short} 2025-26 season
+          {sportInfo.short} {sportInfo.season} season
         </Text>
       </View>
 

@@ -37,7 +37,7 @@ export default function LeagueAlertsScreen() {
   }, [activeSport]);
 
   const alerts = useLeagueAlerts(sport, zone);
-  const sportPlayers = alerts.data;
+  const sportPlayers = alerts.players;
   const generatedAt = alerts.generatedAt;
   const positions = useMemo(
     () => [...new Set(sportPlayers.map(p => p.position))].sort(),

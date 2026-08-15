@@ -102,7 +102,7 @@ export default function StoryModal() {
 
   const mod = module === 'home' ? 'momentum' : (module ?? 'momentum');
 
-  const [liveStory, setLiveStory] = useState<{ headlineText: string; storyText: string; generatedBy: string; keyMetrics?: Record<string, unknown> | null } | null>(null);
+  const [liveStory, setLiveStory] = useState<{ headlineText: string; storyText: string; generatedBy: string; keyMetrics?: Record<string, unknown> | null; generatedAt?: string | null } | null>(null);
 
   // Ask the backend for a generated story; fall back to the local template.
   // The backend caches by (module, sport, role, entityId) for 1 hour, so an
@@ -113,7 +113,7 @@ export default function StoryModal() {
       .story(mod, sport ?? 'NBA', { role: role ?? 'fan', entityId })
       .then(res => {
         if (cancelled) return;
-        setLiveStory({ headlineText: res.headlineText, storyText: res.storyText, generatedBy: res.generatedBy, keyMetrics: res.keyMetrics });
+        setLiveStory({ headlineText: res.headlineText, storyText: res.storyText, generatedBy: res.generatedBy, keyMetrics: res.keyMetrics, generatedAt: res.generatedAt });
       })
       .catch(() => {
         // Backend unreachable — the local template below renders instead.

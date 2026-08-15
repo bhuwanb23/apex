@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
@@ -22,6 +22,11 @@ export default function GameReplayScreen() {
   const [playing, setPlaying] = useState(false);
   const [gameQuery, setGameQuery] = useState('');
   const [peaksOpen, setPeaksOpen] = useState(true);
+
+  // Playback interval lives in a ref so pause actually stops it and leaving
+  // the screen clears it (previously pause only flipped state and re-press
+  // stacked a second interval — the scrubber never stopped).
+  const playTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: gameData } = useGameMomentum(selectedId, activeSport);
   const game = gameData ?? GAMES.find(g => g.id === selectedId) ?? GAMES[0];
@@ -77,17 +82,27 @@ export default function GameReplayScreen() {
   const lastEvent = pastEvents[pastEvents.length - 1];
   const currentLabel = nearestLabel(game, currentTime);
 
+  const stopPlayback = () => {
+    if (playTimer.current) {
+      clearInterval(playTimer.current);
+      playTimer.current = null;
+    }
+    setPlaying(false);
+  };
+
+  // Cleanup on unmount / game change so the interval never leaks.
+  useEffect(() => stopPlayback, [selectedId]);
+
   const togglePlay = () => {
     if (playing) {
-      setPlaying(false);
+      stopPlayback();
       return;
     }
     setPlaying(true);
-    const timer = setInterval(() => {
+    playTimer.current = setInterval(() => {
       setProgress(prev => {
         if (prev >= 1) {
-          clearInterval(timer);
-          setPlaying(false);
+          stopPlayback();
           return 1;
         }
         return prev + 0.02;

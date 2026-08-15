@@ -61,7 +61,7 @@ export default function TimeoutOptimizerScreen() {
     const should = baseWith - baseWithout > 0.06 && timeouts > 0;
     const withTimeout = Math.round(Math.min(0.92, baseWith * urgency) * 100);
     const without = Math.round(Math.min(0.92, baseWithout * urgency) * 100);
-    const diff = Math.round((withTimeout - without) / 2);
+    const diff = Math.max(0, withTimeout - without);
     setRecommendation({
       should,
       withTimeout,
@@ -143,7 +143,7 @@ export default function TimeoutOptimizerScreen() {
           </View>
           <Text style={styles.recDiff}>
             {recommendation.should ? '+' : ''}
-            {Math.max(0, Math.round((recommendation.withTimeout - recommendation.without) / 2))}% better with timeout
+            {Math.max(0, recommendation.withTimeout - recommendation.without)}% better with timeout
           </Text>
           <View style={styles.recNoteBox}>
             <Text style={styles.recNote}>{recommendation.note}</Text>

@@ -14,7 +14,7 @@ import { PillButton } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
-import { useLeaguePlayers, useTeamRoster } from '@/data/live/injury';
+import { useLeaguePlayers, useTeamRoster, useTeams } from '@/data/live/injury';
 import { DataFreshness } from '@/components/ui/data-freshness';
 
 export default function InjuryDashboardScreen() {
@@ -39,8 +39,11 @@ export default function InjuryDashboardScreen() {
   const greenCount = league.counts.green;
   const topRed = sportPlayers.filter(p => p.zone === 'red').slice(0, 5);
 
-  const teamNames = SPORT_BY_ID[sport].teams;
-  const activeTeam = selectedTeam ?? teamNames[0] ?? null;
+  // Real backend team names drive the team picker (mock names like "Chiefs"
+  // don't exist in the DB — fix #4); fall back to the demo list when offline.
+  const liveTeams = useTeams(sport);
+  const teamNames = liveTeams.data.map(t => t.name);
+  const activeTeam = selectedTeam ?? teamNames[0] ?? SPORT_BY_ID[sport].teams[0] ?? null;
   const filteredTeams = teamNames.filter(t => t.toLowerCase().includes(teamQuery.toLowerCase()));
 
   // Team view hits the backend team endpoint directly — the full roster with

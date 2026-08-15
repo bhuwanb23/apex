@@ -14,10 +14,10 @@ import { DECISION_GAMES } from '@/data/mock/games';
 import { useCoachLeaderboard } from '@/data/live/decisions';
 import { useOnboarding } from '@/context/onboarding';
 import { DataFreshness } from '@/components/ui/data-freshness';
+import { api, type SportInfo } from '@/lib/api';
 
 const DECISION_TYPES = ['All', '4th Down', 'Timeout', '2-Point'];
 const GAME_TYPES = ['Regular', 'Playoff', 'All'];
-const SEASONS = ['2025-26', '2024-25'];
 
 const DECISION_TYPE_KEYS: Record<string, string> = {
   All: 'all',
@@ -31,6 +31,34 @@ const GAME_TYPE_KEYS: Record<string, string> = {
   All: 'all',
 };
 
+/** Real seasons come from the backend (each sport has a current season — the
+ *  old hardcoded '2025-26' matched nothing and the board fell back to demo). */
+function useBackendSeasons(sport: SportId): string[] {
+  const [seasons, setSeasons] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    setSeasons([]); // sport changed — season chips re-derive
+    api
+      .sports()
+      .then(res => {
+        if (cancelled) return;
+        // Each sport knows its current season; the chip list is that sport's
+        // season plus any other seasons the backend has scorecards for.
+        const current = res.sports.find((s: SportInfo) => s.name === sport)?.season;
+        if (!current) return;
+        const others = res.sports
+          .map((s: SportInfo) => s.season)
+          .filter((s: string): s is string => Boolean(s) && s !== current);
+        setSeasons([current, ...others.slice(0, 2)]);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [sport]);
+  return seasons;
+}
+
 export default function CoachLeaderboardScreen() {
   const router = useRouter();
   const { activeSport } = useOnboarding();
@@ -38,13 +66,20 @@ export default function CoachLeaderboardScreen() {
   // follows the user's selected sport on load and when it changes. The chips
   // below remain a per-screen browse override until the sport changes again.
   const [sport, setSport] = useState<SportId>(activeSport);
-  const [season, setSeason] = useState(SEASONS[0]);
+  const seasons = useBackendSeasons(sport);
+  const [season, setSeason] = useState<string | undefined>(undefined);
   const [decisionType, setDecisionType] = useState('All');
   const [gameType, setGameType] = useState('All');
 
   useEffect(() => {
     setSport(activeSport);
   }, [activeSport]);
+
+  // Season is per-sport — reset to "current" when the sport changes.
+  const pickSport = (id: SportId) => {
+    setSport(id);
+    setSeason(undefined);
+  };
 
   const { coaches, generatedAt, refetch: refetchLeaderboard } = useCoachLeaderboard(sport, {
     season,
@@ -65,11 +100,11 @@ export default function CoachLeaderboardScreen() {
       <View style={styles.filters}>
         <View style={styles.chipRow}>
           {SPORTS.map(s => (
-            <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => setSport(s.id)} />
+            <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => pickSport(s.id)} />
           ))}
         </View>
         <View style={styles.chipRow}>
-          {SEASONS.map(se => (
+          {seasons.map(se => (
             <Chip key={se} label={se} small selected={season === se} onPress={() => setSeason(se)} />
           ))}
           {DECISION_TYPES.map(dt => (
@@ -84,7 +119,7 @@ export default function CoachLeaderboardScreen() {
       {coaches.length === 0 ? (
         <EmptyState
           icon="trophy.fill"
-          title={`No coach data for ${sport} · ${season}`}
+          title={`No coach data for ${sport} · ${season ?? 'current season'}`}
           subtitle="Decision grades are available once a season has enough games analyzed."
           accent="#5856D6"
         />

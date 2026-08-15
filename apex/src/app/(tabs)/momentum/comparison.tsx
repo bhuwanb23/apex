@@ -12,11 +12,13 @@ import { GradientView } from '@/components/ui/gradient';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useMomentumComparison } from '@/data/live/momentum';
 
-const SEASONS = ['2024-25', '2023-24', '2022-23'];
+const SEASONS = ['2025', '2026', '2024-25'];
 
 export default function SportComparisonScreen() {
   const router = useRouter();
-  const [season, setSeason] = useState(SEASONS[0]);
+  // The comparison is backend-driven; "current" (undefined) matches each
+  // sport's own season and shows the strongest effect first.
+  const [season, setSeason] = useState<string | undefined>(undefined);
 
   const { data: rankedData } = useMomentumComparison(season);
   const ranked = (rankedData ?? []).map(v => ({
@@ -34,6 +36,7 @@ export default function SportComparisonScreen() {
       <StackHeader title="Sport Comparison" subtitle="Is momentum real? Depends on the sport." />
 
       <View style={styles.seasonRow}>
+        <Chip key="current" label="Current" small selected={season === undefined} onPress={() => setSeason(undefined)} />
         {SEASONS.map(s => (
           <Chip key={s} label={s} small selected={season === s} onPress={() => setSeason(s)} />
         ))}
@@ -42,7 +45,7 @@ export default function SportComparisonScreen() {
       {/* Effect size chart */}
       <Card style={styles.chartCard}>
         <Text style={styles.chartTitle}>Momentum effect size by sport</Text>
-        <Text style={styles.chartSub}>Cox hazard model · {season} season</Text>
+        <Text style={styles.chartSub}>Cox hazard model · {season ? `${season} season` : 'current seasons'}</Text>
         <View style={styles.bars}>
           {ranked.map(v => {
             const sport = SPORT_BY_ID[v.sport];
