@@ -125,9 +125,16 @@ export function useHomeMomentum(sport: SportId) {
       const v = await api.momentumAnalysis(sport);
       const hasStats = (v.context?.gamesAnalyzed ?? 0) > 0;
       if (!hasStats) return null;
+      // The backend nests the verdict fields under `verdict`.
+      const verdict = v.verdict ?? {};
+      const label = verdict.isSignificant
+        ? 'real'
+        : verdict.verdictLabel === 'insufficient_data'
+          ? 'inconclusive'
+          : 'myth';
       return {
         sport: v.sport as SportId,
-        verdict: (v.verdictLabel === 'real' ? 'real' : v.verdictLabel === 'myth' ? 'myth' : 'inconclusive') as 'real' | 'myth' | 'inconclusive',
+        verdict: label as 'real' | 'myth' | 'inconclusive',
         effectSize: v.statistics.effectSize ?? 0,
         pValue: v.statistics.pValue ?? 1,
         hazardCoefficient: v.statistics.hazardCoefficient ?? 1,

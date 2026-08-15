@@ -34,9 +34,11 @@ function mapVerdictLabel(label: string): VerdictLabel {
   return 'inconclusive';
 }
 
-/** Backend MomentumVerdict → screen verdict shape. */
+/** Backend MomentumVerdict → screen verdict shape. The backend nests the
+ *  verdict fields under `verdict` — tolerate the flat shape too. */
 export function verdictToShape(sport: SportId, v: {
-  verdictLabel: string;
+  verdict?: { verdictLabel?: string; isSignificant?: boolean; shortExplanation?: string };
+  verdictLabel?: string;
   isSignificant?: boolean;
   plainExplanation?: string;
   shortExplanation?: string;
@@ -50,7 +52,10 @@ export function verdictToShape(sport: SportId, v: {
   };
   context?: { gamesAnalyzed?: number };
 }): VerdictShape {
-  const label = v.isSignificant ? 'real' : mapVerdictLabel(v.verdictLabel);
+  const verdict = v.verdict ?? {};
+  const isSignificant = verdict.isSignificant ?? v.isSignificant ?? false;
+  const verdictLabel = verdict.verdictLabel ?? v.verdictLabel ?? '';
+  const label = isSignificant ? 'real' : mapVerdictLabel(verdictLabel);
   return {
     sport,
     verdict: label,
@@ -61,7 +66,7 @@ export function verdictToShape(sport: SportId, v: {
     ciHigh: v.statistics?.confidenceIntervalHigh ?? 0,
     gamesAnalyzed: v.context?.gamesAnalyzed ?? 0,
     season: v.season ?? '',
-    explanation: v.plainExplanation ?? v.shortExplanation ?? '',
+    explanation: v.plainExplanation ?? verdict.shortExplanation ?? v.shortExplanation ?? '',
   };
 }
 
@@ -149,7 +154,8 @@ export function useGameMomentum(gameId: string | undefined, sport: SportId) {
     async () => {
       if (!gameId) return null;
       const g = await api.gameMomentum(Number(gameId));
-      if (!g.timeline || g.timeline.length === 0) return null;
+      const events = g.timeline?.events ?? [];
+      if (events.length === 0) return null;
       return momentumToGame(g, sport);
     },
     fallback,
@@ -158,52 +164,94 @@ export function useGameMomentum(gameId: string | undefined, sport: SportId) {
   return result;
 }
 
-/** Backend timeline response → screen Game shape (with mock timeline mapping). */
+/**
+ * Backend timeline response → screen Game shape.
+ *
+ * The backend stores one `timeline.events` entry per scoring event, each with
+ * the game clock and both momentum scores — that IS the chart's point series.
+ * Team attribution and swing are derived from the momentum deltas (the scorer
+ * is whichever side's momentum jumped); the app only reshapes, it doesn't
+ * compute momentum itself.
+ */
 function momentumToGame(g: GameMomentumResponse, sport: SportId): Game {
-  const lastTime = g.timeline[g.timeline.length - 1]?.gameTimeSeconds ?? 0;
+  const events = g.timeline.events ?? [];
+  const lastTime = events.length > 0 ? events[events.length - 1].gameTimeSeconds : 0;
   const totalMinutes = Math.max(1, lastTime / 60);
   const quarterLen = Math.max(1, totalMinutes / 4);
+  const scale = Math.max(
+    1,
+    ...events.map(e => Math.abs(e.homeMomentumScore)),
+    ...events.map(e => Math.abs(e.awayMomentumScore))
+  );
+
+  const timeLabel = (seconds: number): string => {
+    const q = Math.min(3, Math.floor(seconds / 60 / quarterLen));
+    const secsInQ = seconds - q * quarterLen * 60;
+    const clock = Math.max(0, quarterLen * 60 - secsInQ);
+    const mm = Math.floor(clock / 60);
+    const ss = Math.round(clock % 60);
+    return `Q${q + 1} - ${mm}:${ss.toString().padStart(2, '0')}`;
+  };
+
+  const timeline = events.map(p => ({
+    time: p.gameTimeSeconds,
+    label: timeLabel(p.gameTimeSeconds),
+    // Chart expects a ±100-ish domain — normalize against the peak.
+    home: (p.homeMomentumScore / scale) * 100,
+    away: (p.awayMomentumScore / scale) * 100,
+  }));
+
+  const screenEvents = events.map((ev, i) => {
+    const prevHome = i > 0 ? events[i - 1].homeMomentumScore : 0;
+    const prevAway = i > 0 ? events[i - 1].awayMomentumScore : 0;
+    const homeDelta = ev.homeMomentumScore - prevHome;
+    const awayDelta = ev.awayMomentumScore - prevAway;
+    const team: 'home' | 'away' = homeDelta >= awayDelta ? 'home' : 'away';
+    const swing = Math.round((Math.max(homeDelta, awayDelta) / scale) * 100);
+    return {
+      time: ev.gameTimeSeconds,
+      label: timeLabel(ev.gameTimeSeconds),
+      description: ev.eventDescription ?? '',
+      team,
+      swing,
+    };
+  });
+
+  // "Held momentum longest" — the side that led in momentum for more game time.
+  let homeLead = 0;
+  let awayLead = 0;
+  for (let i = 0; i < timeline.length; i += 1) {
+    const p = timeline[i];
+    const next = timeline[i + 1];
+    const span = (next?.time ?? p.time) - p.time;
+    if (p.home > p.away) homeLead += span;
+    else if (p.away > p.home) awayLead += span;
+  }
+  const momentumLeader = homeLead >= awayLead ? g.game.homeTeam : g.game.awayTeam;
+
+  const [homeScore, awayScore] = (g.game.finalScore ?? '-').split('-').map(s => Number(s.trim()));
   return {
-    id: String(g.gameId),
+    id: String(g.game.gameId),
     sport,
-    homeTeam: g.homeTeamName ?? 'Home',
-    awayTeam: g.awayTeamName ?? 'Away',
-    homeScore: g.homeScore ?? 0,
-    awayScore: g.awayScore ?? 0,
-    date: '',
+    homeTeam: g.game.homeTeam ?? 'Home',
+    awayTeam: g.game.awayTeam ?? 'Away',
+    homeScore: Number.isFinite(homeScore) ? homeScore : 0,
+    awayScore: Number.isFinite(awayScore) ? awayScore : 0,
+    date: (g.game.date ?? '').slice(0, 10),
     nightsAgo: 0,
     season: '',
     homeCoach: '',
     awayCoach: '',
     homeEvRate: 0,
     awayEvRate: 0,
-    momentumShifts: g.momentumShifts ?? 0,
-    longestStreak: g.longestStreak ?? '',
-    momentumLeader: g.momentumLeader ?? '',
+    momentumShifts: g.summary?.momentumShifts ?? 0,
+    longestStreak: g.summary?.longestStreak?.teamName
+      ? `${g.summary.longestStreak.length} · ${g.summary.longestStreak.teamName}`
+      : String(g.summary?.longestStreak?.length ?? 0),
+    momentumLeader,
     verdict: '',
-    timeline: g.timeline.map((p, i) => {
-      const q = Math.min(3, Math.floor(p.gameTimeSeconds / 60 / quarterLen));
-      const secsInQ = p.gameTimeSeconds - q * quarterLen * 60;
-      const clock = Math.max(0, quarterLen * 60 - secsInQ);
-      const mm = Math.floor(clock / 60);
-      const ss = Math.round(clock % 60);
-      const label = `Q${q + 1} - ${mm}:${ss.toString().padStart(2, '0')}`;
-      // Screen chart expects ±100 scale — backend values are already ±100-ish.
-      const scale = Math.max(1, Math.abs(p.homeMomentum), Math.abs(p.awayMomentum));
-      return {
-        time: p.gameTimeSeconds,
-        label,
-        home: (p.homeMomentum / scale) * 100,
-        away: (p.awayMomentum / scale) * 100,
-      };
-    }),
-    events: (g.events ?? []).map(ev => ({
-      time: ev.gameTimeSeconds,
-      label: '',
-      description: ev.description ?? '',
-      team: (ev.team as 'home' | 'away') ?? 'home',
-      swing: ev.swing ?? 0,
-    })),
+    timeline,
+    events: screenEvents,
     decisions: [],
   };
 }

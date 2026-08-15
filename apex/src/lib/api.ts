@@ -235,9 +235,12 @@ export interface CoachDecision {
 export interface MomentumVerdict {
   sport: string;
   season: string;
-  verdictLabel: string;
-  isSignificant: boolean;
-  shortExplanation: string;
+  /** The backend nests the verdict under `verdict`. */
+  verdict: {
+    verdictLabel: string;
+    isSignificant: boolean;
+    shortExplanation: string;
+  };
   statistics: {
     hazardCoefficient?: number | null;
     pValue?: number | null;
@@ -249,6 +252,7 @@ export interface MomentumVerdict {
   context: { gamesAnalyzed: number; playsAnalyzed: number; streakThreshold?: number | null };
   plainExplanation: string;
   computedAt: string;
+  warning?: string | null;
 }
 
 export interface MomentumComparisonEntry {
@@ -262,16 +266,32 @@ export interface MomentumComparisonEntry {
 }
 
 export interface GameMomentumResponse {
-  gameId: number;
-  homeTeamName: string;
-  awayTeamName: string;
-  homeScore?: number | null;
-  awayScore?: number | null;
-  timeline: { gameTimeSeconds: number; homeMomentum: number; awayMomentum: number }[];
-  events: { gameTimeSeconds: number; description: string; team?: string | null; swing?: number | null }[];
-  momentumShifts?: number | null;
-  longestStreak?: string | null;
-  momentumLeader?: string | null;
+  game: {
+    gameId: number;
+    date: string;
+    homeTeam: string;
+    awayTeam: string;
+    finalScore: string | null;
+  };
+  timeline: {
+    homeTeamMomentum: number[];
+    awayTeamMomentum: number[];
+    /** One entry per scoring event — carries the timestamps + both scores. */
+    events: {
+      gameTimeSeconds: number;
+      homeMomentumScore: number;
+      awayMomentumScore: number;
+      eventDescription: string | null;
+    }[];
+  };
+  summary: {
+    peakHomeMomentum: number;
+    peakAwayMomentum: number;
+    momentumShifts: number;
+    longestStreak: { length: number; teamName: string | null; startTime: string | null };
+  };
+  computedAt: string;
+  warning?: string | null;
 }
 
 export interface TimeoutRecommendationResponse {
