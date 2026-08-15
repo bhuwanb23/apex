@@ -28,7 +28,10 @@ const SPORTS: SportSeed[] = [
   {
     name: 'NBA',
     abbreviation: 'nba',
-    season: '2024-25',
+    // Current season — the Sports row's season drives every sync fetch and
+    // season-filtered query. The sync coordinator also self-heals this value
+    // to the newest season present in the games table after each run.
+    season: '2026-27',
     isActive: true,
     config: {
       // Coach decisions the decision model can extract for basketball.
