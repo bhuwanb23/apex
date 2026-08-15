@@ -42,6 +42,13 @@ export async function getLeagueAlerts(req: Request, res: Response): Promise<void
   sendSuccess(res, data);
 }
 
+/** GET /api/injury/counts/:sport — league-wide zone counts. */
+export async function getInjuryCounts(req: Request, res: Response): Promise<void> {
+  const { sport } = req.validatedParams as z.infer<typeof sportParamsSchema>;
+  const data = await injuryService.getInjuryCounts(sport);
+  sendSuccess(res, data);
+}
+
 /** GET /api/injury/player/:playerId/history — risk trend for the chart. */
 export async function getPlayerRiskHistory(req: Request, res: Response): Promise<void> {
   const { playerId } = req.validatedParams as z.infer<typeof playerIdParamsSchema>;
