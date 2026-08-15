@@ -1,0 +1,48 @@
+<template>
+  <div id="root" data-composition-id="07-close" data-start="0" data-duration="6.613" data-width="1920" data-height="1080">
+    <style>
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
+      .clip { position: absolute; }
+      #f07-bg { inset: 0; background: #F0F1F5; }
+      #f07-insight {
+        left: 0; right: 0; top: 22%; text-align: center;
+        font-size: 42px; font-weight: 800; color: #14121F;
+      }
+      #f07-orb {
+        left: 50%; top: 40%; width: 140px; height: 140px; margin-left: -70px;
+        border-radius: 50%; background: linear-gradient(135deg, #FF5C8A, #5856D6, #FFA058);
+        display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 64px;
+        box-shadow: 0 22px 55px rgba(88,86,214,0.35);
+      }
+      #f07-orb span {
+        width: 52%; height: 52%; border-radius: 50%; background: rgba(255,255,255,0.22);
+        display: grid; place-items: center;
+      }
+      #f07-word {
+        left: 0; right: 0; top: 58%; text-align: center;
+        font-size: 64px; font-weight: 900; color: #14121F;
+      }
+      #f07-word i { color: #5856D6; font-style: normal; }
+      #f07-sub {
+        left: 0; right: 0; top: 68%; text-align: center;
+        font-size: 22px; font-weight: 700; letter-spacing: 0.22em; color: #6E7280; text-transform: uppercase;
+      }
+    </style>
+    <div id="f07-bg" class="clip" data-start="0" data-duration="6.613" data-track-index="0"></div>
+    <div id="f07-insight" class="clip" data-start="0" data-duration="6.613" data-track-index="1">Plain-English insight</div>
+    <div id="f07-orb" class="clip" data-start="0" data-duration="6.613" data-track-index="2"><span>A</span></div>
+    <div id="f07-word" class="clip" data-start="0" data-duration="6.613" data-track-index="3">AQX<i>.</i></div>
+    <div id="f07-sub" class="clip" data-start="0" data-duration="6.613" data-track-index="4">Personalized</div>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#f07-insight", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.7 }, 0.1);
+      tl.to("#f07-insight", { opacity: 0.25, y: -10, duration: 0.6 }, 2.6);
+      tl.fromTo("#f07-orb", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.75, ease: "back.out(1.6)" }, 3.0);
+      tl.fromTo("#f07-word", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.55 }, 3.5);
+      tl.fromTo("#f07-sub", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 5.5);
+      window.__timelines["07-close"] = tl;
+    </script>
+  </div>
+</template>

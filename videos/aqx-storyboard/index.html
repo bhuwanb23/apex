@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js" integrity="sha384-sG0Hv1tP1lZCk9KQmrIbY/XNwi+OY84GQqhMscbnsoBFqAz8KNCil1kvfL3Hbbk2" crossorigin="anonymous"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #F0F1F5;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="44.288"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div
+        id="el-01-brand"
+        class="scene"
+        data-composition-id="01-brand"
+        data-composition-src="compositions/frames/01-brand.html"
+        data-start="0"
+        data-duration="5.449"
+        data-track-index="0"
+      ></div>
+      <audio
+        id="el-01-brand-voice"
+        src="assets/voice/01.wav"
+        data-start="0"
+        data-duration="4.949"
+        data-track-index="10"
+        data-volume="1"
+      ></audio>
+
+      <div
+        id="el-02-noise"
+        class="scene"
+        data-composition-id="02-noise"
+        data-composition-src="compositions/frames/02-noise.html"
+        data-start="4.949"
+        data-duration="6.388"
+        data-track-index="1"
+      ></div>
+      <audio
+        id="el-02-noise-voice"
+        src="assets/voice/02.wav"
+        data-start="4.949"
+        data-duration="5.888"
+        data-track-index="10"
+        data-volume="1"
+      ></audio>
+
+      <div
+        id="el-03-brief"
+        class="scene"
+        data-composition-id="03-brief"
+        data-composition-src="compositions/frames/03-brief.html"
+        data-start="10.837"
+        data-duration="7.988"
+        data-track-index="0"
+      ></div>
+      <audio
+        id="el-03-brief-voice"
+        src="assets/voice/03.wav"
+        data-start="10.837"
+        data-duration="7.488"
+        data-track-index="10"
+        data-volume="1"
+      ></audio>
+
+      <div
+        id="el-04-injury"
+        class="scene"
+        data-composition-id="04-injury"
+        data-composition-src="compositions/frames/04-injury.html"
+        data-start="18.325"
+        data-duration="6.623"
+        data-track-index="1"
+      ></div>
+      <audio
+        id="el-04-injury-voice"
+        src="assets/voice/04.wav"
+        data-start="18.325"
+        data-duration="6.123"
+        data-track-index="10"
+        data-volume="1"
+      ></audio>
+
+      <div
+        id="el-05-decisions"
+        class="scene"
+        data-composition-id="05-decisions"
+        data-composition-src="compositions/frames/05-decisions.html"
+        data-start="24.448"
+        data-duration="7.988"
+        data-track-index="0"
+      ></div>
+      <audio
+        id="el-05-decisions-voice"
+        src="assets/voice/05.wav"
+        data-start="24.448"
+        data-duration="7.488"
+        data-track-index="10"
+        data-volume="1"
+      ></audio>
+
+      <div
+        id="el-06-momentum"
+        class="scene"
+        data-composition-id="06-momentum"
+        data-composition-src="compositions/frames/06-momentum.html"
+        data-start="31.936"
+        data-duration="6.239"
+        data-track-index="1"
+      ></div>
+      <audio
+        id="el-06-momentum-voice"
+        src="assets/voice/06.wav"
+        data-start="31.936"
+        data-duration="5.739"
+        data-track-index="10"
+        data-volume="1"
+      ></audio>
+
+      <div
+        id="el-07-close"
+        class="scene"
+        data-composition-id="07-close"
+        data-composition-src="compositions/frames/07-close.html"
+        data-start="37.675"
+        data-duration="6.613"
+        data-track-index="0"
+      ></div>
+      <audio
+        id="el-07-close-voice"
+        src="assets/voice/07.wav"
+        data-start="37.675"
+        data-duration="6.613"
+        data-track-index="10"
+        data-volume="1"
+      ></audio>
+
+      <!-- BGM -->
+      <audio
+        id="el-bgm"
+        src="assets/bgm/track.wav"
+        data-start="0"
+        data-duration="44.288"
+        data-track-index="11"
+        data-volume="0.14"
+      ></audio>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+      // ── frame transitions (injected by transitions.mjs) ──
+      (function () { var tl = window.__timelines["main"];
+        tl.to("#el-01-brand", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 4.949);
+        tl.fromTo("#el-02-noise", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 4.949);
+        tl.to("#el-02-noise", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 10.837);
+        tl.fromTo("#el-03-brief", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 10.837);
+        tl.to("#el-03-brief", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 18.325);
+        tl.fromTo("#el-04-injury", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 18.325);
+        tl.to("#el-04-injury", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 24.448);
+        tl.fromTo("#el-05-decisions", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 24.448);
+        tl.to("#el-05-decisions", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 31.936);
+        tl.fromTo("#el-06-momentum", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 31.936);
+        tl.to("#el-06-momentum", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 37.675);
+        tl.fromTo("#el-07-close", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 37.675);
+        tl.to({}, { duration: 44.288 }, 0); // full-span anchor — main.duration() == composition total (Studio master duration)
+      })();
+    </script>
+  </body>
+</html>

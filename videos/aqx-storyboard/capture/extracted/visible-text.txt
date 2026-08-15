@@ -1,0 +1,15 @@
+AQX Sports Intelligence
+Sports Intelligence. Personalized.
+
+Topic: How AQX turns the chaos of sports data into clear, personalized intelligence — without showing a product UI.
+
+Every game dumps noise: box scores, play-by-play, gut feel, highlight reels. Trainers, coaches, analysts, and fans each need a different brief.
+
+AQX is the idea of one personalized intelligence layer with three pillars:
+1. Injury Risk — know who is at risk before they get hurt (traffic-light thinking, workload, alerts as concepts).
+2. Decisions — grade coaching calls on expected value / pure logic, not only the final score.
+3. Momentum — ask whether a run is statistically real or just a story.
+
+Story Mode is the plain-English payoff: the same insight spoken as a shareable brief.
+
+Closing: AQX Sports Intelligence. Clear insights. Personalized.

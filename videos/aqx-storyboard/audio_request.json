@@ -1,0 +1,41 @@
+{
+  "provider": "auto",
+  "speed": 1,
+  "lines": [
+    {
+      "id": "01",
+      "text": "This is AQX. Sports intelligence — made personal for how you work."
+    },
+    {
+      "id": "02",
+      "text": "Every game dumps noise — box scores, play-by-play, gut feel, and endless highlight takes."
+    },
+    {
+      "id": "03",
+      "text": "AQX turns that chaos into a brief you can act on — shaped for trainers, coaches, analysts, and fans."
+    },
+    {
+      "id": "04",
+      "text": "First pillar: injury risk. Traffic-light thinking so you know who's at risk — before they get hurt."
+    },
+    {
+      "id": "05",
+      "text": "Second: decisions. Grade every coaching call on pure logic and expected value — not just the final score."
+    },
+    {
+      "id": "06",
+      "text": "Third: momentum. Scrub the run and ask — is it statistically real, or just a story?"
+    },
+    {
+      "id": "07",
+      "text": "Then plain-English insight you can share. AQX Sports Intelligence. Clear. Personalized."
+    }
+  ],
+  "bgm": {
+    "mode": "retrieve",
+    "query": "cinematic ambient · confident · clean · premium explainer",
+    "blob": "Raw sports chaos becomes clear, personalized intelligence",
+    "arc": "Narrative — noise → brief → three pillars → story payoff → lockup"
+  },
+  "voice": "am_michael"
+}

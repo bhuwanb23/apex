@@ -1,0 +1,49 @@
+<template>
+  <div id="root" data-composition-id="04-injury" data-start="0" data-duration="6.623" data-width="1920" data-height="1080">
+    <style>
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
+      .clip { position: absolute; }
+      #f04-bg { inset: 0; background: linear-gradient(160deg, #F0F1F5, #FDEBEC 140%); }
+      #f04-card {
+        left: 50%; top: 18%; width: 720px; height: 520px; margin-left: -360px;
+        background: #fff; border-radius: 28px; border: 1px solid #E4E5EC;
+        box-shadow: 0 24px 60px rgba(229,72,77,0.12);
+      }
+      #f04-label {
+        left: 50%; top: 28%; width: 720px; margin-left: -360px; text-align: center;
+        font-size: 20px; font-weight: 800; letter-spacing: 0.22em; color: #E5484D; text-transform: uppercase;
+      }
+      #f04-title {
+        left: 50%; top: 36%; width: 720px; margin-left: -360px; text-align: center;
+        font-size: 56px; font-weight: 900; color: #14121F;
+      }
+      #f04-dots { left: 50%; top: 52%; width: 240px; margin-left: -120px; display: flex; justify-content: space-between; }
+      .f04-dot { width: 48px; height: 48px; border-radius: 50%; }
+      #f04-line {
+        left: 50%; top: 66%; width: 720px; margin-left: -360px; text-align: center;
+        font-size: 28px; font-weight: 700; color: #14121F;
+      }
+    </style>
+    <div id="f04-bg" class="clip" data-start="0" data-duration="6.623" data-track-index="0"></div>
+    <div id="f04-card" class="clip" data-start="0" data-duration="6.623" data-track-index="1"></div>
+    <div id="f04-label" class="clip" data-start="0" data-duration="6.623" data-track-index="2">Pillar 01</div>
+    <div id="f04-title" class="clip" data-start="0" data-duration="6.623" data-track-index="3">Injury Risk</div>
+    <div id="f04-dots" class="clip" data-start="0" data-duration="6.623" data-track-index="4">
+      <div class="f04-dot" style="background:#E5484D"></div>
+      <div class="f04-dot" style="background:#F5A623"></div>
+      <div class="f04-dot" style="background:#2FA36B"></div>
+    </div>
+    <div id="f04-line" class="clip" data-start="0" data-duration="6.623" data-track-index="5">Before they get hurt</div>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#f04-card", { opacity: 0, y: 40, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.85, ease: "power3.out" }, 0.05);
+      tl.fromTo("#f04-label", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0.5);
+      tl.fromTo("#f04-title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.55 }, 0.7);
+      tl.fromTo("#f04-dots .f04-dot", { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, duration: 0.4, stagger: 0.15, ease: "back.out(1.6)" }, 1.6);
+      tl.fromTo("#f04-line", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55 }, 2.4);
+      window.__timelines["04-injury"] = tl;
+    </script>
+  </div>
+</template>
