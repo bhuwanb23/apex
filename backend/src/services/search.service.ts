@@ -54,6 +54,19 @@ export async function searchPlayers(
     take: opts.limit,
   });
 
+  // Latest risk zone per matched player — one batched lookup, no N+1. The
+  // players table's injuryStatus column is a separate sports-feed field, so
+  // the searchable risk zone comes from the latest InjuryRiskScores row.
+  const ids = players.map(p => p.id);
+  const latestScores =
+    ids.length > 0
+      ? await prisma.injuryRiskScores.findMany({
+          where: { playerId: { in: ids }, isLatest: true },
+          select: { playerId: true, zone: true },
+        })
+      : [];
+  const zoneByPlayer = new Map(latestScores.map(r => [r.playerId, r.zone]));
+
   const results: SearchPlayerResult[] = players.map(p => ({
     playerId: p.id,
     playerName: p.name,
@@ -62,6 +75,7 @@ export async function searchPlayers(
     teamAbbreviation: p.team.abbreviation,
     sport: p.sport.name as SportAbbreviation,
     injuryStatus: p.injuryStatus,
+    zone: (zoneByPlayer.get(p.id) as SearchPlayerResult['zone']) ?? null,
   }));
 
   cacheSearchResults(query, opts.sport ?? 'all', results);
@@ -133,9 +147,11 @@ export async function searchCoaches(
   }));
 }
 
-/** GET /api/search/games — filtered game list (team / sport / season / dates). */
+/** GET /api/search/games — filtered game list (q / team / sport / season / dates). */
 export async function searchGames(
   filters: {
+    /** Free-text match against home/away team name, city or abbreviation. */
+    q?: string;
     teamId?: number;
     sport?: SportAbbreviation;
     season?: string;
@@ -145,10 +161,25 @@ export async function searchGames(
     limit: number;
   }
 ): Promise<{ games: SearchGameResult[]; total: number; meta: PaginatedMeta }> {
+  // Team-based filters (explicit teamId and/or free-text q matching a team's
+  // name / city / abbreviation) combine as an AND of ORs.
+  const teamFilters: Prisma.GamesWhereInput[] = [];
+  if (filters.teamId !== undefined) {
+    teamFilters.push({ OR: [{ homeTeamId: filters.teamId }, { awayTeamId: filters.teamId }] });
+  }
+  if (filters.q) {
+    const teamMatch: Prisma.TeamsWhereInput = {
+      OR: [
+        { name: { contains: filters.q } },
+        { city: { contains: filters.q } },
+        { abbreviation: { contains: filters.q } },
+      ],
+    };
+    teamFilters.push({ OR: [{ homeTeam: teamMatch }, { awayTeam: teamMatch }] });
+  }
+
   const where: Prisma.GamesWhereInput = {
-    ...(filters.teamId !== undefined
-      ? { OR: [{ homeTeamId: filters.teamId }, { awayTeamId: filters.teamId }] }
-      : {}),
+    ...(teamFilters.length > 0 ? { AND: teamFilters } : {}),
     ...(filters.sport ? { sport: { name: filters.sport } } : {}),
     ...(filters.season ? { season: filters.season } : {}),
     ...(filters.dateFrom || filters.dateTo
