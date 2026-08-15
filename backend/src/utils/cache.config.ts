@@ -82,6 +82,11 @@ export const CacheDataType = {
   SEARCH_RESULTS: 'search_results',
   TEAM_DATA: 'team_data',
   PLAYER_DATA: 'player_data',
+  /** Fetch-layer CacheMetadata dataTypes (fetcher.manager writes these). */
+  TEAMS: 'teams',
+  PLAYERS: 'players',
+  GAMES: 'games',
+  COACHES: 'coaches',
   TIMEOUT_RECOMMENDATIONS: 'timeout_recommendations',
   SPORT_CONFIG: 'sport_config',
   /** Whole-season data (raw plays, logs) — the doc gives it a 7-day SQLite TTL. */

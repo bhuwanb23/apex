@@ -217,10 +217,29 @@ async function resolveGameIds(
 // Write functions (upsert by externalId per sport)
 // ---------------------------------------------------------------------------
 
-/** Upserts teams by [externalId, sportId]. Returns the number of records written. */
+/**
+ * Upserts teams by [externalId, sportId]. Returns the number of records written.
+ *
+ * The Teams table also has a unique constraint on (abbreviation, sportId), so
+ * a payload with duplicate abbreviations (e.g. NBA + historical teams sharing
+ * "WAS") would fail the WHOLE $transaction. Dedupe by abbreviation up front
+ * (keeping the first row) so one bad record can't block the rest — the dupes
+ * are almost always junk/historical rows anyway.
+ */
 export async function writeTeams(teams: TeamRecord[], sportId: number): Promise<number> {
+  const seen = new Set<string>();
+  const deduped: TeamRecord[] = [];
+  for (const t of teams) {
+    const key = `${t.abbreviation?.toLowerCase() ?? ''}`;
+    if (seen.has(key)) {
+      logger.warn({ sportId, abbreviation: t.abbreviation }, 'writeTeams dropped duplicate abbreviation');
+      continue;
+    }
+    seen.add(key);
+    deduped.push(t);
+  }
   return runChunked(
-    teams,
+    deduped,
     t =>
       prisma.teams.upsert({
         where: { externalId_sportId: { externalId: t.externalId, sportId } },

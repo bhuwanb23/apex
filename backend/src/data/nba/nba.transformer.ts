@@ -54,6 +54,19 @@ export function parseMinutesToDecimal(min: string | null | undefined): number | 
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * BallDontLie /teams returns 88 rows: the 30 active NBA teams plus ~58
+ * historical/defunct/international teams (e.g. "Washington Capitols", "Tel
+ * Aviv Maccabi") that share abbreviations with active teams. Active NBA
+ * teams are the only ones with a real conference ("East"/"West"); the rest
+ * have a blank string or null. The Teams table has a unique constraint on
+ * (abbreviation, sportId), so writing the full payload collides on the
+ * duplicates — filter to active NBA teams here.
+ */
+export function isActiveNbaTeam(raw: NBATeam): boolean {
+  return raw.conference != null && raw.conference.trim() !== '';
+}
+
 /** BallDontLie team → TeamRecord. */
 export function transformTeam(raw: NBATeam): TeamRecord {
   return {
@@ -61,7 +74,7 @@ export function transformTeam(raw: NBATeam): TeamRecord {
     name: raw.full_name,
     abbreviation: raw.abbreviation,
     city: raw.city,
-    conference: raw.conference ?? null,
+    conference: raw.conference?.trim() || null,
     division: raw.division ?? null,
     externalId: String(raw.id),
     logoUrl: null,

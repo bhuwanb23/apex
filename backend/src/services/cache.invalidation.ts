@@ -137,6 +137,13 @@ export async function invalidateSportCache(sport: string): Promise<void> {
       CacheDataType.PLAYER_DATA,
       CacheDataType.TIMEOUT_RECOMMENDATIONS,
       CacheDataType.SEASON_DATA,
+      // Fetch-layer dataTypes (fetcher.manager writes these — without them a
+      // sport invalidation never touches teams/players/games rows, so a sync
+      // whose DB write failed would keep skipping the stage on cache hits).
+      CacheDataType.TEAMS,
+      CacheDataType.PLAYERS,
+      CacheDataType.GAMES,
+      CacheDataType.COACHES,
     ]);
   }
 

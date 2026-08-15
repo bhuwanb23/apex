@@ -6,6 +6,7 @@
 
 import { logger } from '../config/logger.js';
 import { prisma } from '../db/client.js';
+import { invalidateSportCache } from '../services/cache.invalidation.js';
 import { logSyncComplete, logSyncSection, logSyncStart } from './fetch.logger.js';
 import {
   writeCoachDecisions,
@@ -26,6 +27,7 @@ import {
 import type { DateRange, FetcherManager } from './fetcher.manager.js';
 import { fetcherManager } from './fetcher.manager.js';
 import {
+  isActiveNbaTeam,
   transformGame as transformNbaGame,
   transformPlayer as transformNbaPlayer,
   transformPlayerGameLogs as transformNbaGameLogs,
@@ -115,7 +117,10 @@ interface SportSyncAdapter {
 
 const ADAPTERS: Record<string, SportSyncAdapter> = {
   nba: {
-    transformTeams: data => (data as NBATeam[]).map(transformNbaTeam),
+    // BallDontLie /teams also returns historical teams (blank conference,
+    // duplicate abbreviations) — only active NBA teams have a real conference.
+    transformTeams: data =>
+      (data as NBATeam[]).filter(isActiveNbaTeam).map(transformNbaTeam),
     transformCoaches: () => {
       throw new Error('NBA coaches pending a data source');
     },
@@ -455,6 +460,16 @@ export async function syncSport(
 
   // Cache metadata is refreshed inside every manager fetch (updateCacheMetadata),
   // so no separate stage is needed here.
+
+  // A partial/failed sync must not leave the fetch-layer cache marked fresh:
+  // updateCacheMetadata runs on FETCH success, before the DB write — if the
+  // write then fails (e.g. unique-constraint collision), the cache would tell
+  // the next sync to skip the stage forever. Invalidate so the next run
+  // re-fetches and retries the failed stages (the data_sync job also
+  // invalidates after a run, but direct syncSport callers rely on this).
+  if (errors.length > 0) {
+    await invalidateSportCache(sport);
+  }
 
   const completedAt = new Date();
   const durationSeconds = (completedAt.getTime() - startedAt.getTime()) / 1000;
