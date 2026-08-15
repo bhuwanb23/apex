@@ -22,6 +22,7 @@ import type {
   AlertZone,
   GameLogPoint,
   GameLogSummary,
+  InjuryCountsResponse,
   PlayerRiskProfile,
   PlayerRiskResponse,
   RiskAlert,
@@ -89,6 +90,9 @@ function profileFromRow(player: PlayerCtx, row: DbRiskRow): PlayerRiskProfile {
     backToBackFlag: row.backToBackFlag,
     baselineMeanMinutes: row.baselineMeanMinutes,
     baselineStdMinutes: row.baselineStdMinutes,
+    recentMeanMinutes: null,
+    recentMeanDistance: null,
+    recentMeanIntensity: null,
     explanation: row.explanation,
     windowStart: row.windowStart.toISOString(),
     windowEnd: row.windowEnd.toISOString(),
@@ -114,6 +118,9 @@ function profileFromScore(player: PlayerCtx, score: InjuryRiskScore): PlayerRisk
     backToBackFlag: score.backToBackFlag,
     baselineMeanMinutes: score.baselineMeanMinutes,
     baselineStdMinutes: score.baselineStdMinutes,
+    recentMeanMinutes: null,
+    recentMeanDistance: null,
+    recentMeanIntensity: null,
     explanation: score.explanation,
     windowStart: score.windowStart,
     windowEnd: score.windowEnd,
@@ -144,6 +151,9 @@ function noScoreProfile(
     backToBackFlag: false,
     baselineMeanMinutes: null,
     baselineStdMinutes: null,
+    recentMeanMinutes: null,
+    recentMeanDistance: null,
+    recentMeanIntensity: null,
     explanation,
     windowStart: null,
     windowEnd: null,
@@ -187,6 +197,34 @@ function toGameLogInput(log: {
     highIntensityEvents: log.highIntensityEvents,
     backToBack: log.backToBack,
     daysRestBefore: log.daysRestBefore,
+  };
+}
+
+/**
+ * Recent-window (7 day) workload means per metric. The risk model compares
+ * the last 7 days against the 21-day baseline; the app's "recent vs baseline"
+ * bars need the recent side too, which is only meaningful when computed from
+ * the same game logs. Not stored — derived per request (cheap: one indexed
+ * query on the player's logs).
+ */
+async function loadRecentMeans(playerId: number): Promise<{
+  recentMeanMinutes: number | null;
+  recentMeanDistance: number | null;
+  recentMeanIntensity: number | null;
+}> {
+  const logs = await prisma.playerGameLogs.findMany({
+    where: { playerId, date: { gte: new Date(Date.now() - 7 * DAY_MS) } },
+    select: { minutesPlayed: true, distanceCovered: true, highIntensityEvents: true },
+  });
+  const mean = (vals: (number | null)[]): number | null => {
+    const nums = vals.filter((v): v is number => v != null);
+    if (nums.length === 0) return null;
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  };
+  return {
+    recentMeanMinutes: mean(logs.map(l => l.minutesPlayed)),
+    recentMeanDistance: mean(logs.map(l => l.distanceCovered)),
+    recentMeanIntensity: mean(logs.map(l => l.highIntensityEvents)),
   };
 }
 
@@ -327,6 +365,7 @@ export async function getPlayerRisk(
   if (isFresh && !forceRecalculate) {
     return {
       ...profileFromRow(player, latest),
+      ...(await loadRecentMeans(playerId)),
       gameLogSummary: await loadGameLogSummary(playerId),
       gameLogs: await loadGameLogs(playerId, 21),
       history: await loadHistory(playerId, 60, 10),
@@ -346,6 +385,7 @@ export async function getPlayerRisk(
           'No game log data available — risk cannot be computed.',
           new Date().toISOString()
         ),
+        ...(await loadRecentMeans(playerId)),
         gameLogSummary: { gamesLast7Days: 0, gamesLast21Days: 0, avgMinutesLast21Days: null },
         gameLogs: [],
         history: await loadHistory(playerId, 60, 10),
@@ -365,6 +405,7 @@ export async function getPlayerRisk(
 
     return {
       ...profileFromScore(player, score),
+      ...(await loadRecentMeans(playerId)),
       gameLogSummary: await loadGameLogSummary(playerId),
       gameLogs: await loadGameLogs(playerId, 21),
       history: await loadHistory(playerId, 60, 10),
@@ -375,6 +416,7 @@ export async function getPlayerRisk(
       if (latest) {
         return {
           ...profileFromRow(player, latest),
+          ...(await loadRecentMeans(playerId)),
           gameLogSummary: await loadGameLogSummary(playerId),
           gameLogs: await loadGameLogs(playerId, 21),
           history: await loadHistory(playerId, 60, 10),
@@ -560,6 +602,42 @@ export async function getLeagueAlerts(
     })),
     totalAlerts: total,
     generatedAt: (latestComputed?.computedAt ?? new Date()).toISOString(),
+  };
+}
+
+/**
+ * GET /api/injury/counts/:sport — real zone counts for the league view.
+ *
+ * The dashboard's "red/yellow/green" distribution must reflect the whole
+ * league, not just the first page of alerts. One batched groupBy on the
+ * latest scores — no per-player loop. Players without any latest score are
+ * counted in totalPlayers but not in a zone (they have no risk data yet).
+ */
+export async function getInjuryCounts(
+  sport: SportAbbreviation
+): Promise<InjuryCountsResponse> {
+  const sportRow = await getSport(sport);
+  const [scores, totalPlayers] = await Promise.all([
+    prisma.injuryRiskScores.groupBy({
+      by: ['zone'],
+      where: { isLatest: true, player: { sportId: sportRow.id } },
+      _count: true,
+    }),
+    prisma.players.count({ where: { sportId: sportRow.id, isActive: true } }),
+  ]);
+  const countFor = (zone: string): number =>
+    scores.find(s => s.zone === zone)?._count ?? 0;
+  const totalScored = scores.reduce((acc, s) => acc + s._count, 0);
+  return {
+    sport,
+    counts: {
+      red: countFor('red'),
+      yellow: countFor('yellow'),
+      green: countFor('green'),
+    },
+    totalScored,
+    totalPlayers,
+    generatedAt: new Date().toISOString(),
   };
 }
 
