@@ -42,8 +42,11 @@ export default function LeagueAlertsScreen() {
       return a.position.localeCompare(b.position);
     });
 
+  // Pull-to-refresh (plan: "app sends the same request again; backend checks
+  // if the cache is still valid and returns fresh or cached data").
   const refresh = () => {
     setRefreshing(true);
+    alerts.refetch();
     setTimeout(() => setRefreshing(false), 900);
   };
 
