@@ -96,6 +96,28 @@ const SPORTS: SportSeed[] = [
       ],
     },
   },
+  {
+    // Seeded so the momentum comparison panel shows all four sports the app
+    // supports (the frontend SportId includes NHL). No sync adapter exists
+    // yet, so the sync coordinator skips it and momentum reports
+    // insufficient_data until a data source is wired in.
+    name: 'NHL',
+    abbreviation: 'nhl',
+    season: '2024',
+    isActive: true,
+    config: {
+      decisionTypes: ['timeout', 'challenge', 'line_change'],
+      dataSource: 'none',
+      momentumMetric: 'goal',
+      workloadMetrics: [
+        'backToBack',
+        'daysRestBefore',
+        'gamesLast7Days',
+        'gamesLast14Days',
+        'gamesLast21Days',
+      ],
+    },
+  },
 ];
 
 async function main(): Promise<void> {
@@ -107,9 +129,11 @@ async function main(): Promise<void> {
     });
     const row = await prisma.sports.upsert({
       where: { abbreviation: sport.abbreviation },
+      // On update, DON'T clobber `season` — the sync coordinator self-heals it
+      // to the newest season present in the games table, and a re-seed must
+      // not regress that to the seed's static value (e.g. 2024 → real 2026).
       update: {
         name: sport.name,
-        season: sport.season,
         isActive: sport.isActive,
         config: sport.config,
       },
