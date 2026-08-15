@@ -1,0 +1,13 @@
+{
+  "provider": "kokoro",
+  "voice": "am_michael",
+  "speed": 1,
+  "lines": [],
+  "bgm": {
+    "mode": "generate",
+    "query": "cinematic ambient confident light pulse premium product",
+    "prompt": "uplifting corporate tech, bright modern piano with synth pads, clean and focused, minimal arrangement, BPM 100, MAJOR, soft cinematic promo underscore, no vocals",
+    "blob": "AQX Sports Intelligence personalized sports analytics promo",
+    "arc": "Demo Loop"
+  }
+}
