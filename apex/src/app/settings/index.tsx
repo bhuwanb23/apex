@@ -10,7 +10,7 @@ import { Chip } from '@/components/ui/chip';
 import { ROLES, useOnboarding } from '@/context/onboarding';
 import { useAuth } from '@/context/auth';
 import { useBackend } from '@/context/backend';
-import { api, type CacheStatsResponse, type JobsStatusResponse } from '@/lib/api';
+import { api, API_BASE_URL, type CacheStatsResponse, type JobsStatusResponse } from '@/lib/api';
 import { clearDeviceCache } from '@/lib/storage';
 import { timeAgo } from '@/lib/time';
 
@@ -240,7 +240,7 @@ export default function SettingsScreen() {
       {/* App */}
       <Section title="App">
         <SettingRow icon="doc.fill" label="Version" value={health?.version ?? Constants.expoConfig?.version ?? '1.0.0'} />
-        <SettingRow icon="location.fill" label="Backend URL" value="localhost:8000" />
+        <SettingRow icon="location.fill" label="Backend URL" value={API_BASE_URL.replace(/^https?:\/\//, '')} />
         <SettingRow
           icon="info.circle.fill"
           label="System health"

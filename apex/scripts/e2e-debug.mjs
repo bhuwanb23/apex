@@ -15,25 +15,28 @@ await page.addInitScript(() => {
     localStorage.clear();
   }
 });
+
 await page.goto('http://localhost:8081/', { waitUntil: 'networkidle', timeout: 90000 });
 await page.waitForTimeout(3000);
+console.log('1. fresh URL:', page.url(), '| signIn:', await page.evaluate(() => document.body.innerText.includes('Sign in to your dashboard')));
+
 await page.getByText('Use demo account', { exact: true }).click();
 await page.getByText('Sign in', { exact: true }).click();
-await page.waitForTimeout(2500);
-await page.getByText('Already set up? Skip', { exact: true }).click();
-await page.waitForTimeout(4000);
+await page.waitForTimeout(3000);
+console.log('2. after login URL:', page.url(), '| onboarding:', await page.evaluate(() => document.body.innerText.includes('Sports Intelligence')));
 
-const probe = await page.evaluate(() => {
-  // Find leaf elements with single glyph text and get codepoint + bounding rect.
-  const els = [...document.querySelectorAll('*')];
-  const leaves = els.filter(el => {
-    const t = (el.textContent ?? '');
-    return t.length === 1 && el.children.length === 0 && t.charCodeAt(0) > 0xE000;
-  });
-  return leaves.slice(0, 12).map(el => {
-    const r = el.getBoundingClientRect();
-    return { glyph: el.textContent, code: 'U+' + el.textContent.charCodeAt(0).toString(16).toUpperCase(), x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
-  });
-});
-console.log(JSON.stringify(probe, null, 2));
+await page.getByText('Get started', { exact: true }).click();
+await page.waitForTimeout(2000);
+await page.getByText('Basketball', { exact: true }).first().click();
+await page.getByText('Continue', { exact: true }).click();
+await page.waitForTimeout(2000);
+await page.getByText('Front Office Analyst', { exact: true }).click();
+await page.getByText('Continue as Front Office Analyst', { exact: true }).click();
+await page.waitForTimeout(5000);
+console.log('5. after onboarding URL:', page.url(), '| home:', await page.evaluate(() => document.body.innerText.includes('Injury Watch')));
+
+await page.reload({ waitUntil: 'networkidle', timeout: 90000 });
+await page.waitForTimeout(4000);
+console.log('6. reload URL:', page.url(), '| home:', await page.evaluate(() => document.body.innerText.includes('Injury Watch')), '| onboarding re-shown:', await page.evaluate(() => document.body.innerText.includes('Sports Intelligence')));
+
 await b.close();

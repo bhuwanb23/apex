@@ -4,11 +4,36 @@
  * Every screen fetches through here; the app never calls the sports APIs or
  * runs calculations itself (integration plan: "app is purely the presentation
  * layer"). All responses are unwrapped from the backend's { success, data }
- * envelope. Base URL comes from EXPO_PUBLIC_API_URL (default localhost:8000).
+ * envelope.
+ *
+ * Base URL resolution (demo / device flow):
+ *   1. EXPO_PUBLIC_API_URL — explicit override (staging, production, or a
+ *      fixed machine IP). Always wins when set.
+ *   2. Device via Expo Go — Constants.expoConfig.hostUri carries the dev
+ *      machine's LAN address ("192.168.1.100:8081"), so the backend is the
+ *      same host on port 8000. Without this, a phone on the demo WiFi would
+ *      call localhost:8000 — i.e. itself — and every request would fail.
+ *   3. Fallback — localhost:8000 (web, simulators).
  */
+import Constants from 'expo-constants';
 
-export const API_BASE_URL: string =
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
+const BACKEND_PORT = 8000;
+
+export function resolveApiBaseUrl(): string {
+  const explicit = process.env.EXPO_PUBLIC_API_URL;
+  if (explicit) return explicit;
+
+  // Expo dev server host, e.g. "192.168.1.100:8081" on a phone in Expo Go.
+  const hostUri = Constants.expoConfig?.hostUri;
+  const host = hostUri?.split(':')[0];
+  if (host && host !== 'localhost' && host !== '127.0.0.1' && /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+    return `http://${host}:${BACKEND_PORT}`;
+  }
+
+  return `http://localhost:${BACKEND_PORT}`;
+}
+
+export const API_BASE_URL: string = resolveApiBaseUrl();
 
 /** Backend envelope: { success, status, data, timestamp }. */
 interface ApiEnvelope<T> {
