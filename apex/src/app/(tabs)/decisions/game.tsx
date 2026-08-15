@@ -176,7 +176,7 @@ export default function GameDecisionsScreen() {
                 <View style={[styles.timelineDot, { backgroundColor: decision.isOptimal ? '#2FA36B' : '#E5484D' }]} />
                 {i !== decisions.length - 1 ? <View style={styles.timelineLine} /> : null}
               </View>
-              <TimelineBody decision={decision} onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id } })} />
+              <TimelineBody decision={decision} onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id, decision: JSON.stringify(decision) } })} />
             </View>
           ))}
           {decisions.length === 0 ? (

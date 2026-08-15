@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
@@ -6,7 +7,7 @@ import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { QualityBadge } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
-import { DECISIONS } from '@/data/mock/coaches';
+import { DECISIONS, type Decision } from '@/data/mock/coaches';
 
 interface Option {
   action: string;
@@ -17,26 +18,69 @@ interface Option {
   isBest?: boolean;
 }
 
-function buildOptions(decision: (typeof DECISIONS)[number]): Option[] {
+/**
+ * Builds the option list for the comparison cards. Live decisions carry the
+ * backend's evaluated `alternativeActions` (action + EV + probabilities) —
+ * sorted by EV descending with the highest marked BEST. Mock decisions have
+ * none, so plausible options are fabricated around the decision's own EVs.
+ */
+function buildOptions(decision: Decision): Option[] {
+  if (decision.alternativeActions && decision.alternativeActions.length > 0) {
+    const options: Option[] = decision.alternativeActions.map(a => ({
+      action: a.action,
+      ev: a.ev,
+      successProb: a.probSuccess ?? 0,
+      wpIfSucceed: a.wpIfSuccess ?? 0,
+      wpIfFail: a.wpIfFailure ?? 0,
+    }));
+    const sorted = [...options].sort((a, b) => b.ev - a.ev);
+    const maxEv = sorted[0].ev;
+    return sorted.map(o => ({ ...o, isBest: o.ev === maxEv }));
+  }
+
   const options: Option[] = [
     { action: decision.chosenAction, ev: decision.evChosen, successProb: 0.62, wpIfSucceed: 0.58, wpIfFail: 0.31 },
     { action: 'Punt', ev: decision.evBest, successProb: 0.94, wpIfSucceed: 0.42, wpIfFail: 0.38 },
     { action: 'Field goal attempt', ev: decision.evBest - 0.08, successProb: 0.81, wpIfSucceed: 0.5, wpIfFail: 0.44 },
     { action: 'Kneel / clock management', ev: decision.evBest - 0.14, successProb: 1, wpIfSucceed: 0.36, wpIfFail: 0.36 },
   ];
-  // Ensure the chosen action always appears; sort by EV desc for display.
   const sorted = [...options].sort((a, b) => b.ev - a.ev);
   const maxEv = sorted[0].ev;
   return sorted.map(o => ({ ...o, isBest: o.ev === maxEv }));
 }
 
+/** Tolerant match: "Call timeout" ↔ "call_timeout", "go" ↔ "go_for_it". */
+function findChosen(options: Option[], chosenAction: string): Option {
+  const normalized = chosenAction.toLowerCase().replace(/[_\s]+/g, ' ');
+  return (
+    options.find(o => o.action === chosenAction) ??
+    options.find(o => o.action.toLowerCase().replace(/[_\s]+/g, ' ').includes(normalized)) ??
+    options[0]
+  );
+}
+
 export default function DecisionDrillDownScreen() {
-  const { decisionId } = useLocalSearchParams<{ decisionId: string }>();
-  const decision = DECISIONS.find(d => d.id === decisionId) ?? DECISIONS[0];
-  const options = buildOptions(decision);
+  const params = useLocalSearchParams<{ decision?: string; decisionId?: string }>();
+
+  // The plan: the list screen already has the full decision object, so it is
+  // passed along and rendered immediately — no backend request. Deep links /
+  // cold starts fall back to the mock set by id.
+  const passed = useMemo(() => {
+    if (!params.decision) return null;
+    try {
+      return JSON.parse(params.decision) as Decision;
+    } catch {
+      return null;
+    }
+  }, [params.decision]);
+  const decision: Decision =
+    passed ?? DECISIONS.find(d => d.id === params.decisionId) ?? DECISIONS[0];
+
+  const options = useMemo(() => buildOptions(decision), [decision]);
   const best = options[0];
-  const chosen = options.find(o => o.action === decision.chosenAction) ?? options[0];
+  const chosen = findChosen(options, decision.chosenAction);
   const wpAfter = decision.outcomeSuccess ? chosen.wpIfSucceed : chosen.wpIfFail;
+  const wpBefore = decision.winProbabilityBefore != null ? Math.round(decision.winProbabilityBefore * 100) : 54;
 
   const contextLines = decision.situation.split(', ');
 
@@ -68,7 +112,7 @@ export default function DecisionDrillDownScreen() {
               {decision.team} {decision.chosenAction.toLowerCase()} with {decision.period} {decision.clock} left
             </Text>
           </View>
-          <Text style={styles.wpBeforeValue}>54%</Text>
+          <Text style={styles.wpBeforeValue}>{wpBefore}%</Text>
         </View>
       </Card>
 
@@ -121,14 +165,24 @@ export default function DecisionDrillDownScreen() {
         <Text style={styles.sectionTitle}>What actually happened</Text>
         <Card style={styles.outcomeCard}>
           <View style={styles.outcomeTop}>
-            <AppIcon name={decision.outcomeSuccess ? 'checkmark' : 'xmark'} size={18} color={decision.outcomeSuccess ? '#2FA36B' : '#E5484D'} />
-            <Text style={[styles.outcomeBadge, { color: decision.outcomeSuccess ? '#1F8A52' : '#E5484D' }]}>
-              {decision.outcomeSuccess ? 'SUCCESS' : 'FAILED'}
-            </Text>
+            {decision.outcomeSuccess != null ? (
+              <>
+                <AppIcon name={decision.outcomeSuccess ? 'checkmark' : 'xmark'} size={18} color={decision.outcomeSuccess ? '#2FA36B' : '#E5484D'} />
+                <Text style={[styles.outcomeBadge, { color: decision.outcomeSuccess ? '#1F8A52' : '#E5484D' }]}>
+                  {decision.outcomeSuccess ? 'SUCCESS' : 'FAILED'}
+                </Text>
+              </>
+            ) : (
+              <Text style={[styles.outcomeBadge, { color: '#9AA0B5' }]}>OUTCOME NOT RECORDED</Text>
+            )}
           </View>
-          <Text style={styles.outcomeText}>{decision.outcome}</Text>
+          {decision.outcome ? <Text style={styles.outcomeText}>{decision.outcome}</Text> : null}
           <View style={styles.outcomeStats}>
-            <OutcomeStat label="Win probability after this play" value={`${Math.round(wpAfter * 100)}%`} color={wpAfter >= 0.5 ? '#1F8A52' : '#E5484D'} />
+            <OutcomeStat
+              label="Win probability after this play"
+              value={decision.outcomeSuccess != null ? `${Math.round(wpAfter * 100)}%` : '—'}
+              color={decision.outcomeSuccess != null ? (wpAfter >= 0.5 ? '#1F8A52' : '#E5484D') : '#9AA0B5'}
+            />
             <OutcomeStat label="Decision was" value={decision.isOptimal ? 'Optimal' : 'Suboptimal'} color={decision.isOptimal ? '#5856D6' : '#E5484D'} />
           </View>
         </Card>

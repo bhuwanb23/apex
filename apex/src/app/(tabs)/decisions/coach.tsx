@@ -132,7 +132,7 @@ export default function CoachDetailScreen() {
           {decisions.map(decision => (
             <Pressable
               key={decision.id}
-              onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id } })}>
+              onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id, decision: JSON.stringify(decision) } })}>
               <Card style={[styles.decisionCard, { borderLeftColor: decision.isOptimal ? '#2FA36B' : '#E5484D' }]}>
                 <View style={styles.decisionTop}>
                   <Text style={styles.decisionDate}>
