@@ -6,7 +6,7 @@
  * the process-vs-outcome matrix; the app only renders them.
  */
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useState } from 'react';
 
 import { api, type CoachDecision, type CoachScorecard } from '@/lib/api';
 import { useApiData, type DataSource } from '@/hooks/use-api-data';
@@ -89,13 +89,14 @@ export function useCoachLeaderboard(
         .sort((a, b) => a.rank - b.rank),
     [sport]
   );
-  const generatedAtRef = useRef<string | null>(null);
+  // Set inside the async fetcher (not during render), so no refs-during-render.
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
 
   const result = useApiData<Coach[]>(
     async () => {
       const board = await api.leaderboard(sport, { ...opts, limit: 50 });
       if (board.coaches.length === 0) return null;
-      generatedAtRef.current = board.generatedAt ?? null;
+      setGeneratedAt(board.generatedAt ?? null);
       return board.coaches.map(c => scorecardToCoach(c, sport));
     },
     fallback,
@@ -107,7 +108,7 @@ export function useCoachLeaderboard(
     coaches: result.data,
     source: result.source,
     refetch: result.refetch,
-    generatedAt: result.source === 'live' ? generatedAtRef.current : null,
+    generatedAt: result.source === 'live' ? generatedAt : null,
   };
 }
 
@@ -174,7 +175,7 @@ export function useGameDecisions(gameId: string | undefined, sport: SportId) {
     const game = GAMES.find(g => g.id === gameId) ?? GAMES[0];
     const decisions = DECISIONS.filter(d => d.gameId === game.id);
     return { game, decisions };
-  }, [gameId, sport]);
+  }, [gameId]);
 
   const result = useApiData<{ game: Game; decisions: Decision[] }>(
     async () => {

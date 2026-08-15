@@ -9,7 +9,7 @@
 import { useMemo } from 'react';
 
 import { api, type GameMomentumResponse } from '@/lib/api';
-import { useApiData, type DataSource } from '@/hooks/use-api-data';
+import { useApiData } from '@/hooks/use-api-data';
 import { MOMENTUM_VERDICTS, type SportId } from '@/data/mock/sports';
 import { GAMES, type Game } from '@/data/mock/games';
 
@@ -153,7 +153,7 @@ export function useGameMomentum(gameId: string | undefined, sport: SportId) {
   const fallback = useMemo(() => {
     const game = GAMES.find(g => g.id === gameId) ?? GAMES[0];
     return game;
-  }, [gameId, sport]);
+  }, [gameId]);
 
   const result = useApiData<Game>(
     async () => {

@@ -472,6 +472,19 @@ export const api = {
 
   // System / settings
   cacheStats: () => apiFetch<CacheStatsResponse>('/api/cache/stats'),
+  /** Real "Clear cache": invalidates backend entries (memory + registry).
+   *  Needs the shared admin key — the same dev key the backend .env uses.
+   *  @param all When true (default) flush everything; otherwise target a
+   *             specific key/sport/type via opts. */
+  cacheInvalidate: (opts?: { key?: string; sport?: string; type?: string; all?: boolean }) =>
+    apiFetch<{ invalidated: string; key?: string; note?: string }>('/api/cache/invalidate', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Key': process.env.EXPO_PUBLIC_ADMIN_KEY ?? 'dev-admin-key-2026',
+      },
+      body: JSON.stringify({ all: true, ...opts }),
+    }),
   jobsStatus: () => apiFetch<JobsStatusResponse>('/api/jobs/status'),
   jobsHistory: (jobName?: string, limit = 5) =>
     apiFetch<JobsHistoryResponse>(`/api/jobs/history${qs({ jobName, limit })}`),

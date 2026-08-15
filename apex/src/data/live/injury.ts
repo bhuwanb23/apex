@@ -6,7 +6,7 @@
  * returns (zones, triggers, scores) — it never computes them itself.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { api, type RiskAlert, type PlayerRiskProfile, type TeamRiskResponse } from '@/lib/api';
 import { useApiData, type DataSource } from '@/hooks/use-api-data';
