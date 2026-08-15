@@ -542,6 +542,18 @@ export async function getSportComparison(season?: string): Promise<SportComparis
   });
   const bySport = new Map(rows.map(r => [r.sportId, r]));
 
+  // Seasons differ across sports (NBA 2024-25 vs NFL 2025 vs MLB 2026), so a
+  // single requested season never matches them all. When a sport has no row
+  // for it, fall back to that sport's own current-season row — the plan's
+  // "current season for all sports" — so the panel shows live data per sport.
+  const missingSports = sports.filter(s => !bySport.has(s.id));
+  for (const s of missingSports) {
+    const ownRow = await prisma.momentumAnalysis.findUnique({
+      where: { sportId_season: { sportId: s.id, season: s.season } },
+    });
+    if (ownRow) bySport.set(s.id, ownRow);
+  }
+
   const summaries: SportMomentumSummary[] = [];
   for (const s of sports) {
     const row = bySport.get(s.id);
