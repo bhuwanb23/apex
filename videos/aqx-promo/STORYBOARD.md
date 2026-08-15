@@ -14,8 +14,8 @@ captions: on
 Premium product film: soft `#F0F1F5` canvas, AQX purple `#5856D6` as the only primary accent, pink→purple→orange orb as brand spectacle. Phone devices float with soft depth; UI screenshots are the truth. Motion is restrained and timed to VO cues — no sports-highlight chaos. Crossfades between pillars; logo lockup closes clean.
 
 ## Frame 1 — Brand open
-- status: outline
-- duration: 8s
+- status: animated
+- duration: 3.84s
 - transition_in: cut
 - type: branding
 - blueprint: logo-assemble-lockup
@@ -33,8 +33,8 @@ Scene 2 (1.5–4.0s): wordmark AQX. locks beside/below orb as VO names intellige
 Scene 3 (4.0–end): tagline PERSONALIZED holds still; subtle orb glow only.
 
 ## Frame 2 — The promise
-- status: outline
-- duration: 8s
+- status: animated
+- duration: 7.573s
 - transition_in: crossfade
 - type: hook
 - blueprint: kinetic-type-beats
@@ -52,8 +52,8 @@ Scene 2 (2.5–5.5s): line resolves to ONE CLEAR BRIEF as VO lands the promise.
 Scene 3 (5.5–end): hold payoff with soft purple accent bar.
 
 ## Frame 3 — Meet AQX
-- status: outline
-- duration: 8s
+- status: animated
+- duration: 5.632s
 - transition_in: crossfade
 - type: product_intro
 - blueprint: device-surface-showcase
@@ -71,8 +71,8 @@ Scene 2 (1.5–5.0s): role chips Trainers / Coaches / Analysts / Fans stagger in
 Scene 3 (5.0–end): hold device + chips.
 
 ## Frame 4 — Injury Risk
-- status: outline
-- duration: 10s
+- status: animated
+- duration: 6.613s
 - transition_in: crossfade
 - type: feature_showcase
 - blueprint: device-surface-showcase
@@ -90,8 +90,8 @@ Scene 2 (1.2–4.5s): RISK label + red accent pulse as VO says at risk.
 Scene 3 (4.5–end): hold device; subtle scrub on screenshot scale.
 
 ## Frame 5 — Decisions
-- status: outline
-- duration: 10s
+- status: animated
+- duration: 6.272s
 - transition_in: crossfade
 - type: feature_showcase
 - blueprint: device-surface-showcase
@@ -109,8 +109,8 @@ Scene 2 (1.2–5.0s): PURE LOGIC / EV badge reveals with VO.
 Scene 3 (5.0–end): hold.
 
 ## Frame 6 — Momentum Replay
-- status: outline
-- duration: 8s
+- status: animated
+- duration: 5.653s
 - transition_in: crossfade
 - type: benefit_highlight
 - blueprint: device-surface-showcase
@@ -128,8 +128,8 @@ Scene 2 (1.5–4.5s): REAL badge springs as VO asks if momentum is real.
 Scene 3 (4.5–end): hold with soft pulse on badge.
 
 ## Frame 7 — Story Mode + CTA
-- status: outline
-- duration: 8s
+- status: animated
+- duration: 5.504s
 - transition_in: crossfade
 - type: cta
 - blueprint: logo-assemble-lockup
