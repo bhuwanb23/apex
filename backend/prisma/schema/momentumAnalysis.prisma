@@ -13,6 +13,9 @@ model MomentumAnalysis {
   effectSize             Float? // Practical size of the effect
   streakThreshold        Int? // How many consecutive scores trigger momentum
   hazardRateChange       Float? // Percentage change in opponent hazard rate
+  // Optional explicit verdict ("significant" / "not_significant" /
+  // "inconclusive"). Null = derive from isSignificant on read (legacy rows).
+  verdictLabel           String?
   plainExplanation       String // Full plain English summary
   shortExplanation       String // One sentence summary
   computedAt             DateTime // When model was run

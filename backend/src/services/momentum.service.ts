@@ -340,6 +340,8 @@ export async function getMomentumAnalysis(
   if (isFresh) {
     return toAnalysisResponse(sport, resolvedSeason, {
       ...row,
+      // Normalize the nullable DB column to the response's optional label.
+      verdictLabel: row.verdictLabel ?? undefined,
       hazardCoefficient: row.hazardCoefficient,
       computedAt: row.computedAt.toISOString(),
     });
@@ -365,7 +367,7 @@ export async function getMomentumAnalysis(
           toAnalysisResponse(
             sport,
             resolvedSeason,
-            { ...row, computedAt: row.computedAt.toISOString() },
+            { ...row, verdictLabel: row.verdictLabel ?? undefined, computedAt: row.computedAt.toISOString() },
             warning
           ),
           buildFallbackMeta(row.computedAt, warning)
@@ -606,10 +608,11 @@ export async function getSportComparison(season?: string): Promise<SportComparis
     if (row) {
       summaries.push({
         sport: s.name as SportAbbreviation,
-        // The table stores no verdict column — significant rows imply the verdict.
-        verdictLabel: (row.isSignificant
-          ? 'significant'
-          : 'not_significant') as SportMomentumSummary['verdictLabel'],
+        // Prefer an explicitly stored verdict; legacy rows derive from significance.
+        verdictLabel: (row.verdictLabel ??
+          (row.isSignificant
+            ? 'significant'
+            : 'not_significant')) as SportMomentumSummary['verdictLabel'],
         hazardCoefficient: row.hazardCoefficient,
         pValue: row.pValue,
         effectSize: row.effectSize,
