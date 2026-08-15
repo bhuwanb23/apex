@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { AppIcon } from '@/components/ui/icon';
 import { useBackend } from '@/context/backend';

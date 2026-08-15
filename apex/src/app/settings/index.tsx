@@ -8,8 +8,10 @@ import { AppIcon, type IconName } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { ROLES, useOnboarding } from '@/context/onboarding';
+import { useAuth } from '@/context/auth';
 import { useBackend } from '@/context/backend';
 import { api, type CacheStatsResponse, type JobsStatusResponse } from '@/lib/api';
+import { clearDeviceCache } from '@/lib/storage';
 import { timeAgo } from '@/lib/time';
 
 type HealthStatus = 'ok' | 'degraded' | 'down';
@@ -34,21 +36,34 @@ function overallStatus(services: ServiceHealth[]): HealthStatus {
   return 'ok';
 }
 
+/** Live service list derived from the health ping (no effect needed). */
+function servicesFromHealth(health: { status: string; version: string; services: { mlService: string; database: string; cache: string } }): ServiceHealth[] {
+  return [
+    { name: 'API', status: health.status === 'ok' ? 'ok' : 'degraded', detail: `Healthy · ${health.version}` },
+    { name: 'ML Service', status: health.services.mlService === 'connected' ? 'ok' : 'down', detail: health.services.mlService === 'connected' ? 'Healthy' : 'Unreachable' },
+    { name: 'Database', status: health.services.database === 'connected' ? 'ok' : 'down', detail: health.services.database === 'connected' ? 'Healthy' : 'Unreachable' },
+    { name: 'Cache', status: health.services.cache === 'connected' ? 'ok' : 'down', detail: health.services.cache === 'connected' ? 'Healthy' : 'Unreachable' },
+  ];
+}
+
 const STATUS_COLOR: Record<HealthStatus, string> = { ok: '#2FA36B', degraded: '#F5A623', down: '#E5484D' };
 const STATUS_LABEL: Record<HealthStatus, string> = { ok: 'All services running', degraded: 'Degraded', down: 'Issues detected' };
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { role, setDefaultModule, defaultModule, storyLanguage, setStoryLanguage, sports, activeSport } = useOnboarding();
+  const { role, setDefaultModule, defaultModule, storyLanguage, setStoryLanguage, sports, activeSport, resetOnboarding } = useOnboarding();
+  const { user, logout } = useAuth();
   const { health, status, refresh } = useBackend();
   const [cleared, setCleared] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState('2 hours ago');
+  const [lastSync] = useState('2 hours ago');
   const [healthOpen, setHealthOpen] = useState(false);
-  const [services, setServices] = useState<ServiceHealth[]>(SERVICES);
   const [aboutOpen, setAboutOpen] = useState<string | null>(null);
   const [cacheStats, setCacheStats] = useState<CacheStatsResponse | null>(null);
   const [jobs, setJobs] = useState<JobsStatusResponse | null>(null);
+
+  // Live service health derived from the ping (no effect/state — fix #lint).
+  const services = health ? servicesFromHealth(health) : SERVICES;
 
   // Pull real cache + job state from the backend when it is reachable.
   useEffect(() => {
@@ -60,18 +75,6 @@ export default function SettingsScreen() {
   const lastSyncLabel = jobs?.jobs?.find(j => j.jobName === 'data_sync')?.lastRunAt
     ? `Last run ${timeAgo(jobs.jobs.find(j => j.jobName === 'data_sync')!.lastRunAt!)}`
     : lastSync;
-
-  // Health services come from the live health ping.
-  useEffect(() => {
-    if (health) {
-      setServices([
-        { name: 'API', status: health.status === 'ok' ? 'ok' : 'degraded', detail: `Healthy · ${health.version}` },
-        { name: 'ML Service', status: health.services.mlService === 'connected' ? 'ok' : 'down', detail: health.services.mlService === 'connected' ? 'Healthy' : 'Unreachable' },
-        { name: 'Database', status: health.services.database === 'connected' ? 'ok' : 'down', detail: health.services.database === 'connected' ? 'Healthy' : 'Unreachable' },
-        { name: 'Cache', status: health.services.cache === 'connected' ? 'ok' : 'down', detail: health.services.cache === 'connected' ? 'Healthy' : 'Unreachable' },
-      ]);
-    }
-  }, [health]);
 
   const roleLabel = ROLES.find(r => r.id === role)?.label ?? 'Analyst';
   const healthBadge = overallStatus(services);
@@ -123,11 +126,32 @@ export default function SettingsScreen() {
     void refresh();
   };
 
-  const clearCacheLive = () => {
+  /** Real "Clear cache": flush backend entries (memory + SQLite registry) via
+   *  the admin endpoint, clear this device's cached API payloads, then re-pull
+   *  the stats so the count reflects the cleared state. Previously a no-op. */
+  const clearCacheLive = async () => {
     setCleared(true);
     setCacheStats(null);
+    try {
+      await api.cacheInvalidate({ all: true });
+    } catch {
+      // Backend unreachable or key rejected — still clear the device cache.
+    }
+    await clearDeviceCache();
     api.cacheStats().then(setCacheStats).catch(() => {});
     setTimeout(() => setCleared(false), 1500);
+  };
+
+  /** Mock auth logout — clears the session; the root layout swaps to login. */
+  const signOut = () => {
+    void logout();
+    router.dismissAll?.();
+  };
+
+  /** Re-show the setup flow (preferences are kept — user re-picks sport/role). */
+  const reRunSetup = () => {
+    resetOnboarding();
+    router.dismissAll?.();
   };
 
   const ABOUT: { id: string; icon: IconName; title: string; body: string }[] = [
@@ -155,14 +179,14 @@ export default function SettingsScreen() {
     <View style={styles.container}>
       <StackHeader title="Settings" right={<CloseButton onPress={() => router.back()} />} />
 
-      {/* Profile */}
+      {/* Profile — signed-in account from mock auth + role */}
       <Card style={styles.profileCard}>
         <View style={styles.profileAvatar}>
           <AppIcon name="person.crop.circle.fill" size={40} color="#5856D6" />
         </View>
         <View style={styles.profileBody}>
-          <Text style={styles.profileName}>AQX User</Text>
-          <Text style={styles.profileRole}>{roleLabel}</Text>
+          <Text style={styles.profileName}>{user?.name ?? 'AQX User'}</Text>
+          <Text style={styles.profileRole}>{user?.email ?? roleLabel}</Text>
         </View>
         <Pressable style={styles.changeBtn} onPress={() => router.push('/settings/role-preferences')}>
           <Text style={styles.changeText}>Change role</Text>
@@ -223,6 +247,11 @@ export default function SettingsScreen() {
           value={<HealthBadge status={healthBadge} />}
           onPress={() => setHealthOpen(true)}
         />
+        <SettingRow icon="calendar" label="Re-run setup" value="Onboarding again" onPress={reRunSetup} />
+        <SettingRow icon="person.crop.circle.fill" label="Signed in" value={user?.email ?? '—'} />
+        <Pressable onPress={signOut}>
+          <SettingRow icon="xmark" label="Log out" value="End session" danger />
+        </Pressable>
       </Section>
 
       {/* About */}

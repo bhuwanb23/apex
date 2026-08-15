@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View, type DimensionValue } from 'react-native';
 
 interface SkeletonProps {
@@ -10,7 +10,9 @@ interface SkeletonProps {
 
 /** Pulsing gray placeholder block — the building block for loading skeletons. */
 export function Skeleton({ width = '100%', height = 16, radius = 8, style }: SkeletonProps) {
-  const opacity = useRef(new Animated.Value(0.45)).current;
+  // Lazy useState keeps one stable Animated.Value across renders (the refs-
+  // during-render lint rule rejects useRef(...).current in the render body).
+  const [opacity] = useState(() => new Animated.Value(0.45));
 
   useEffect(() => {
     const loop = Animated.loop(

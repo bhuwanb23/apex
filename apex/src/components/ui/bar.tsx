@@ -47,7 +47,6 @@ interface DistributionBarProps {
 
 /** Stacked distribution bar (e.g. red/yellow/green counts). */
 export function DistributionBar({ segments }: DistributionBarProps) {
-  const total = Math.max(1, segments.reduce((sum, s) => sum + s.value, 0));
   return (
     <View style={styles.distRow}>
       {segments.map(s => (

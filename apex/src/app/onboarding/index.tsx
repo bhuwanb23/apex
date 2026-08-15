@@ -6,7 +6,6 @@ import { AqxOrb } from '@/components/aqx-logo';
 import { AppIcon, type IconName } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { GradientView } from '@/components/ui/gradient';
 import { useOnboarding } from '@/context/onboarding';
 
 const VALUE_PROPS: { icon: IconName; title: string; color: string }[] = [
