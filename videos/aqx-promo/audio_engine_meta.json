@@ -4,8 +4,8 @@
   "bgm": {
     "path": "assets/bgm/track.wav",
     "volume": 0.12,
-    "mode": "detached-seed-loop",
-    "duration_s": null
+    "mode": "generate",
+    "duration_s": 45
   },
   "bgm_pending": true,
   "bgm_provider": "musicgen",
@@ -13,47 +13,45 @@
   "bgm_log": "D:\\projects\\apps\\apex\\videos\\aqx-promo\\assets\\bgm\\bgm-1786796397454.log",
   "bgm_mode": "detached-seed-loop",
   "bgm_target_duration_s": 41.087,
-  "bgm_seed_duration_s": 28,
-  "bgm_loop_count": 2,
   "voices": [
     {
-      "id": "01",
+      "frame": 1,
       "path": "assets/voice/01.wav",
       "duration_s": 3.84,
       "words": []
     },
     {
-      "id": "02",
+      "frame": 2,
       "path": "assets/voice/02.wav",
       "duration_s": 7.573,
       "words": []
     },
     {
-      "id": "03",
+      "frame": 3,
       "path": "assets/voice/03.wav",
       "duration_s": 5.632,
       "words": []
     },
     {
-      "id": "04",
+      "frame": 4,
       "path": "assets/voice/04.wav",
       "duration_s": 6.613,
       "words": []
     },
     {
-      "id": "05",
+      "frame": 5,
       "path": "assets/voice/05.wav",
       "duration_s": 6.272,
       "words": []
     },
     {
-      "id": "06",
+      "frame": 6,
       "path": "assets/voice/06.wav",
       "duration_s": 5.653,
       "words": []
     },
     {
-      "id": "07",
+      "frame": 7,
       "path": "assets/voice/07.wav",
       "duration_s": 5.504,
       "words": []

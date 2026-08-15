@@ -1,6 +1,6 @@
 ---
 format: 1920x1080
-duration: 60s
+duration: 42s
 message: "Raw sports data becomes clear, personalized intelligence"
 arc: "Demo Loop — question → product → three UI proofs → Story Mode → CTA"
 audience: "trainers, coaches, analysts, and sports fans evaluating AQX"

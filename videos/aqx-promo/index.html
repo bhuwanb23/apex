@@ -47,8 +47,8 @@
         data-composition-id="01-brand-open"
         data-composition-src="compositions/frames/01-brand-open.html"
         data-start="0"
-        data-duration="3.84"
-        data-track-index="1"
+        data-duration="4.34"
+        data-track-index="0"
       ></div>
       <audio
         id="el-01-brand-open-voice"
@@ -65,7 +65,7 @@
         data-composition-id="02-promise"
         data-composition-src="compositions/frames/02-promise.html"
         data-start="3.84"
-        data-duration="7.573"
+        data-duration="8.073"
         data-track-index="1"
       ></div>
       <audio
@@ -83,8 +83,8 @@
         data-composition-id="03-meet-aqx"
         data-composition-src="compositions/frames/03-meet-aqx.html"
         data-start="11.413"
-        data-duration="5.632"
-        data-track-index="1"
+        data-duration="6.132"
+        data-track-index="0"
       ></div>
       <audio
         id="el-03-meet-aqx-voice"
@@ -101,7 +101,7 @@
         data-composition-id="04-injury"
         data-composition-src="compositions/frames/04-injury.html"
         data-start="17.045"
-        data-duration="6.613"
+        data-duration="7.113"
         data-track-index="1"
       ></div>
       <audio
@@ -119,8 +119,8 @@
         data-composition-id="05-decisions"
         data-composition-src="compositions/frames/05-decisions.html"
         data-start="23.658"
-        data-duration="6.272"
-        data-track-index="1"
+        data-duration="6.772"
+        data-track-index="0"
       ></div>
       <audio
         id="el-05-decisions-voice"
@@ -137,7 +137,7 @@
         data-composition-id="06-momentum"
         data-composition-src="compositions/frames/06-momentum.html"
         data-start="29.93"
-        data-duration="5.653"
+        data-duration="6.153"
         data-track-index="1"
       ></div>
       <audio
@@ -156,7 +156,7 @@
         data-composition-src="compositions/frames/07-close.html"
         data-start="35.583"
         data-duration="5.504"
-        data-track-index="1"
+        data-track-index="0"
       ></div>
       <audio
         id="el-07-close-voice"
@@ -167,11 +167,37 @@
         data-volume="1"
       ></audio>
 
+      <!-- BGM -->
+      <audio
+        id="el-bgm"
+        src="assets/bgm/track.wav"
+        data-start="0"
+        data-duration="41.087"
+        data-track-index="11"
+        data-volume="0.14"
+      ></audio>
+
     </div>
 
     <script>
       window.__timelines = window.__timelines || {};
       window.__timelines["main"] = gsap.timeline({ paused: true });
+      // ── frame transitions (injected by transitions.mjs) ──
+      (function () { var tl = window.__timelines["main"];
+        tl.to("#el-01-brand-open", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 3.84);
+        tl.fromTo("#el-02-promise", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 3.84);
+        tl.to("#el-02-promise", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 11.413);
+        tl.fromTo("#el-03-meet-aqx", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 11.413);
+        tl.to("#el-03-meet-aqx", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 17.045);
+        tl.fromTo("#el-04-injury", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 17.045);
+        tl.to("#el-04-injury", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 23.658);
+        tl.fromTo("#el-05-decisions", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 23.658);
+        tl.to("#el-05-decisions", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 29.93);
+        tl.fromTo("#el-06-momentum", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 29.93);
+        tl.to("#el-06-momentum", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 35.583);
+        tl.fromTo("#el-07-close", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 35.583);
+        tl.to({}, { duration: 41.087 }, 0); // full-span anchor — main.duration() == composition total (Studio master duration)
+      })();
     </script>
   </body>
 </html>

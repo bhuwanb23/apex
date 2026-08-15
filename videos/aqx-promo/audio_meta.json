@@ -1,6 +1,15 @@
 {
-  "bgm": null,
+  "bgm": {
+    "path": "assets/bgm/track.wav",
+    "volume": 0.14,
+    "mode": "generate",
+    "duration_s": 45
+  },
   "bgm_pending": false,
+  "bgm_provider": "musicgen",
+  "bgm_log": "D:\\projects\\apps\\apex\\videos\\aqx-promo\\assets\\bgm\\bgm-1786796397454.log",
+  "bgm_mode": "detached-seed-loop",
+  "bgm_target_duration_s": 41.087,
   "voices": [
     {
       "frame": 1,
