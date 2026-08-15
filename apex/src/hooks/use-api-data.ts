@@ -45,6 +45,10 @@ function isEmpty(result: unknown): boolean {
   if (Array.isArray(result)) return result.length === 0;
   if (typeof result === 'object') {
     const obj = result as Record<string, unknown>;
+    // Objects that carry aggregate stats (league counts, roster summary) are
+    // meaningful even when their list is empty — e.g. an all-green league
+    // returns real counts with zero alerts; falling back to demo would lie.
+    if (obj['counts'] != null || obj['summary'] != null) return false;
     // Objects that carry a list — treat missing/empty lists as empty.
     for (const key of ['coaches', 'alerts', 'players', 'games', 'sports', 'teams', 'history', 'timeline', 'decisions']) {
       if (Array.isArray(obj[key]) && (obj[key] as unknown[]).length === 0) return true;

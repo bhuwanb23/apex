@@ -9,6 +9,8 @@ export interface Sport {
   hook: string;
   gradient: [string, string];
   teams: string[];
+  /** Current season label — matches the backend Sports table when known. */
+  season: string;
 }
 
 export const SPORTS: Sport[] = [
@@ -32,6 +34,7 @@ export const SPORTS: Sport[] = [
       'Cavaliers',
       'Thunder',
     ],
+    season: '2024-25',
   },
   {
     id: 'NFL',
@@ -40,6 +43,7 @@ export const SPORTS: Sport[] = [
     hook: '4th down decisions graded weekly',
     gradient: ['#5C9DFF', '#5856D6'],
     teams: ['Chiefs', 'Eagles', '49ers', 'Ravens', 'Bills', 'Cowboys', 'Lions', 'Bengals'],
+    season: '2025',
   },
   {
     id: 'MLB',
@@ -48,6 +52,7 @@ export const SPORTS: Sport[] = [
     hook: 'Pitch by pitch momentum analysis',
     gradient: ['#2FA36B', '#4CC38A'],
     teams: ['Yankees', 'Dodgers', 'Braves', 'Astros', 'Red Sox', 'Phillies'],
+    season: '2026',
   },
   {
     id: 'NHL',
@@ -56,6 +61,7 @@ export const SPORTS: Sport[] = [
     hook: 'Strongest momentum effect of any sport',
     gradient: ['#FFA058', '#FF5C8A'],
     teams: ['Rangers', 'Bruins', 'Oilers', 'Avalanche', 'Maple Leafs', 'Golden Knights'],
+    season: '2024-25',
   },
 ];
 

@@ -6,12 +6,12 @@
  * returns (zones, triggers, scores) — it never computes them itself.
  */
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useState } from 'react';
 
 import { api, type RiskAlert, type PlayerRiskProfile, type TeamRiskResponse } from '@/lib/api';
 import { useApiData, type DataSource } from '@/hooks/use-api-data';
 import { PLAYERS, type Player, type RiskZone } from '@/data/mock/players';
-import { type SportId } from '@/data/mock/sports';
+import { SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 
 // ---------------------------------------------------------------------------
 // Adapters: backend shapes → screen shapes
@@ -67,13 +67,15 @@ function profileToPlayer(
     zone: (profile.zone as RiskZone) ?? 'insufficient_data',
     triggerMetric: profile.triggerMetric ?? '—',
     explanation: profile.explanation ?? '',
-    minutesRecent: profile.baselineMeanMinutes ?? 0,
+    // The backend computes both sides of the workload bars: the 7-day recent
+    // mean vs the 21-day baseline mean (fix: previously recent = baseline).
+    minutesRecent: profile.recentMeanMinutes ?? profile.baselineMeanMinutes ?? 0,
     minutesBaseline: profile.baselineMeanMinutes ?? 0,
     minutesZ: profile.minutesZScore ?? 0,
-    distanceRecent: 0,
+    distanceRecent: profile.recentMeanDistance ?? 0,
     distanceBaseline: 0,
     distanceZ: profile.distanceZScore ?? 0,
-    intensityRecent: 0,
+    intensityRecent: profile.recentMeanIntensity ?? 0,
     intensityBaseline: 0,
     intensityZ: profile.intensityZScore ?? 0,
     backToBack: profile.backToBackFlag ?? false,
@@ -124,21 +126,19 @@ export function useLeaguePlayers(sport: SportId) {
   const result = useApiData<LeaguePayload>(
     async opts => {
       const recalc = opts?.recalculate ?? false;
-      const [red, yellow, players] = await Promise.all([
+      // Counts come from a dedicated endpoint covering the WHOLE league (no
+      // 100-row cap), and the alert lists for the flagged players. A league
+      // with zero alerts (all green) still returns real counts — the old code
+      // returned null and the whole dashboard fell back to demo data.
+      const [red, yellow, counts] = await Promise.all([
         api.leagueAlerts(sport, 'red', 50, recalc),
         api.leagueAlerts(sport, 'yellow', 50, recalc),
-        api.players(sport).catch(() => null),
+        api.injuryCounts(sport),
       ]);
       const alertPlayers = [...red.alerts, ...yellow.alerts].map(a => alertToPlayer(a, sport));
-      if (alertPlayers.length === 0) return null;
-      const total = players?.length ?? red.totalAlerts + yellow.totalAlerts;
       return {
         players: alertPlayers,
-        counts: {
-          red: red.totalAlerts,
-          yellow: yellow.totalAlerts,
-          green: Math.max(0, total - red.totalAlerts - yellow.totalAlerts),
-        },
+        counts: counts.counts,
         generatedAt: red.generatedAt,
       };
     },
@@ -161,8 +161,7 @@ export function useLeagueAlerts(sport: SportId, zone: 'red' | 'yellow' | 'all') 
     () => PLAYERS.filter(p => p.sport === sport && (zone === 'all' ? p.zone !== 'green' : p.zone === zone)),
     [sport, zone]
   );
-  const generatedAtRef = useRef<string | null>(null);
-  const result = useApiData<Player[]>(
+  const result = useApiData<{ players: Player[]; generatedAt: string | null }>(
     async () => {
       // "All" = red + yellow — the backend validates zone as red|yellow, so
       // fetch both and merge. Each player has exactly one latest score, so
@@ -171,16 +170,16 @@ export function useLeagueAlerts(sport: SportId, zone: 'red' | 'yellow' | 'all') 
       const responses = await Promise.all(zones.map(z => api.leagueAlerts(sport, z, 50)));
       const players = responses.flatMap(r => r.alerts.map(a => alertToPlayer(a, sport)));
       if (players.length === 0) return null;
-      generatedAtRef.current = responses[0]?.generatedAt ?? null;
-      return players;
+      return { players, generatedAt: responses[0]?.generatedAt ?? null };
     },
-    fallback,
+    { players: fallback, generatedAt: null },
     [sport, zone],
     `alerts:${sport}:${zone}`
   );
   return {
     ...result,
-    generatedAt: result.source === 'live' ? generatedAtRef.current : null,
+    players: result.data.players,
+    generatedAt: result.source === 'live' ? result.data.generatedAt : null,
   };
 }
 
@@ -232,10 +231,29 @@ export interface TeamRosterResult {
 }
 
 /**
+ * Resolves a team reference to a backend team row. Accepts a DB id, an exact
+ * name, a city or abbreviation, or a fuzzy fragment ("Chiefs" → "Kansas City
+ * Chiefs") so the mock team names used by the dashboard still reach the real
+ * backend teams.
+ */
+function resolveTeam(
+  teams: { id: number; name: string; abbreviation: string; city: string }[],
+  ref: string
+): { id: number; name: string } | null {
+  const q = ref.trim().toLowerCase();
+  if (!q) return null;
+  const exact = teams.find(t => t.name.toLowerCase() === q || t.abbreviation.toLowerCase() === q || t.city.toLowerCase() === q);
+  if (exact) return { id: exact.id, name: exact.name };
+  // Last-word fragment: "Chiefs" matches "Kansas City Chiefs".
+  const fragment = teams.find(t => t.name.toLowerCase().includes(q) || t.name.toLowerCase().split(' ').some(w => w.toLowerCase() === q));
+  return fragment ? { id: fragment.id, name: fragment.name } : null;
+}
+
+/**
  * Team view: accepts either a backend team id (search results carry it) or a
- * team name (home / demo navigation). Resolves to the backend teamId, fetches
- * the full roster with every player's zone (green included) and the backend's
- * lastUpdated time.
+ * team name / abbreviation (dashboard picker, home navigation). Resolves to
+ * the backend teamId, fetches the full roster with every player's zone (green
+ * included) and the backend's lastUpdated time.
  */
 export function useTeamRoster(teamRef: string | undefined, sport: SportId) {
   const teamId = teamRef !== undefined && /^\d+$/.test(teamRef) ? Number(teamRef) : undefined;
@@ -251,7 +269,7 @@ export function useTeamRoster(teamRef: string | undefined, sport: SportId) {
         roster = await api.teamRisk(teamId, opts?.recalculate ?? false);
       } else {
         const teams = await api.teams(sport);
-        const team = teams.teams.find(t => t.name.toLowerCase() === teamRef.toLowerCase());
+        const team = resolveTeam(teams.teams, teamRef);
         if (!team) return null;
         roster = await api.teamRisk(team.id, opts?.recalculate ?? false);
       }
@@ -271,4 +289,24 @@ export function useTeamRoster(teamRef: string | undefined, sport: SportId) {
     lastUpdated: result.source === 'live' ? result.data.lastUpdated : null,
     refetch: result.refetch,
   } satisfies TeamRosterResult;
+}
+
+/** Real team names for the sport (dashboard team picker) — mock names often
+ *  don't exist in the backend, so the picker should offer backend teams. */
+export function useTeams(sport: SportId) {
+  const fallback = useMemo(
+    () => SPORT_BY_ID[sport].teams.map(name => ({ name, id: undefined as number | undefined })),
+    [sport]
+  );
+  const result = useApiData<{ name: string; id?: number }[]>(
+    async () => {
+      const res = await api.teams(sport);
+      if (res.teams.length === 0) return null;
+      return res.teams.map(t => ({ name: t.name, id: t.id }));
+    },
+    fallback,
+    [sport],
+    `teams:${sport}`
+  );
+  return result;
 }

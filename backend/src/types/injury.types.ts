@@ -30,6 +30,11 @@ export interface PlayerRiskProfile {
   backToBackFlag: boolean;
   baselineMeanMinutes: number | null;
   baselineStdMinutes: number | null;
+  /** Recent-window (7-day) means per workload metric — what the app shows as
+   *  "recent" next to the baseline (computed here; not stored in SQLite). */
+  recentMeanMinutes: number | null;
+  recentMeanDistance: number | null;
+  recentMeanIntensity: number | null;
   explanation: string;
   windowStart: string | null;
   windowEnd: string | null;
@@ -74,6 +79,18 @@ export interface PlayerRiskResponse extends PlayerRiskProfile {
   gameLogs: GameLogPoint[];
   /** Last 10 computed scores, oldest first, for the trend chart. */
   history: RiskHistoryEntry[];
+}
+
+/** GET /api/injury/counts/:sport — zone counts across a league (no 100-row cap). */
+export interface InjuryCountsResponse {
+  sport: SportAbbreviation;
+  /** Players with a latest risk score, by zone (players without a score are not counted). */
+  counts: { red: number; yellow: number; green: number };
+  /** Players with any latest score (red + yellow + green). */
+  totalScored: number;
+  /** Active players in the league (the roster denominator). */
+  totalPlayers: number;
+  generatedAt: string;
 }
 
 /** Roster-wide risk summary for a team (the trainer dashboard view). */

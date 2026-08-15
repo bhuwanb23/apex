@@ -151,6 +151,10 @@ export interface PlayerRiskProfile {
   backToBackFlag?: boolean;
   baselineMeanMinutes?: number | null;
   baselineStdMinutes?: number | null;
+  /** Recent-window (7d) means — the "recent" side of the workload bars. */
+  recentMeanMinutes?: number | null;
+  recentMeanDistance?: number | null;
+  recentMeanIntensity?: number | null;
   explanation?: string | null;
   windowStart?: string | null;
   windowEnd?: string | null;
@@ -169,6 +173,14 @@ export interface PlayerRiskResponse extends PlayerRiskProfile {
     isSpike: boolean;
   }[];
   history?: { computedAt: string; riskScore: number | null; zone: string; triggerMetric?: string | null }[];
+}
+
+export interface InjuryCountsResponse {
+  sport: string;
+  counts: { red: number; yellow: number; green: number };
+  totalScored: number;
+  totalPlayers: number;
+  generatedAt: string;
 }
 
 export interface TeamRiskResponse {
@@ -355,6 +367,8 @@ export interface StoryResponse {
   toneLabel: string;
   generatedBy: string;
   keyMetrics?: Record<string, unknown> | null;
+  /** When the story was generated/cached — drives the "data updated" note. */
+  generatedAt?: string | null;
 }
 
 export interface CacheStatsResponse {
@@ -415,6 +429,7 @@ export const api = {
     apiFetch<TeamRiskResponse>(`/api/injury/team/${teamId}${qs({ recalculate: recalculate || undefined })}`),
   playerRiskHistory: (playerId: string | number, days = 60) =>
     apiFetch<RiskHistoryResponse>(`/api/injury/player/${playerId}/history${qs({ days })}`),
+  injuryCounts: (sport: string) => apiFetch<InjuryCountsResponse>(`/api/injury/counts/${sport}`),
 
   // Decisions
   leaderboard: (sport: string, opts?: { season?: string; decisionType?: string; gameType?: string; limit?: number }) =>
