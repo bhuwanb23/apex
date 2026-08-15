@@ -24,7 +24,7 @@ import { ApiError } from '../middleware/error.middleware.js';
 import { sendSuccess } from '../utils/response.util.js';
 import { logger } from '../utils/logger.util.js';
 
-const sleep = (ms: number): Promise<void> =>
+export const sleep = (ms: number): Promise<void> =>
   new Promise(resolve => {
     setTimeout(resolve, ms);
   });
@@ -37,7 +37,7 @@ const sleep = (ms: number): Promise<void> =>
  * Returns null if the write hasn't landed within the window (e.g. the run was
  * skipped by the in-flight guard) — callers can still poll history.
  */
-async function awaitJobLogId(
+export async function awaitJobLogId(
   jobName: string,
   firedAt: Date,
   attempts = 20
