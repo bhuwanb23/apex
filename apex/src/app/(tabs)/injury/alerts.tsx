@@ -13,6 +13,7 @@ import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
 import { useLeagueAlerts } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
+import { DataFreshness } from '@/components/ui/data-freshness';
 
 type ZoneFilter = 'all' | 'red' | 'yellow';
 type SortKey = 'risk' | 'team' | 'position';
@@ -37,6 +38,7 @@ export default function LeagueAlertsScreen() {
 
   const alerts = useLeagueAlerts(sport, zone);
   const sportPlayers = alerts.data;
+  const generatedAt = alerts.generatedAt;
   const positions = useMemo(
     () => [...new Set(sportPlayers.map(p => p.position))].sort(),
     [sportPlayers]
@@ -109,6 +111,9 @@ export default function LeagueAlertsScreen() {
           />
         ))}
       </View>
+
+      {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
+      {generatedAt ? <DataFreshness timestamp={generatedAt} onRefresh={refresh} /> : null}
 
       {/* Count banner + sort */}
       <View style={styles.countBanner}>

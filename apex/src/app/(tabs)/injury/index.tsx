@@ -15,7 +15,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
 import { useLeaguePlayers, useTeamRoster } from '@/data/live/injury';
-import { timeAgo } from '@/lib/time';
+import { DataFreshness } from '@/components/ui/data-freshness';
 
 export default function InjuryDashboardScreen() {
   const router = useRouter();
@@ -212,14 +212,12 @@ export default function InjuryDashboardScreen() {
         </>
       )}
 
+      {/* Data freshness — the plan's tiers: gray note for 1-6h, yellow/orange/red banner for 6h+ */}
+      {lastUpdated ? <DataFreshness timestamp={lastUpdated} onRefresh={refresh} /> : null}
       <Pressable onPress={refresh} style={styles.updatedRow}>
         <AppIcon name="clock.fill" size={13} color="#9AA0B5" />
         <Text style={styles.updatedText}>
-          {refreshing
-            ? 'Refreshing risk scores…'
-            : lastUpdated
-              ? `Risk scores updated ${timeAgo(lastUpdated)} — tap to force refresh`
-              : 'Risk scores updated — tap to force refresh'}
+          {refreshing ? 'Refreshing risk scores…' : 'Tap to force refresh'}
         </Text>
       </Pressable>
     </Screen>

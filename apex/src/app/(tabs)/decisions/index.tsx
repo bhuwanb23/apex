@@ -13,6 +13,7 @@ import { type Coach } from '@/data/mock/coaches';
 import { DECISION_GAMES } from '@/data/mock/games';
 import { useCoachLeaderboard } from '@/data/live/decisions';
 import { useOnboarding } from '@/context/onboarding';
+import { DataFreshness } from '@/components/ui/data-freshness';
 
 const DECISION_TYPES = ['All', '4th Down', 'Timeout', '2-Point'];
 const GAME_TYPES = ['Regular', 'Playoff', 'All'];
@@ -45,7 +46,7 @@ export default function CoachLeaderboardScreen() {
     setSport(activeSport);
   }, [activeSport]);
 
-  const { coaches } = useCoachLeaderboard(sport, {
+  const { coaches, generatedAt, refetch: refetchLeaderboard } = useCoachLeaderboard(sport, {
     season,
     decisionType: DECISION_TYPE_KEYS[decisionType],
     gameType: GAME_TYPE_KEYS[gameType],
@@ -56,6 +57,9 @@ export default function CoachLeaderboardScreen() {
   return (
     <Screen>
       <StackHeader title="Coach Leaderboard" subtitle="Decision quality · EV Rate" />
+
+      {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
+      {generatedAt ? <DataFreshness timestamp={generatedAt} onRefresh={refetchLeaderboard} /> : null}
 
       {/* Filters */}
       <View style={styles.filters}>

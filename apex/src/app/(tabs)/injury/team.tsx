@@ -14,7 +14,7 @@ import { type Player } from '@/data/mock/players';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useTeamRoster } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
-import { timeAgo } from '@/lib/time';
+import { DataFreshness } from '@/components/ui/data-freshness';
 
 type ZoneFilter = 'all' | 'red' | 'yellow' | 'green';
 type SortKey = 'risk' | 'name' | 'position';
@@ -30,7 +30,7 @@ export default function TeamRiskScreen() {
   const [chartOpen, setChartOpen] = useState(true);
   const { activeSport } = useOnboarding();
 
-  const { players: roster, lastUpdated } = useTeamRoster(teamName, activeSport);
+  const { players: roster, lastUpdated, refetch: refetchRoster } = useTeamRoster(teamName, activeSport);
   const sport = SPORT_BY_ID[roster[0]?.sport ?? activeSport];
 
   const counts = {
@@ -69,10 +69,10 @@ export default function TeamRiskScreen() {
             </Text>
           </View>
         </View>
-        <Text style={styles.bannerUpdated}>
-          {lastUpdated ? `Risk scores updated ${timeAgo(lastUpdated)}` : 'Risk scores updated'}
-        </Text>
       </GradientView>
+
+      {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
+      {lastUpdated ? <DataFreshness timestamp={lastUpdated} onRefresh={refetchRoster} /> : null}
 
       {/* Traffic light summary */}
       <Card style={styles.countsCard}>

@@ -11,6 +11,7 @@ import { LineChart, type ChartPoint } from '@/components/ui/chart';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PillButton } from '@/components/ui/button';
+import { DataFreshness } from '@/components/ui/data-freshness';
 import { usePlayerRisk } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
 
@@ -35,7 +36,7 @@ export default function PlayerRiskScreen() {
   // Display-only (the plan's role rules): fans get plain English without the
   // statistics sections; the backend request never changes.
   const isFan = role === 'fan';
-  const { data: player } = usePlayerRisk(playerId, activeSport);
+  const { data: player, refetch: refetchPlayer } = usePlayerRisk(playerId, activeSport);
   const [metric, setMetric] = useState<MetricKey>('minutes');
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
 
@@ -83,7 +84,8 @@ export default function PlayerRiskScreen() {
           <Text style={styles.headerMeta}>
             {player.team} · {player.position} · #{player.jersey}
           </Text>
-          <Text style={styles.updated}>Risk scores updated 2 hours ago</Text>
+          {/* Real backend timestamp → freshness note/banner (plan: data age tiers) */}
+          {player.computedAt ? <DataFreshness timestamp={player.computedAt} onRefresh={refetchPlayer} /> : null}
         </View>
       </Card>
 

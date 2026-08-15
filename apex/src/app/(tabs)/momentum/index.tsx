@@ -10,6 +10,7 @@ import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
+import { DataFreshness } from '@/components/ui/data-freshness';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { useMomentumAnalysis } from '@/data/live/momentum';
 
@@ -25,7 +26,7 @@ export default function MomentumOverviewScreen() {
   const { activeSport, role, storyLanguage } = useOnboarding();
   const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? activeSport);
   const [statsOpen, setStatsOpen] = useState(role === 'analyst');
-  const { data: verdictData } = useMomentumAnalysis(sport);
+  const { data: verdictData, refetch: refetchMomentum } = useMomentumAnalysis(sport);
   const verdict = verdictData as unknown as (typeof import('@/data/mock/sports').MOMENTUM_VERDICTS)[number];
   const isReal = verdict.verdict === 'real';
   const isAnalystDepth = role === 'analyst' || storyLanguage === 'technical';
@@ -97,6 +98,8 @@ export default function MomentumOverviewScreen() {
         <Text style={styles.gamesContext}>
           Based on analysis of {verdict.gamesAnalyzed.toLocaleString()} games from the {verdict.season} {verdict.sport} season
         </Text>
+        {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
+        {verdictData.computedAt ? <DataFreshness timestamp={verdictData.computedAt} onRefresh={refetchMomentum} /> : null}
       </View>
 
       {/* Quick access */}
