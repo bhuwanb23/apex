@@ -89,4 +89,7 @@ export interface RiskAlert {
   zone: AlertZone;
   triggerMetric: string | null;
   explanation: string;
+  /** How long the player has been in this zone, in days — the span of the
+   *  current consecutive run of scores in the same zone. 0 = brand-new flag. */
+  daysInZone: number;
 }

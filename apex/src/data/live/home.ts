@@ -50,7 +50,7 @@ function alertToPlayer(alert: RiskAlert, sport: SportId): Player {
     intensityBaseline: 0,
     intensityZ: 0,
     backToBack: false,
-    daysInZone: 0,
+    daysInZone: alert.daysInZone ?? 0,
   };
 }
 

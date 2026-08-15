@@ -131,6 +131,8 @@ export interface RiskAlert {
   zone: RiskZone;
   triggerMetric?: string | null;
   explanation: string;
+  /** Days the player has been in this zone (backend-computed streak). */
+  daysInZone?: number;
 }
 
 export interface PlayerRiskProfile {

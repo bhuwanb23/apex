@@ -41,7 +41,7 @@ function alertToPlayer(alert: RiskAlert, sport: SportId): Player {
     intensityBaseline: 0,
     intensityZ: 0,
     backToBack: false,
-    daysInZone: 0,
+    daysInZone: alert.daysInZone ?? 0,
   };
 }
 
@@ -152,9 +152,12 @@ export function useLeagueAlerts(sport: SportId, zone: 'red' | 'yellow' | 'all') 
   );
   const result = useApiData<Player[]>(
     async () => {
-      const zoneArg = zone === 'all' ? 'red' : zone;
-      const res = await api.leagueAlerts(sport, zoneArg, 50);
-      const players = res.alerts.map(a => alertToPlayer(a, sport));
+      // "All" = red + yellow — the backend validates zone as red|yellow, so
+      // fetch both and merge. Each player has exactly one latest score, so
+      // there is no overlap to dedupe.
+      const zones: ('red' | 'yellow')[] = zone === 'all' ? ['red', 'yellow'] : [zone];
+      const responses = await Promise.all(zones.map(z => api.leagueAlerts(sport, z, 50)));
+      const players = responses.flatMap(r => r.alerts.map(a => alertToPlayer(a, sport)));
       if (players.length === 0) return null;
       return players;
     },
