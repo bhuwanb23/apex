@@ -106,6 +106,7 @@ async function loadSeasonPlays(sportId: number, season: string): Promise<PlayRow
   return prisma.playByPlay.findMany({
     where: { game: { sportId, season } },
     select: PLAY_SELECT,
+    orderBy: [{ gameId: 'asc' }, { eventNumber: 'asc' }],
   }) as Promise<PlayRow[]>;
 }
 
@@ -151,6 +152,10 @@ async function loadGamePlays(gameId: number): Promise<PlayRow[]> {
   return prisma.playByPlay.findMany({
     where: { gameId },
     select: PLAY_SELECT,
+    // Chronological — Python's stable sort keeps input order among plays that
+    // share an eventTimeSeconds, so an unordered query scrambles the score
+    // tracking and empties/garbles the timeline.
+    orderBy: { eventNumber: 'asc' },
   }) as Promise<PlayRow[]>;
 }
 
@@ -626,6 +631,20 @@ export async function getSportComparison(season?: string): Promise<SportComparis
           .catch(err => logger.error({ sport: s.name, err }, 'Background momentum compute failed'))
           .finally(() => pendingSeasonComputes.delete(computeKey));
       }
+      // Include the sport now so the comparison panel always shows every
+      // active league (the plan's "all four sports") — an insufficient-data
+      // placeholder until the background compute lands, instead of dropping
+      // NBA/NHL from the panel entirely.
+      summaries.push({
+        sport: s.name as SportAbbreviation,
+        verdictLabel: 'insufficient_data',
+        hazardCoefficient: null,
+        pValue: null,
+        effectSize: null,
+        isSignificant: false,
+        shortExplanation:
+          'Not enough play-by-play data for this sport yet — momentum cannot be evaluated.',
+      });
     }
   }
 
