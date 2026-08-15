@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
@@ -32,9 +32,13 @@ export default function LeagueAlertsScreen() {
   const [position, setPosition] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  // Follow the stored sport when it changes — guarded render-time adjustment
+  // (React's documented pattern), not setState-in-effect.
+  const [prevActiveSport, setPrevActiveSport] = useState<SportId>(activeSport);
+  if (prevActiveSport !== activeSport) {
+    setPrevActiveSport(activeSport);
     setSport(activeSport);
-  }, [activeSport]);
+  }
 
   const alerts = useLeagueAlerts(sport, zone);
   const sportPlayers = alerts.players;

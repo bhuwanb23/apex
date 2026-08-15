@@ -10,6 +10,7 @@ import { AppIcon } from '@/components/ui/icon';
 import { type Game } from '@/data/mock/games';
 import { type Decision } from '@/data/mock/coaches';
 import { useGameDecisions } from '@/data/live/decisions';
+import { useOnboarding } from '@/context/onboarding';
 
 const PERIOD_BASE: Record<string, number> = { Q1: 0, Q2: 0.25, Q3: 0.5, Q4: 0.75, OT: 1 };
 
@@ -100,7 +101,10 @@ function LegendDot({ color, label }: { color: string; label: string }) {
 export default function GameDecisionsScreen() {
   const router = useRouter();
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
-  const { game, decisions: gameDecisions } = useGameDecisions(gameId, 'NFL');
+  const { activeSport } = useOnboarding();
+  // The game carries its sport; the screen follows the stored sport filter
+  // (previously hardcoded 'NFL' — an NBA game review always fell back to demo).
+  const { game, decisions: gameDecisions } = useGameDecisions(gameId, activeSport);
   const decisions = gameDecisions.slice().sort((a, b) => decisionX(a) - decisionX(b));
 
   const biggestMistake =

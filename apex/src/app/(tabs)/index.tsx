@@ -10,7 +10,7 @@ import { VerdictBadge, QualityBadge } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
-import { Skeleton, SkeletonRow, SkeletonCard, SkeletonGames } from '@/components/ui/skeleton';
+import { SkeletonRow, SkeletonCard, SkeletonGames } from '@/components/ui/skeleton';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { SPORT_BY_ID } from '@/data/mock/sports';

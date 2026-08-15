@@ -10,7 +10,7 @@ import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Coach } from '@/data/mock/coaches';
-import { DECISION_GAMES } from '@/data/mock/games';
+import { useRecentGames } from '@/data/live/games';
 import { useCoachLeaderboard } from '@/data/live/decisions';
 import { useOnboarding } from '@/context/onboarding';
 import { DataFreshness } from '@/components/ui/data-freshness';
@@ -32,12 +32,13 @@ const GAME_TYPE_KEYS: Record<string, string> = {
 };
 
 /** Real seasons come from the backend (each sport has a current season — the
- *  old hardcoded '2025-26' matched nothing and the board fell back to demo). */
+ *  old hardcoded '2025-26' matched nothing and the board fell back to demo).
+ *  The result is stored alongside the sport it belongs to, so a sport switch
+ *  shows no chips until the fresh fetch lands (no synchronous setState). */
 function useBackendSeasons(sport: SportId): string[] {
-  const [seasons, setSeasons] = useState<string[]>([]);
+  const [result, setResult] = useState<{ sport: SportId; seasons: string[] }>({ sport, seasons: [] });
   useEffect(() => {
     let cancelled = false;
-    setSeasons([]); // sport changed — season chips re-derive
     api
       .sports()
       .then(res => {
@@ -49,14 +50,14 @@ function useBackendSeasons(sport: SportId): string[] {
         const others = res.sports
           .map((s: SportInfo) => s.season)
           .filter((s: string): s is string => Boolean(s) && s !== current);
-        setSeasons([current, ...others.slice(0, 2)]);
+        setResult({ sport, seasons: [current, ...others.slice(0, 2)] });
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, [sport]);
-  return seasons;
+  return result.sport === sport ? result.seasons : [];
 }
 
 export default function CoachLeaderboardScreen() {
@@ -71,9 +72,14 @@ export default function CoachLeaderboardScreen() {
   const [decisionType, setDecisionType] = useState('All');
   const [gameType, setGameType] = useState('All');
 
-  useEffect(() => {
+  // Follow the stored sport when it changes (e.g. the Home badge) without a
+  // setState-in-effect — the guarded render-time adjustment is the React-
+  // documented pattern for syncing state to a changing prop/context value.
+  const [prevActiveSport, setPrevActiveSport] = useState<SportId>(activeSport);
+  if (prevActiveSport !== activeSport) {
+    setPrevActiveSport(activeSport);
     setSport(activeSport);
-  }, [activeSport]);
+  }
 
   // Season is per-sport — reset to "current" when the sport changes.
   const pickSport = (id: SportId) => {
@@ -86,6 +92,10 @@ export default function CoachLeaderboardScreen() {
     decisionType: DECISION_TYPE_KEYS[decisionType],
     gameType: GAME_TYPE_KEYS[gameType],
   });
+  // Game decision reviews — live recent games for the sport (fix #13: the old
+  // hardcoded DECISION_GAMES were NFL-only mock rows that never changed).
+  const recentGames = useRecentGames(sport, 8);
+  const reviewGames = recentGames.data;
   const podium = coaches.slice(0, 3);
   const rest = coaches.slice(3);
 
@@ -159,11 +169,11 @@ export default function CoachLeaderboardScreen() {
         <Text style={styles.noteText}>EV Rate measures how often a coach chose the statistically optimal decision</Text>
       </View>
 
-      {/* Game reviews */}
+      {/* Game reviews — live recent games for the sport */}
       <View>
         <Text style={styles.gameSectionTitle}>Game decision reviews</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gameRow}>
-          {DECISION_GAMES.map(game => (
+          {reviewGames.map(game => (
             <Pressable key={game.id} onPress={() => router.push({ pathname: '/decisions/game', params: { gameId: game.id } })}>
               <Card style={styles.gameCard}>
                 <Text style={styles.gameDate}>{game.date}</Text>
@@ -171,7 +181,11 @@ export default function CoachLeaderboardScreen() {
                   {game.homeTeam} {game.homeScore} – {game.awayScore} {game.awayTeam}
                 </Text>
                 <View style={styles.gameMetaRow}>
-                  <Text style={styles.gameMetaText}>{game.homeEvRate}% vs {game.awayEvRate}% EV rate</Text>
+                  <Text style={styles.gameMetaText}>
+                    {game.homeEvRate > 0 || game.awayEvRate > 0
+                      ? `${game.homeEvRate}% vs ${game.awayEvRate}% EV rate`
+                      : `${game.sport} · review decisions`}
+                  </Text>
                   <AppIcon name="chevron.right" size={13} color="#9AA0B5" />
                 </View>
               </Card>

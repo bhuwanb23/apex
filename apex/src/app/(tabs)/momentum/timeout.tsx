@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
@@ -11,6 +11,7 @@ import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
 import { fetchTimeoutRecommendation } from '@/data/live/momentum';
 import { useOnboarding } from '@/context/onboarding';
+import type { SportId } from '@/data/mock/sports';
 
 const PERIODS = ['Q1', 'Q2', 'Q3', 'Q4', 'OT'];
 
@@ -31,9 +32,13 @@ export default function TimeoutOptimizerScreen() {
   // user's stored sport when it is one of them, default to NFL otherwise.
   const [sport, setSport] = useState<'NFL' | 'NBA'>(activeSport === 'NBA' ? 'NBA' : 'NFL');
 
-  useEffect(() => {
+  // Follow the stored sport when it changes — guarded render-time adjustment
+  // (React's documented pattern), not setState-in-effect.
+  const [prevActiveSport, setPrevActiveSport] = useState<SportId>(activeSport);
+  if (prevActiveSport !== activeSport) {
+    setPrevActiveSport(activeSport);
     setSport(activeSport === 'NBA' ? 'NBA' : 'NFL');
-  }, [activeSport]);
+  }
   const [consecutive, setConsecutive] = useState(3);
   const [scoreDiff, setScoreDiff] = useState(-4);
   const [minutes, setMinutes] = useState(5);

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useOnboarding } from '@/context/onboarding';
@@ -24,10 +24,13 @@ export default function InjuryDashboardScreen() {
   const [view, setView] = useState<'league' | 'team'>('league');
 
   // Follow the stored sport when it changes (e.g. the Home badge) so this
-  // already-mounted tab re-requests with the new sport filter.
-  useEffect(() => {
+  // already-mounted tab re-requests with the new sport filter. Guarded
+  // render-time adjustment (React's documented pattern), not setState-in-effect.
+  const [prevActiveSport, setPrevActiveSport] = useState<SportId>(activeSport);
+  if (prevActiveSport !== activeSport) {
+    setPrevActiveSport(activeSport);
     setSport(activeSport);
-  }, [activeSport]);
+  }
   const [teamQuery, setTeamQuery] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);

@@ -9,6 +9,7 @@ import { LineChart, type ChartPoint, type ChartMarker } from '@/components/ui/ch
 import { Slider } from '@/components/ui/slider';
 import { AppIcon } from '@/components/ui/icon';
 import { GAMES, type Game } from '@/data/mock/games';
+import { useRecentGames } from '@/data/live/games';
 import { useGameMomentum } from '@/data/live/momentum';
 import { useOnboarding } from '@/context/onboarding';
 
@@ -31,7 +32,11 @@ export default function GameReplayScreen() {
   const { data: gameData } = useGameMomentum(selectedId, activeSport);
   const game = gameData ?? GAMES.find(g => g.id === selectedId) ?? GAMES[0];
   const lastTime = game.timeline[game.timeline.length - 1].time;
-  const filteredGames = GAMES.filter(g =>
+  // Real recent games for the sport fill the picker (fix #13 — the old mock
+  // GAMES list never changed); mock games remain the offline fallback.
+  const recentGames = useRecentGames(activeSport, 10);
+  const pickerGames = recentGames.data;
+  const filteredGames = pickerGames.filter(g =>
     (g.homeTeam + ' ' + g.awayTeam).toLowerCase().includes(gameQuery.toLowerCase())
   );
 
