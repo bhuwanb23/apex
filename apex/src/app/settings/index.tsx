@@ -39,7 +39,7 @@ const STATUS_LABEL: Record<HealthStatus, string> = { ok: 'All services running',
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { role, setDefaultModule, defaultModule, storyLanguage, setStoryLanguage, sports } = useOnboarding();
+  const { role, setDefaultModule, defaultModule, storyLanguage, setStoryLanguage, sports, activeSport } = useOnboarding();
   const { health, status, refresh } = useBackend();
   const [cleared, setCleared] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -76,16 +76,47 @@ export default function SettingsScreen() {
   const roleLabel = ROLES.find(r => r.id === role)?.label ?? 'Analyst';
   const healthBadge = overallStatus(services);
 
-  const refreshData = () => {
+  /**
+   * "Refresh data now" — the plan's flow: trigger a real backend sync
+   * (optionally for the active sport), get its job id, then poll the backend
+   * every 5 seconds until the run finishes. On completion, refresh the
+   * screen's health / job / cache state (screens refetch when their deps
+   * change, so the data they show is fresh again).
+   */
+  const refreshData = async () => {
     if (syncing) return;
     setSyncing(true);
-    // Ask the backend to refresh — re-ping health + jobs and re-check the ping.
-    void refresh();
-    api.jobsStatus().then(setJobs).catch(() => {});
-    setTimeout(() => {
+    try {
+      const trigger = await api.syncRefresh(activeSport);
+      const logId = trigger.logId;
+      const triggeredAt = Date.now();
+
+      // Poll every 5s — "is job <id> complete?" (give up after 2 minutes).
+      const deadline = triggeredAt + 120_000;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 5000));
+        const { runs } = await api.jobsHistory('data_sync', 1);
+        const run = runs[0];
+        if (!run) continue;
+        // Ours = matching log id, or (when the id is null — e.g. a run was
+        // skipped as already in-flight) any run started after we triggered.
+        const isOurs =
+          logId != null ? run.id === logId : new Date(run.startedAt).getTime() >= triggeredAt;
+        if (isOurs && run.status !== 'running') break; // completed / partial / failed
+      }
+
+      // Run finished (or timed out) — refresh what this screen shows.
+      void refresh();
+      const [j, c] = await Promise.all([api.jobsStatus(), api.cacheStats()]);
+      setJobs(j);
+      setCacheStats(c);
+    } catch {
+      // Backend unreachable — re-ping health only, keep the demo behavior.
+      void refresh();
+      api.jobsStatus().then(setJobs).catch(() => {});
+    } finally {
       setSyncing(false);
-      setLastSync('Just now');
-    }, 1200);
+    }
   };
 
   const runHealthCheck = () => {
