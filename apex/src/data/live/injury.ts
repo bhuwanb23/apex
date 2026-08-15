@@ -45,7 +45,14 @@ function alertToPlayer(alert: RiskAlert, sport: SportId): Player {
   };
 }
 
-function profileToPlayer(profile: PlayerRiskProfile, sport: SportId): Player {
+function profileToPlayer(
+  profile: PlayerRiskProfile,
+  sport: SportId,
+  extras?: {
+    riskHistory?: { computedAt: string; riskScore: number }[];
+    gameLogs?: { date: string; minutesPlayed: number | null; backToBack: boolean; isSpike: boolean }[];
+  }
+): Player {
   const name = profile.playerName;
   return {
     id: String(profile.playerId),
@@ -72,6 +79,8 @@ function profileToPlayer(profile: PlayerRiskProfile, sport: SportId): Player {
     backToBack: profile.backToBackFlag ?? false,
     daysInZone: 0,
     computedAt: profile.computedAt ?? undefined,
+    riskHistory: extras?.riskHistory ?? undefined,
+    gameLogs: extras?.gameLogs ?? undefined,
   };
 }
 
@@ -187,9 +196,22 @@ export function usePlayerRisk(playerId: string | undefined, sport: SportId) {
   const result = useApiData<Player>(
     async () => {
       if (!playerId) return null;
-      const profile = await api.playerRisk(playerId);
+      // Two requests fire simultaneously (plan: Request A = risk profile,
+      // Request B = last 60 days of risk history for the trend chart).
+      const [profile, historyRes] = await Promise.all([
+        api.playerRisk(playerId),
+        api.playerRiskHistory(playerId, 60),
+      ]);
       if (!profile.riskScore && !profile.explanation) return null;
-      return profileToPlayer(profile, sport);
+      return profileToPlayer(profile, sport, {
+        riskHistory: historyRes.history.map(h => ({ computedAt: h.computedAt, riskScore: h.riskScore ?? 0 })),
+        gameLogs: profile.gameLogs?.map(g => ({
+          date: g.date,
+          minutesPlayed: g.minutesPlayed,
+          backToBack: g.backToBack,
+          isSpike: g.isSpike,
+        })),
+      });
     },
     fallback,
     [playerId, sport],

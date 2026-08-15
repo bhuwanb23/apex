@@ -7,7 +7,7 @@ import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { RiskCircle } from '@/components/ui/risk-circle';
 import { ZoneBadge, type Zone } from '@/components/ui/badge';
-import { LineChart, type ChartPoint } from '@/components/ui/chart';
+import { LineChart, type ChartMarker, type ChartPoint } from '@/components/ui/chart';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PillButton } from '@/components/ui/button';
@@ -29,6 +29,40 @@ function noise(i: number): number {
   return (x - Math.floor(x)) * 2 - 1;
 }
 
+/** "MM/DD" from an ISO date — chart labels for real game logs. */
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/** Real minutes-per-game points from backend gameLogs (high values at top). */
+function pointsFromGameLogs(
+  logs: { date: string; minutesPlayed: number | null; backToBack: boolean; isSpike: boolean }[]
+): { points: ChartPoint[]; spikes: ChartMarker[]; labels: string[] } {
+  const n = logs.length;
+  const minutes = logs.map(l => l.minutesPlayed ?? 0);
+  const max = Math.max(...minutes, 1) * 1.1;
+  const points: ChartPoint[] = logs.map((l, i) => ({
+    x: n > 1 ? i / (n - 1) : 0.5,
+    y: Math.max(0.04, Math.min(0.96, 1 - (l.minutesPlayed ?? 0) / max)),
+  }));
+  const spikes: ChartMarker[] = logs
+    .map((l, i) => ({ l, i }))
+    .filter(({ l }) => l.isSpike)
+    .map(({ l, i }) => ({ x: n > 1 ? i / (n - 1) : 0.5, y: points[i].y, color: '#E5484D' }));
+  const labels = n > 3 ? [shortDate(logs[0].date), shortDate(logs[Math.floor(n / 3)].date), shortDate(logs[Math.floor((2 * n) / 3)].date), shortDate(logs[n - 1].date)] : logs.map(l => shortDate(l.date));
+  return { points, spikes, labels };
+}
+
+/** Real risk-score points from backend history (score → normalized 0..1). */
+function pointsFromHistory(history: { computedAt: string; riskScore: number }[]): ChartPoint[] {
+  const n = history.length;
+  return history.map((h, i) => ({
+    x: n > 1 ? i / (n - 1) : 0.5,
+    y: Math.max(0.04, Math.min(0.96, 1 - (h.riskScore ?? 0) / 100)),
+  }));
+}
+
 export default function PlayerRiskScreen() {
   const router = useRouter();
   const { playerId } = useLocalSearchParams<{ playerId: string }>();
@@ -43,11 +77,18 @@ export default function PlayerRiskScreen() {
   const zone = player.zone as Zone;
   const metricDef = METRICS.find(m => m.key === metric)!;
   const recent = player[`${metric}Recent` as const];
-  const baseline = player[`${metric}Baseline` as const];
-  const z = player[`${metric}Z` as const];
+
+  // Real game logs (live) drive the workload chart; demo players fall back to
+  // a synthetic 24-game season. Only logs with actual minutes count — baseball
+  // box scores have none, so those players keep the demo chart. Real history
+  // drives the risk trend chart.
+  const logsWithMinutes = player.gameLogs?.filter(g => g.minutesPlayed != null);
+  const realLogs = logsWithMinutes?.length ? pointsFromGameLogs(logsWithMinutes) : null;
+  const realTrend = player.riskHistory?.length ? pointsFromHistory(player.riskHistory) : null;
 
   /** 24-game season workload, normalized to 0..1 (high values at the top). */
   const workload = (key: MetricKey): ChartPoint[] => {
+    if (realLogs) return realLogs.points;
     const rec = player[`${key}Recent` as const];
     const base = player[`${key}Baseline` as const];
     const start = base * 0.92;
@@ -58,10 +99,22 @@ export default function PlayerRiskScreen() {
     });
   };
 
-  const riskTrend: ChartPoint[] = Array.from({ length: 12 }, (_, i) => ({
-    x: i / 11,
-    y: 0.74 - i * 0.02 + noise(i) * 0.07 + (i >= 8 ? 0.12 : 0),
-  }));
+  const riskTrend: ChartPoint[] =
+    realTrend ??
+    Array.from({ length: 12 }, (_, i) => ({
+      x: i / 11,
+      y: 0.74 - i * 0.02 + noise(i) * 0.07 + (i >= 8 ? 0.12 : 0),
+    }));
+
+  const workloadLabels = realLogs ? realLogs.labels : ['Oct', 'Nov', 'Dec', 'Jan', 'Feb'];
+  const spikeMarkers = realLogs ? realLogs.spikes : [];
+  // Tapped point: real logs show that game's actual minutes + date.
+  const selectedGameMinutes =
+    realLogs && selectedGame != null
+      ? player.gameLogs![selectedGame]?.minutesPlayed ?? recent
+      : recent;
+  const selectedGameDate =
+    realLogs && selectedGame != null ? player.gameLogs![selectedGame]?.date : null;
 
   const share = () => {
     Share.share({
@@ -172,7 +225,9 @@ export default function PlayerRiskScreen() {
               <View style={styles.tooltipChip}>
                 <AppIcon name="location.fill" size={12} color="#5856D6" />
                 <Text style={styles.tooltipText}>
-                  Game {selectedGame + 1} · {recent.toFixed(1)} {metricDef.unit}
+                  {realLogs && selectedGameDate
+                    ? `${selectedGameDate} · ${selectedGameMinutes.toFixed(1)} min`
+                    : `Game ${selectedGame + 1} · ${selectedGameMinutes.toFixed(1)} ${metricDef.unit}`}
                 </Text>
               </View>
             ) : null}
@@ -180,8 +235,9 @@ export default function PlayerRiskScreen() {
             <LineChart
               series={[{ name: metricDef.label, color: metricDef.color, points: workload(metric) }]}
               height={170}
-              gridLabels={['Oct', 'Nov', 'Dec', 'Jan', 'Feb']}
+              gridLabels={workloadLabels}
               showDots
+              markers={spikeMarkers}
               bands={[
                 { y0: 0, y1: 0.3, color: '#E5484D' },
                 { y0: 0.3, y1: 0.5, color: '#F5A623' },
@@ -190,7 +246,9 @@ export default function PlayerRiskScreen() {
               onPointPress={(_si, pi) => setSelectedGame(pi === selectedGame ? null : pi)}
             />
             <Text style={styles.chartCaption}>
-              {metricDef.label} per game — red/yellow bands mark elevated workload zones. Tap a dot for details.
+              {realLogs
+                ? `${metricDef.label} per game — red dots mark backend-detected workload spikes. Tap a dot for details.`
+                : `${metricDef.label} per game — red/yellow bands mark elevated workload zones. Tap a dot for details.`}
             </Text>
           </Card>
         </View>
@@ -204,13 +262,15 @@ export default function PlayerRiskScreen() {
             <LineChart
               series={[{ name: 'Risk', color: '#E5484D', points: riskTrend }]}
               height={110}
-              gridLabels={['60d', '45d', '30d', '15d', 'Now']}
+              gridLabels={realTrend ? ['60d', '45d', '30d', '15d', 'Now'] : ['60d', '45d', '30d', '15d', 'Now']}
               showDots
             />
             <Text style={styles.chartCaption}>
-              {player.daysInZone > 0
-                ? `Entered the red zone ${player.daysInZone} day(s) ago — flagged by ${player.triggerMetric}`
-                : 'Risk score trending within the normal range over the last 60 days'}
+              {realTrend
+                ? `Real backend scores over the last 60 days — ${player.riskHistory!.length} snapshots${player.zone === 'red' ? `, flagged by ${player.triggerMetric}` : ''}`
+                : player.daysInZone > 0
+                  ? `Entered the red zone ${player.daysInZone} day(s) ago — flagged by ${player.triggerMetric}`
+                  : 'Risk score trending within the normal range over the last 60 days'}
             </Text>
           </Card>
         </View>

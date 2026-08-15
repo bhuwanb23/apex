@@ -20,6 +20,7 @@ import { injuryML, type InjuryGameLogInput, type InjuryRiskScore } from '../ml/i
 import { getSport } from './shared.service.js';
 import type {
   AlertZone,
+  GameLogPoint,
   GameLogSummary,
   PlayerRiskProfile,
   PlayerRiskResponse,
@@ -209,6 +210,46 @@ async function loadGameLogSummary(playerId: number): Promise<GameLogSummary> {
   };
 }
 
+/**
+ * Last N game logs, oldest first, with the backend's spike flag (minutes
+ * played above the player's recent-workload threshold — the z-score rule the
+ * risk model uses, applied per game). The app just draws the line.
+ */
+async function loadGameLogs(playerId: number, limit = 21): Promise<GameLogPoint[]> {
+  const rows = await prisma.playerGameLogs.findMany({
+    where: { playerId },
+    orderBy: { date: 'desc' },
+    take: limit,
+    select: {
+      date: true,
+      minutesPlayed: true,
+      distanceCovered: true,
+      highIntensityEvents: true,
+      backToBack: true,
+    },
+  });
+  const logs = rows.reverse(); // oldest → newest for the chart
+
+  // Per-game spike = minutes more than 1.5 std above that window's own mean
+  // (same z>1.5 rule the trigger uses, computed from the returned window).
+  const minutes = logs.map(l => l.minutesPlayed).filter((m): m is number => m != null);
+  const mean = minutes.length > 0 ? minutes.reduce((a, b) => a + b, 0) / minutes.length : 0;
+  const std =
+    minutes.length > 1
+      ? Math.sqrt(minutes.reduce((acc, m) => acc + (m - mean) ** 2, 0) / minutes.length)
+      : 0;
+  const spikeThreshold = mean + 1.5 * std;
+
+  return logs.map(l => ({
+    date: l.date.toISOString().slice(0, 10),
+    minutesPlayed: l.minutesPlayed,
+    distanceCovered: l.distanceCovered,
+    highIntensityEvents: l.highIntensityEvents,
+    backToBack: l.backToBack,
+    isSpike: l.minutesPlayed != null && std > 0 && l.minutesPlayed > spikeThreshold,
+  }));
+}
+
 async function loadHistory(
   playerId: number,
   days: number,
@@ -287,6 +328,7 @@ export async function getPlayerRisk(
     return {
       ...profileFromRow(player, latest),
       gameLogSummary: await loadGameLogSummary(playerId),
+      gameLogs: await loadGameLogs(playerId, 21),
       history: await loadHistory(playerId, 60, 10),
     };
   }
@@ -305,6 +347,7 @@ export async function getPlayerRisk(
           new Date().toISOString()
         ),
         gameLogSummary: { gamesLast7Days: 0, gamesLast21Days: 0, avgMinutesLast21Days: null },
+        gameLogs: [],
         history: await loadHistory(playerId, 60, 10),
       };
     }
@@ -323,6 +366,7 @@ export async function getPlayerRisk(
     return {
       ...profileFromScore(player, score),
       gameLogSummary: await loadGameLogSummary(playerId),
+      gameLogs: await loadGameLogs(playerId, 21),
       history: await loadHistory(playerId, 60, 10),
     };
   } catch (err) {
@@ -332,6 +376,7 @@ export async function getPlayerRisk(
         return {
           ...profileFromRow(player, latest),
           gameLogSummary: await loadGameLogSummary(playerId),
+          gameLogs: await loadGameLogs(playerId, 21),
           history: await loadHistory(playerId, 60, 10),
           ...buildFallbackMeta(
             latest.computedAt,
@@ -346,6 +391,7 @@ export async function getPlayerRisk(
           new Date().toISOString()
         ),
         gameLogSummary: { gamesLast7Days: 0, gamesLast21Days: 0, avgMinutesLast21Days: null },
+        gameLogs: [],
         history: await loadHistory(playerId, 60, 10),
         ...buildFallbackMeta(null, 'ML service unavailable — no cached score available'),
       };

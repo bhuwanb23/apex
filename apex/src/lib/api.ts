@@ -159,6 +159,15 @@ export interface PlayerRiskProfile {
 
 export interface PlayerRiskResponse extends PlayerRiskProfile {
   gameLogSummary?: { gamesLast7Days: number; gamesLast21Days: number; avgMinutesLast21Days: number | null };
+  /** Last 21 game logs, oldest first, with the backend's spike flag. */
+  gameLogs?: {
+    date: string;
+    minutesPlayed: number | null;
+    distanceCovered: number | null;
+    highIntensityEvents: number | null;
+    backToBack: boolean;
+    isSpike: boolean;
+  }[];
   history?: { computedAt: string; riskScore: number | null; zone: string; triggerMetric?: string | null }[];
 }
 

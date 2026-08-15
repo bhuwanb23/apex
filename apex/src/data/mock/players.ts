@@ -30,6 +30,10 @@ export interface Player {
   daysInZone: number;
   /** When the backend last computed the risk score — drives freshness display. */
   computedAt?: string;
+  /** Real 60-day risk history (live only) — feeds the trend chart. */
+  riskHistory?: { computedAt: string; riskScore: number }[];
+  /** Real recent game logs (live only) — feed the minutes-per-game chart. */
+  gameLogs?: { date: string; minutesPlayed: number | null; backToBack: boolean; isSpike: boolean }[];
 }
 
 export const PLAYERS: Player[] = [

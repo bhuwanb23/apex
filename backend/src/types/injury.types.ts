@@ -56,9 +56,22 @@ export interface GameLogSummary {
   avgMinutesLast21Days: number | null;
 }
 
+/** One recent game's workload — feeds the minutes-per-game chart. */
+export interface GameLogPoint {
+  date: string; // YYYY-MM-DD
+  minutesPlayed: number | null;
+  distanceCovered: number | null;
+  highIntensityEvents: number | null;
+  backToBack: boolean;
+  /** Backend-computed: minutes exceeded the baseline threshold (the spike the chart highlights). */
+  isSpike: boolean;
+}
+
 /** GET /api/injury/player/:id — the full single-player view. */
 export interface PlayerRiskResponse extends PlayerRiskProfile {
   gameLogSummary: GameLogSummary;
+  /** Last 21 game logs, oldest first, for the workload chart. */
+  gameLogs: GameLogPoint[];
   /** Last 10 computed scores, oldest first, for the trend chart. */
   history: RiskHistoryEntry[];
 }
