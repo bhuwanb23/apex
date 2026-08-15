@@ -186,6 +186,8 @@ export interface CoachScorecard {
   evRate: number;
   avgEvLeft?: number | null;
   rank?: number | null;
+  /** Direction vs the prior 30-day window — backend-computed. */
+  trend?: 'up' | 'down' | 'same' | null;
 }
 
 export interface LeaderboardResponse {

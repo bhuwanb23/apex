@@ -103,7 +103,7 @@ export function useHomeDecisionSpotlight(sport: SportId) {
           totalDecisions: top.totalDecisions,
           optimalDecisions: top.optimalDecisions,
           avgEvLeft: top.avgEvLeft ?? 0,
-          trend: 'flat',
+          trend: top.trend === 'up' || top.trend === 'down' ? top.trend : 'flat',
           matrix: { 'good-good': 0, 'good-bad': 0, 'bad-good': 0, 'bad-bad': 0 },
         } as Coach,
       };

@@ -18,6 +18,11 @@ import { type SportId } from '@/data/mock/sports';
 // Adapters: backend shapes → screen shapes
 // ---------------------------------------------------------------------------
 
+/** Backend trend ('up'/'down'/'same') → screen trend ('up'/'down'/'flat'). */
+function trendToScreen(trend?: CoachScorecard['trend']): Coach['trend'] {
+  return trend === 'up' || trend === 'down' ? trend : 'flat';
+}
+
 function scorecardToCoach(score: CoachScorecard, sport: SportId): Coach {
   return {
     id: String(score.coachId),
@@ -29,7 +34,7 @@ function scorecardToCoach(score: CoachScorecard, sport: SportId): Coach {
     totalDecisions: score.totalDecisions,
     optimalDecisions: score.optimalDecisions,
     avgEvLeft: score.avgEvLeft ?? 0,
-    trend: 'flat',
+    trend: trendToScreen(score.trend),
     matrix: { 'good-good': 0, 'good-bad': 0, 'bad-good': 0, 'bad-bad': 0 },
   };
 }
