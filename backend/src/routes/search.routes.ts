@@ -113,9 +113,14 @@ searchRouter.get('/coaches', createValidator(simpleSearchQuerySchema, 'query'), 
  * /api/search/games:
  *   get:
  *     summary: Game search
- *     description: Games filtered by team, sport, season and date range.
+ *     description: Games filtered by free-text team match, team, sport, season and date range.
  *     tags: [Search]
  *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Matches home/away team name, city or abbreviation
  *       - in: query
  *         name: teamId
  *         schema:
