@@ -70,8 +70,16 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
   res.end = ((chunk?: unknown, ...args: unknown[]) => {
     if (chunk !== undefined && chunk !== null) responseSize += byteCount(chunk);
     // Step 7.2 — the header must be set BEFORE the response is flushed (the
-    // 'finish' event fires after headers are already on the wire).
-    res.setHeader('X-Response-Time', String(getElapsedMs(startTime)));
+    // 'finish' event fires after headers are already on the wire). Guard
+    // against responses already committed (a second res.end after the socket
+    // flushed throws ERR_HTTP_HEADERS_SENT, which used to crash the process).
+    if (!res.headersSent) {
+      try {
+        res.setHeader('X-Response-Time', String(getElapsedMs(startTime)));
+      } catch {
+        // Response already on the wire — nothing left to set.
+      }
+    }
     return origEnd(chunk as never, ...(args as never[]));
   }) as typeof res.end;
 
