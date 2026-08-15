@@ -221,6 +221,7 @@ export const simpleSearchQuerySchema = z.object({
 
 export const gamesSearchQuerySchema = addDateRangeCheck(
   z.object({
+    q: z.string().min(1, 'Search query is required').optional(),
     teamId: positiveInt('teamId').optional(),
     sport: sportSchema.optional(),
     season: seasonFormat.optional(),

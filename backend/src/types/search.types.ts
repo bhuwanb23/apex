@@ -13,6 +13,8 @@ export interface SearchPlayerResult {
   teamAbbreviation: string;
   sport: SportAbbreviation;
   injuryStatus: string | null;
+  /** Latest risk zone (from InjuryRiskScores isLatest) — red/yellow/green or null. */
+  zone: 'red' | 'yellow' | 'green' | null;
 }
 
 /** One team autocomplete result (with sport context). */

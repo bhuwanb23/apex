@@ -308,7 +308,7 @@ export interface TimeoutRecommendationResponse {
 }
 
 export interface SearchPlayersResponse {
-  players: { playerId: number; playerName: string; position?: string | null; teamName: string; teamAbbreviation: string; sport: string; injuryStatus?: string | null }[];
+  players: { playerId: number; playerName: string; position?: string | null; teamName: string; teamAbbreviation: string; sport: string; injuryStatus?: string | null; zone?: 'red' | 'yellow' | 'green' | null }[];
 }
 
 export interface SearchTeamsResponse {
@@ -415,7 +415,7 @@ export const api = {
     apiFetch<SearchPlayersResponse>(`/api/search/players${qs({ q, sport, limit })}`),
   searchTeams: (q: string, sport?: string) => apiFetch<SearchTeamsResponse>(`/api/search/teams${qs({ q, sport })}`),
   searchCoaches: (q: string, sport?: string) => apiFetch<SearchCoachesResponse>(`/api/search/coaches${qs({ q, sport })}`),
-  searchGames: (opts?: { teamId?: number; sport?: string; season?: string; dateFrom?: string; dateTo?: string; limit?: number }) =>
+  searchGames: (opts?: { q?: string; teamId?: number; sport?: string; season?: string; dateFrom?: string; dateTo?: string; limit?: number }) =>
     apiFetch<SearchGamesResponse>(`/api/search/games${qs({ ...opts, limit: opts?.limit ?? 10 })}`),
 
   // Story

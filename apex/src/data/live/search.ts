@@ -10,15 +10,16 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@/lib/api';
-import { PLAYERS, type Player } from '@/data/mock/players';
-import { COACHES, type Coach } from '@/data/mock/coaches';
-import { GAMES, type Game } from '@/data/mock/games';
+import { type Player } from '@/data/mock/players';
+import { type Coach } from '@/data/mock/coaches';
+import { type Game } from '@/data/mock/games';
 import { SPORTS, type SportId } from '@/data/mock/sports';
 import { useOnboarding } from '@/context/onboarding';
 
 export interface SearchResults {
   players: Player[];
-  teams: string[];
+  /** Backend teams carry their id (for navigation) and sport (for the row label). */
+  teams: { name: string; sport: string; id?: number }[];
   coaches: Coach[];
   games: Game[];
 }
@@ -35,23 +36,32 @@ const DEBOUNCE_MS = 250;
 export function useBackendSearch(term: string, scope: string): BackendSearchState {
   const { activeSport } = useOnboarding();
   const [source, setSource] = useState<'live' | 'demo'>('demo');
+  /** The exact term the current live results were fetched for — stale results
+   *  (debounce window, failed refetch) must never render for a newer term. */
+  const [servedTerm, setServedTerm] = useState('');
 
-  const live = useMemo(() => ({ players: [] as Player[], teams: [] as string[], coaches: [] as Coach[], games: [] as Game[] }), []);
+  const live = useMemo(
+    () => ({ players: [] as Player[], teams: [] as { name: string; sport: string; id?: number }[], coaches: [] as Coach[], games: [] as Game[] }),
+    []
+  );
 
   useEffect(() => {
     const q = term.trim();
-    if (q.length < 2) {
-      setSource('demo');
-      return;
-    }
-    setSource('demo');
+    // All state updates happen inside the debounced callback (never
+    // synchronously in the effect body) to avoid cascading renders.
     const timer = setTimeout(async () => {
+      if (q.length < 2) {
+        setServedTerm('');
+        setSource('demo');
+        return;
+      }
+      let next: 'live' | 'demo' = 'demo';
       try {
         const [players, teams, coaches, games] = await Promise.all([
           scope === 'All' || scope === 'Players' ? api.searchPlayers(q, activeSport, 8) : null,
           scope === 'All' || scope === 'Teams' ? api.searchTeams(q, activeSport) : null,
           scope === 'All' || scope === 'Coaches' ? api.searchCoaches(q, activeSport) : null,
-          scope === 'All' || scope === 'Games' ? api.searchGames({ sport: activeSport, limit: 8 }) : null,
+          scope === 'All' || scope === 'Games' ? api.searchGames({ q, sport: activeSport, limit: 8 }) : null,
         ]);
         const hasAny =
           (players?.players.length ?? 0) > 0 ||
@@ -69,7 +79,7 @@ export function useBackendSearch(term: string, scope: string): BackendSearchStat
             position: p.position ?? '',
             jersey: 0,
             riskScore: 0,
-            zone: 'insufficient_data',
+            zone: (p.zone as Player['zone']) ?? 'insufficient_data',
             triggerMetric: '—',
             explanation: '',
             minutesRecent: 0,
@@ -84,7 +94,7 @@ export function useBackendSearch(term: string, scope: string): BackendSearchStat
             backToBack: false,
             daysInZone: 0,
           }));
-          live.teams = (teams?.teams ?? []).map(t => t.teamName);
+          live.teams = (teams?.teams ?? []).map(t => ({ name: t.teamName, sport: t.sport, id: t.teamId }));
           live.coaches = (coaches?.coaches ?? []).map(c => ({
             id: String(c.coachId),
             name: c.coachName,
@@ -120,16 +130,25 @@ export function useBackendSearch(term: string, scope: string): BackendSearchStat
             events: [],
             decisions: [],
           }));
-          setSource('live');
+          next = 'live';
         }
       } catch {
         // stay on demo fallback
       }
+      setServedTerm(q);
+      setSource(next);
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [term, scope, activeSport, live]);
 
-  return { results: live, source, active: term.trim().length >= 2 };
+  const fresh = source === 'live' && servedTerm === term.trim();
+  return {
+    // Stale live results are hidden so the screen's demo fallback (or the
+    // empty state) renders while a new query is in flight.
+    results: fresh ? live : { players: [], teams: [], coaches: [], games: [] },
+    source: fresh ? 'live' : 'demo',
+    active: term.trim().length >= 2,
+  };
 }
 
 /** Convenience: whether any mock data exists for a team name (used by team rows). */

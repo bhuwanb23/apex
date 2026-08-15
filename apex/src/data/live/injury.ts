@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react';
 
-import { api, type RiskAlert, type PlayerRiskProfile } from '@/lib/api';
+import { api, type RiskAlert, type PlayerRiskProfile, type TeamRiskResponse } from '@/lib/api';
 import { useApiData, type DataSource } from '@/hooks/use-api-data';
 import { PLAYERS, type Player, type RiskZone } from '@/data/mock/players';
 import { type SportId } from '@/data/mock/sports';
@@ -201,26 +201,37 @@ export interface TeamRosterResult {
 }
 
 /**
- * Team view: resolve team name → backend teamId, fetch the full roster with
- * every player's zone (green included) and the backend's lastUpdated time.
+ * Team view: accepts either a backend team id (search results carry it) or a
+ * team name (home / demo navigation). Resolves to the backend teamId, fetches
+ * the full roster with every player's zone (green included) and the backend's
+ * lastUpdated time.
  */
-export function useTeamRoster(teamName: string | undefined, sport: SportId) {
-  const fallback = useMemo(() => PLAYERS.filter(p => p.team === teamName), [teamName]);
+export function useTeamRoster(teamRef: string | undefined, sport: SportId) {
+  const teamId = teamRef !== undefined && /^\d+$/.test(teamRef) ? Number(teamRef) : undefined;
+  const fallback = useMemo(
+    () => (teamId !== undefined ? [] : PLAYERS.filter(p => p.team === teamRef)),
+    [teamRef, teamId]
+  );
   const result = useApiData<{ players: Player[]; lastUpdated: string | null }>(
     async opts => {
-      if (!teamName) return null;
-      const teams = await api.teams(sport);
-      const team = teams.teams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
-      if (!team) return null;
-      const roster = await api.teamRisk(team.id, opts?.recalculate ?? false);
-      if (roster.players.length === 0) return null;
+      if (!teamRef) return null;
+      let roster: TeamRiskResponse | null = null;
+      if (teamId !== undefined) {
+        roster = await api.teamRisk(teamId, opts?.recalculate ?? false);
+      } else {
+        const teams = await api.teams(sport);
+        const team = teams.teams.find(t => t.name.toLowerCase() === teamRef.toLowerCase());
+        if (!team) return null;
+        roster = await api.teamRisk(team.id, opts?.recalculate ?? false);
+      }
+      if (!roster || roster.players.length === 0) return null;
       return {
         players: roster.players.map(p => profileToPlayer(p, sport)),
         lastUpdated: roster.lastUpdated,
       };
     },
     { players: fallback, lastUpdated: null },
-    [teamName, sport]
+    [teamRef, sport, teamId]
   );
   return {
     players: result.data.players,
