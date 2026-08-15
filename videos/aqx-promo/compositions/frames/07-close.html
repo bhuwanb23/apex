@@ -1,0 +1,58 @@
+<template>
+  <div id="root" data-composition-id="07-close" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+    <style>
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
+      .clip { position: absolute; }
+      #f07-bg { inset: 0; background: #F0F1F5; }
+      #f07-phone {
+        left: 18%; top: 10%; width: 320px; height: 660px;
+        border-radius: 40px; border: 10px solid #111; overflow: hidden;
+        box-shadow: 0 30px 80px rgba(20,18,31,0.22); background: #fff;
+      }
+      #f07-phone img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      #f07-orb {
+        left: 58%; top: 22%; width: 160px; height: 160px;
+        border-radius: 50%; background: linear-gradient(135deg, #FF5C8A, #5856D6, #FFA058);
+        display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 72px;
+        box-shadow: 0 24px 60px rgba(88,86,214,0.35);
+      }
+      #f07-orb span {
+        width: 52%; height: 52%; border-radius: 50%; background: rgba(255,255,255,0.22);
+        display: grid; place-items: center;
+      }
+      #f07-word {
+        left: 58%; top: 42%; font-size: 72px; font-weight: 900; color: #14121F;
+      }
+      #f07-word i { color: #5856D6; font-style: normal; }
+      #f07-sub {
+        left: 58%; top: 54%; font-size: 24px; font-weight: 600; color: #6E7280; letter-spacing: 0.18em; text-transform: uppercase;
+      }
+      #f07-line {
+        left: 58%; top: 64%; width: 420px; font-size: 28px; font-weight: 700; color: #14121F;
+      }
+    </style>
+
+    <div id="f07-bg" class="clip" data-start="0" data-duration="8" data-track-index="0"></div>
+    <div id="f07-phone" class="clip" data-start="0" data-duration="8" data-track-index="1">
+      <img src="../../assets/story-mode.png" alt="" />
+    </div>
+    <div id="f07-orb" class="clip" data-start="0" data-duration="8" data-track-index="2"><span>A</span></div>
+    <div id="f07-word" class="clip" data-start="0" data-duration="8" data-track-index="3">AQX<i>.</i></div>
+    <div id="f07-sub" class="clip" data-start="0" data-duration="8" data-track-index="4">Sports Intelligence</div>
+    <div id="f07-line" class="clip" data-start="0" data-duration="8" data-track-index="5">Clear insights. Personalized.</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#f07-phone", { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.9, ease: "power3.out" }, 0.05);
+      tl.to("#f07-phone", { scale: 0.92, x: -20, duration: 0.8, ease: "power2.inOut" }, 2.2);
+      tl.fromTo("#f07-orb", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.6)" }, 2.5);
+      tl.fromTo("#f07-word", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6 }, 3.1);
+      tl.fromTo("#f07-sub", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5 }, 3.5);
+      tl.fromTo("#f07-line", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.6 }, 5.5);
+      tl.to(["#f07-orb","#f07-word","#f07-sub","#f07-line"], { opacity: 0.98, duration: 1.2 }, 6.5);
+      window.__timelines["07-close"] = tl;
+    </script>
+  </div>
+</template>
