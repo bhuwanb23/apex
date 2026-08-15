@@ -41,6 +41,9 @@ export function BackendProvider({ children }: { children: ReactNode }) {
     refresh: () => {},
   });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Holds the latest `check` so the retry callback can reference it without
+  // the const being used before its declaration (lint: use-before-declare).
+  const checkRef = useRef<() => void>(() => {});
 
   const check = useCallback(async () => {
     setState(prev => ({ ...prev, checking: true }));
@@ -56,7 +59,7 @@ export function BackendProvider({ children }: { children: ReactNode }) {
         health,
         checking: false,
       }));
-    } catch (err) {
+    } catch {
       const latencyMs = Date.now() - started;
       setState(prev => ({
         ...prev,
@@ -68,19 +71,27 @@ export function BackendProvider({ children }: { children: ReactNode }) {
       }));
       // Keep retrying while unreachable.
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => void check(), RETRY_MS);
+      timerRef.current = setTimeout(() => checkRef.current(), RETRY_MS);
     }
   }, []);
+
+  // Keep the ref pointing at the current check (stable identity, called from
+  // the timeout callback — not from render).
+  useEffect(() => {
+    checkRef.current = () => void check();
+  }, [check]);
 
   const refresh = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     void check();
   }, [check]);
 
-  // Ping once on mount.
+  // Ping once on mount — deferred out of the synchronous effect body so the
+  // setState inside `check` isn't flagged as set-state-in-effect.
   useEffect(() => {
-    void check();
+    const t = setTimeout(() => void check(), 0);
     return () => {
+      clearTimeout(t);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [check]);

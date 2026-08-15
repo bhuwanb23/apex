@@ -29,6 +29,8 @@ interface OnboardingState {
 }
 
 interface OnboardingContextValue extends OnboardingState {
+  /** True once the stored preferences (if any) have been read from storage. */
+  hydrated: boolean;
   completeOnboarding: (sports: SportId[], role: RoleId) => void;
   setSports: (sports: SportId[]) => void;
   setRole: (role: RoleId) => void;
@@ -36,6 +38,8 @@ interface OnboardingContextValue extends OnboardingState {
   setStoryLanguage: (language: OnboardingState['storyLanguage']) => void;
   /** Switch the active sport, cycling to the next selected sport. */
   cycleActiveSport: () => void;
+  /** Mark onboarding incomplete again so the setup flow shows on next launch. */
+  resetOnboarding: () => void;
 }
 
 /**
@@ -80,13 +84,17 @@ function parseStored(raw: string | null): Partial<OnboardingState> | null {
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<OnboardingState>(DEFAULT_STATE);
+  const [hydrated, setHydrated] = useState(false);
 
   // Hydrate once from storage at boot.
   useEffect(() => {
-    storage.getItem(STORAGE_KEY).then(raw => {
-      const stored = parseStored(raw);
-      if (stored) setState(prev => ({ ...prev, ...stored }));
-    });
+    storage
+      .getItem(STORAGE_KEY)
+      .then(raw => {
+        const stored = parseStored(raw);
+        if (stored) setState(prev => ({ ...prev, ...stored }));
+      })
+      .finally(() => setHydrated(true));
   }, []);
 
   const persist = useCallback((next: OnboardingState) => {
@@ -137,17 +145,26 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     [persist, state]
   );
 
+  /** Re-show the setup flow (Settings → "Re-run setup"). Preferences are
+   *  kept so the user only re-picks sport/role; the next launch lands here. */
+  const resetOnboarding = useCallback(
+    () => persist({ ...state, hasOnboarded: false }),
+    [persist, state]
+  );
+
   const value = useMemo<OnboardingContextValue>(
     () => ({
       ...state,
+      hydrated,
       completeOnboarding,
       setSports,
       setRole,
       setDefaultModule,
       setStoryLanguage,
       cycleActiveSport,
+      resetOnboarding,
     }),
-    [state, completeOnboarding, setSports, setRole, setDefaultModule, setStoryLanguage, cycleActiveSport]
+    [state, hydrated, completeOnboarding, setSports, setRole, setDefaultModule, setStoryLanguage, cycleActiveSport, resetOnboarding]
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
