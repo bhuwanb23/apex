@@ -10,7 +10,7 @@ import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
 import { GAMES } from '@/data/mock/games';
 import { SPORTS } from '@/data/mock/sports';
-import { useBackendSearch } from '@/data/live/search';
+import { useBackendSearch, type SearchResults } from '@/data/live/search';
 
 type Category = 'All' | 'Players' | 'Teams' | 'Coaches' | 'Games';
 
@@ -31,7 +31,7 @@ export default function SearchResultsScreen() {
 
   const liveSearch = useBackendSearch(term, scope);
 
-  const results = useMemo(() => {
+  const results = useMemo<SearchResults>(() => {
     if (!term) return { players: [], teams: [], coaches: [], games: [] };
     if (liveSearch.source === 'live') return liveSearch.results;
     // Demo fallback: filter the curated mock data locally (presentation only).
@@ -41,7 +41,11 @@ export default function SearchResultsScreen() {
         : [];
     const teams =
       scope === 'All' || scope === 'Teams'
-        ? SPORTS.flatMap(s => s.teams).filter(t => t.toLowerCase().includes(term))
+        ? SPORTS.flatMap(s =>
+            s.teams
+              .filter(t => t.toLowerCase().includes(term))
+              .map(t => ({ name: t, sport: s.short }))
+          )
         : [];
     const coaches =
       scope === 'All' || scope === 'Coaches'
@@ -116,14 +120,18 @@ export default function SearchResultsScreen() {
           {results.teams.length > 0 ? (
             <ResultGroup title={`Teams (${results.teams.length})`}>
               {results.teams.map(team => (
-                <Pressable key={team} onPress={() => router.push({ pathname: '/injury/team', params: { team } })}>
+                <Pressable
+                  key={team.name}
+                  onPress={() =>
+                    router.push({ pathname: '/injury/team', params: { team: team.id ? String(team.id) : team.name } })
+                  }>
                   <Card style={styles.row}>
                     <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{team.slice(0, 1)}</Text>
+                      <Text style={styles.avatarText}>{team.name.slice(0, 1)}</Text>
                     </View>
                     <View style={styles.rowBody}>
-                      <Text style={styles.rowTitle}>{team}</Text>
-                      <Text style={styles.rowMeta}>{sportForTeam(team)} · Team risk dashboard</Text>
+                      <Text style={styles.rowTitle}>{team.name}</Text>
+                      <Text style={styles.rowMeta}>{team.sport} · Team risk dashboard</Text>
                     </View>
                     <AppIcon name="chevron.right" size={14} color="#9AA0B5" />
                   </Card>
@@ -147,7 +155,7 @@ export default function SearchResultsScreen() {
                     <View style={styles.rowBody}>
                       <Text style={styles.rowTitle}>{coach.name}</Text>
                       <Text style={styles.rowMeta}>
-                        {coach.team} · {coach.evRate}% EV rate
+                        {coach.team} · {coach.evRate > 0 ? `${coach.evRate}% EV rate` : 'Coach'}
                       </Text>
                     </View>
                     <AppIcon name="chevron.right" size={14} color="#9AA0B5" />
@@ -172,7 +180,7 @@ export default function SearchResultsScreen() {
                         {game.homeTeam} {game.homeScore} – {game.awayScore} {game.awayTeam}
                       </Text>
                       <Text style={styles.rowMeta}>
-                        {sportForTeam(game.homeTeam)} · {game.date} · Momentum replay
+                        {sportForTeam(game.homeTeam) || game.sport} · {game.date} · Momentum replay
                       </Text>
                     </View>
                     <AppIcon name="chevron.right" size={14} color="#9AA0B5" />
