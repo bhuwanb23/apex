@@ -252,6 +252,11 @@ export const triggerJobBodySchema = z.object({
   sport: z.string().min(1).optional(),
 });
 
+/** POST /api/sync/refresh — client-facing data refresh (sport optional, normalized). */
+export const syncRefreshBodySchema = z.object({
+  sport: sportSchema.optional(),
+});
+
 export const cacheEntriesQuerySchema = z.object({
   dataType: z.string().min(1).optional(),
   sport: z.string().min(1).optional(),

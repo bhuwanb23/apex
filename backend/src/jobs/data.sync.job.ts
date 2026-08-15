@@ -38,9 +38,14 @@ async function isSportDataFresh(sportId: number): Promise<boolean> {
 const dataSyncJob: JobDefinition = {
   name: 'data_sync',
   schedule: env.JOB_CRON_DATA_SYNC, // every 6h — 0:00/6:00/12:00/18:00
-  description: 'Incremental sync of recent games, play-by-play and game logs for every active sport',
-  run: async () => {
-    const sports = await prisma.sports.findMany({ where: { isActive: true } });
+  description: 'Incremental sync of recent games, play-by-play and game logs for every active sport (or one sport when triggered with a sport filter)',
+  run: async ctx => {
+    // Scheduled runs sync every active sport; an app-triggered refresh can
+    // target one sport ('Trigger a data sync for NBA right now').
+    const targetSport = ctx.sport?.toUpperCase();
+    const sports = await prisma.sports.findMany({
+      where: { isActive: true, ...(targetSport ? { name: targetSport } : {}) },
+    });
     const errors: string[] = [];
     const perSport: Record<string, unknown> = {};
     const totals = { teams: 0, players: 0, games: 0, logs: 0, decisions: 0 };

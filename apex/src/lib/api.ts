@@ -357,6 +357,30 @@ export interface JobsStatusResponse {
   jobs: { jobName: string; description: string; isRunning: boolean; lastRunAt?: string | null; lastRunStatus?: string | null; nextRunAt?: string | null }[];
 }
 
+export interface JobsHistoryResponse {
+  jobName: string | null;
+  runs: {
+    id: number;
+    jobName: string;
+    sport: string | null;
+    status: string;
+    startedAt: string;
+    completedAt: string | null;
+    durationSeconds: number | null;
+    recordsProcessed: number | null;
+    errors: string[];
+    triggeredBy: string;
+  }[];
+  total: number;
+}
+
+export interface SyncRefreshResponse {
+  jobName: string;
+  sport: string | null;
+  logId: number | null;
+  status: string;
+}
+
 // ---------------------------------------------------------------------------
 // Endpoints
 // ---------------------------------------------------------------------------
@@ -425,4 +449,12 @@ export const api = {
   // System / settings
   cacheStats: () => apiFetch<CacheStatsResponse>('/api/cache/stats'),
   jobsStatus: () => apiFetch<JobsStatusResponse>('/api/jobs/status'),
+  jobsHistory: (jobName?: string, limit = 5) =>
+    apiFetch<JobsHistoryResponse>(`/api/jobs/history${qs({ jobName, limit })}`),
+  syncRefresh: (sport?: string) =>
+    apiFetch<SyncRefreshResponse>('/api/sync/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sport }),
+    }),
 };

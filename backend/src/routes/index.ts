@@ -12,6 +12,7 @@ import { momentumRouter } from './momentum.routes.js';
 import { searchRouter } from './search.routes.js';
 import { sharedRouter } from './shared.routes.js';
 import { storyRouter } from './story.routes.js';
+import { syncRouter } from './sync.routes.js';
 
 export const routes = Router();
 
@@ -51,6 +52,7 @@ export const routeMounts = [
   { path: '/api/search', router: searchRouter }, // Step 8
   { path: '/api/story', router: storyRouter }, // Step 9
   { path: '/api/jobs', router: jobsRouter }, // Phase 6 Step 10 — job control
+  { path: '/api/sync', router: syncRouter }, // app-facing data refresh trigger
   { path: '/api/cache', router: cacheRouter }, // Phase 7 Step 9 — cache monitoring
   { path: '/api/logs', router: logsRouter }, // Phase 8 Step 11 — log viewer
 ] as const;
