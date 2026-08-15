@@ -85,6 +85,8 @@ export interface DecisionDetail {
   outcomeSuccess: boolean | null;
   /** Human-readable game context, e.g. "4:22 left · Q4 · down by 3 · 4th & 2". */
   situation?: string;
+  /** Win probability before the decision, 0-1 (from the EV model). */
+  winProbabilityBefore?: number | null;
   /** From the Python EV model — only present once EV has been computed. */
   explanation?: string;
 }

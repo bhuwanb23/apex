@@ -62,6 +62,8 @@ function decisionToScreen(d: CoachDecision): Decision {
     outcomeSuccess: d.outcomeSuccess ?? false,
     period: d.period != null ? String(d.period) : '',
     clock: d.clock ?? '',
+    alternativeActions: Array.isArray(d.alternativeActions) ? d.alternativeActions : undefined,
+    winProbabilityBefore: d.winProbabilityBefore ?? undefined,
   };
 }
 

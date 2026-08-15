@@ -226,6 +226,10 @@ export interface CoachDecision {
   period?: number | string | null;
   clock?: string | null;
   scoreDiff?: number | null;
+  /** Evaluated alternatives with EVs (backend sends these with each decision). */
+  alternativeActions?: { action: string; ev: number; probSuccess?: number | null; wpIfSuccess?: number | null; wpIfFailure?: number | null }[] | Record<string, unknown> | null;
+  /** Win probability before the decision, 0-1. */
+  winProbabilityBefore?: number | null;
 }
 
 export interface MomentumVerdict {

@@ -5,6 +5,15 @@ import type { SportId } from './sports';
 export type DecisionType = '4th_down' | 'timeout' | '2pt_conversion' | 'intentional_walk';
 export type OutcomeCell = 'good-good' | 'good-bad' | 'bad-good' | 'bad-bad';
 
+/** One evaluated option from the EV model (mirrors the backend shape). */
+export interface AlternativeAction {
+  action: string;
+  ev: number;
+  probSuccess?: number | null;
+  wpIfSuccess?: number | null;
+  wpIfFailure?: number | null;
+}
+
 export interface Coach {
   id: string;
   name: string;
@@ -40,6 +49,10 @@ export interface Decision {
   outcomeSuccess: boolean;
   period: string;
   clock: string;
+  /** Evaluated alternatives — present on live data from the backend. */
+  alternativeActions?: AlternativeAction[];
+  /** Win probability before the decision, 0-1. */
+  winProbabilityBefore?: number;
 }
 
 export const COACHES: Coach[] = [
