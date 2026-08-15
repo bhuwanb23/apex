@@ -261,6 +261,38 @@ type DecisionRow = Prisma.CoachDecisionsGetPayload<{
   };
 }>;
 
+/**
+ * Human-readable game context for a decision card: clock + period + score
+ * state, plus down/distance/field position for 4th-down calls. Falls back to
+ * the raw play description when structured fields are missing.
+ */
+function buildSituation(row: {
+  decisionType: string;
+  period: number;
+  clock: string | null;
+  scoreDiff: number;
+  gameContext: Prisma.JsonValue | null;
+}): string {
+  const ctx = (row.gameContext ?? {}) as Record<string, unknown>;
+  const scoreState =
+    row.scoreDiff > 0
+      ? `up by ${row.scoreDiff}`
+      : row.scoreDiff < 0
+        ? `down by ${-row.scoreDiff}`
+        : 'tied';
+  const clock = row.clock ? `${row.clock} left` : `Q${row.period}`;
+  const parts: string[] = [`${clock}, Q${row.period}`, scoreState];
+  if (row.decisionType === '4th_down') {
+    const yards = typeof ctx.yardsToGo === 'number' ? ctx.yardsToGo : null;
+    const line = typeof ctx.yardLine === 'number' ? ctx.yardLine : null;
+    if (yards != null) parts.push(`4th & ${yards}`);
+    if (line != null) parts.push(`at the ${line} yard line`);
+  } else if (typeof ctx.description === 'string' && ctx.description.length > 0) {
+    parts.push(ctx.description);
+  }
+  return parts.join(', ');
+}
+
 /** DB row → drill-down entry (adds formatted date + opponent name). */
 function toCoachDecisionEntry(row: DecisionRow, coachTeamId: number): CoachDecisionEntry {
   const opponentName =
@@ -282,6 +314,7 @@ function toCoachDecisionEntry(row: DecisionRow, coachTeamId: number): CoachDecis
     alternativeActions: row.alternativeActions as DecisionDetail['alternativeActions'],
     outcome: row.outcome,
     outcomeSuccess: row.outcomeSuccess,
+    situation: buildSituation(row),
     gameDateFormatted: format(row.game.date, 'MMM d, yyyy'),
     opponentName,
   };
@@ -340,7 +373,7 @@ export async function getCoachDecisions(
     // The full filtered set (not just the page) drives the summary counts.
     prisma.coachDecisions.findMany({
       where,
-      select: { isOptimal: true, outcomeSuccess: true },
+      select: { isOptimal: true, outcomeSuccess: true, evDifference: true },
     }),
   ]);
 
@@ -375,6 +408,7 @@ export async function getCoachDecisions(
   const rank = leaderboard.find(s => s.coachId === coachId)?.rank ?? null;
 
   const optimalDecisions = outcomeRows.filter(d => d.isOptimal).length;
+  const evSum = outcomeRows.reduce((sum, d) => sum + (d.evDifference ?? 0), 0);
 
   return {
     coach: {
@@ -387,6 +421,7 @@ export async function getCoachDecisions(
       totalDecisions: total,
       optimalDecisions,
       evRate: total > 0 ? (optimalDecisions / total) * 100 : 0,
+      avgEvDifference: total > 0 ? evSum / total : null,
       rank,
     },
     processVsOutcome,
@@ -428,6 +463,7 @@ function toGameDecisionDetail(
     alternativeActions: row.alternativeActions as DecisionDetail['alternativeActions'],
     outcome: row.outcome,
     outcomeSuccess: row.outcomeSuccess,
+    situation: buildSituation(row),
   };
 }
 

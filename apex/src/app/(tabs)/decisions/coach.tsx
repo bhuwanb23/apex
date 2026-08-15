@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { QualityBadge, TypeChip } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
+import { useOnboarding } from '@/context/onboarding';
 import { type OutcomeCell } from '@/data/mock/coaches';
 import { useCoachDetail } from '@/data/live/decisions';
 
@@ -23,7 +24,8 @@ type DecisionFilter = 'all' | 'optimal' | 'suboptimal';
 export default function CoachDetailScreen() {
   const router = useRouter();
   const { coachId } = useLocalSearchParams<{ coachId: string }>();
-  const { coach, decisions: coachDecisions } = useCoachDetail(coachId, 'NFL');
+  const { activeSport } = useOnboarding();
+  const { coach, decisions: coachDecisions } = useCoachDetail(coachId, activeSport);
   const [filter, setFilter] = useState<DecisionFilter>('all');
   const [cellFilter, setCellFilter] = useState<OutcomeCell | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
