@@ -20,11 +20,17 @@ Premium product film: soft `#F0F1F5` canvas, AQX purple `#5856D6` as the only pr
 - type: branding
 - blueprint: logo-assemble-lockup
 - scene: Gradient orb assembles; AQX. wordmark locks; tagline whispers in
-- voiceover: Sports intelligence. Personalized.
+- voiceover: This is AQX. Sports intelligence. Personalized.
 - poster: 4
-- asset_candidates: logo-orb (brand mark)
+- asset_candidates: logo-orb.png
+- src: compositions/frames/01-brand-open.html
+- focal: logo-orb.png
+- roles: logo-orb = hero · wordmark = supporting · canvas = background
+- sfx: whoosh-soft
 
-Brand orb blooms from zero. Wordmark locks. Quiet confidence.
+Scene 1 (0.0–1.5s): soft canvas ground; gradient orb scales from 0→1 center — Centered.
+Scene 2 (1.5–4.0s): wordmark AQX. locks beside/below orb as VO names intelligence.
+Scene 3 (4.0–end): tagline PERSONALIZED holds still; subtle orb glow only.
 
 ## Frame 2 — The promise
 - status: outline
@@ -33,11 +39,17 @@ Brand orb blooms from zero. Wordmark locks. Quiet confidence.
 - type: hook
 - blueprint: kinetic-type-beats
 - scene: Kinetic line — chaos of sports data → one clear brief
-- voiceover: Every game dumps noise. AQX turns it into a brief you can act on.
+- voiceover: Every game dumps noise — box scores, play-by-play, gut feel. AQX turns it into a brief you can act on.
 - poster: 3
 - asset_candidates: welcome.png
+- src: compositions/frames/02-promise.html
+- focal: kinetic headline
+- roles: noise-words = supporting · brief-payoff = hero
+- sfx: tick
 
-Problem → promise in one breath. Value before features.
+Scene 1 (0.0–2.5s): kinetic tokens NOISE / BOX SCORES / PLAY-BY-PLAY swap center.
+Scene 2 (2.5–5.5s): line resolves to ONE CLEAR BRIEF as VO lands the promise.
+Scene 3 (5.5–end): hold payoff with soft purple accent bar.
 
 ## Frame 3 — Meet AQX
 - status: outline
@@ -46,11 +58,17 @@ Problem → promise in one breath. Value before features.
 - type: product_intro
 - blueprint: device-surface-showcase
 - scene: Phone rises with Welcome screen; three value props settle
-- voiceover: Built for trainers. Coaches. Analysts. Fans.
+- voiceover: Built for trainers. Coaches. Analysts. And fans who want the plain-English version.
 - poster: 4
 - asset_candidates: welcome.png
+- src: compositions/frames/03-meet-aqx.html
+- focal: welcome.png
+- roles: phone = hero · role-chips = supporting
+- sfx: ui-pop
 
-Device hero introduces the product surface.
+Scene 1 (0.0–1.5s): phone device rises with welcome UI screenshot.
+Scene 2 (1.5–5.0s): role chips Trainers / Coaches / Analysts / Fans stagger in with VO.
+Scene 3 (5.0–end): hold device + chips.
 
 ## Frame 4 — Injury Risk
 - status: outline
@@ -59,11 +77,17 @@ Device hero introduces the product surface.
 - type: feature_showcase
 - blueprint: device-surface-showcase
 - scene: Phone shows Player Risk — traffic-light score and workload bars
-- voiceover: Know who's at risk — before they get hurt.
+- voiceover: Know who's at risk before they get hurt — traffic-light scores, workload spikes, and alerts you can share.
 - poster: 5
-- asset_candidates: injury-player.png, home.png
+- asset_candidates: injury-player.png
+- src: compositions/frames/04-injury.html
+- focal: injury-player.png
+- roles: phone = hero · risk-label = supporting
+- sfx: alert-soft
 
-First pillar proof inside the real UI.
+Scene 1 (0.0–1.2s): phone with injury UI pushes in.
+Scene 2 (1.2–4.5s): RISK label + red accent pulse as VO says at risk.
+Scene 3 (4.5–end): hold device; subtle scrub on screenshot scale.
 
 ## Frame 5 — Decisions
 - status: outline
@@ -72,11 +96,17 @@ First pillar proof inside the real UI.
 - type: feature_showcase
 - blueprint: device-surface-showcase
 - scene: Coach Leaderboard podium and EV options light up
-- voiceover: Grade every coaching decision on pure logic — not the final score.
+- voiceover: Grade every coaching decision on pure logic — expected value, not just the final score.
 - poster: 5
 - asset_candidates: decisions-leaderboard.png
+- src: compositions/frames/05-decisions.html
+- focal: decisions-leaderboard.png
+- roles: phone = hero · ev-badge = supporting
+- sfx: click
 
-Second pillar — process over outcome.
+Scene 1 (0.0–1.2s): phone with leaderboard enters.
+Scene 2 (1.2–5.0s): PURE LOGIC / EV badge reveals with VO.
+Scene 3 (5.0–end): hold.
 
 ## Frame 6 — Momentum Replay
 - status: outline
@@ -85,11 +115,17 @@ Second pillar — process over outcome.
 - type: benefit_highlight
 - blueprint: device-surface-showcase
 - scene: Momentum verdict REAL + Game Replay scrubber animates
-- voiceover: And find out if momentum is real — or just a story.
+- voiceover: Scrub the game. Watch the run. Find out if momentum is real — or just a story.
 - poster: 4
 - asset_candidates: momentum-replay.png
+- src: compositions/frames/06-momentum.html
+- focal: momentum-replay.png
+- roles: phone = hero · real-badge = supporting
+- sfx: whoosh
 
-Wow-factor UI: scrubber + statistical verdict.
+Scene 1 (0.0–1.5s): phone with momentum UI enters.
+Scene 2 (1.5–4.5s): REAL badge springs as VO asks if momentum is real.
+Scene 3 (4.5–end): hold with soft pulse on badge.
 
 ## Frame 7 — Story Mode + CTA
 - status: outline
@@ -98,8 +134,14 @@ Wow-factor UI: scrubber + statistical verdict.
 - type: cta
 - blueprint: logo-assemble-lockup
 - scene: Story Mode card → share moment → AQX lockup and tagline
-- voiceover: AQX Sports Intelligence. Clear insights. Personalized.
+- voiceover: AQX Sports Intelligence. Clear insights. Personalized for how you work.
 - poster: 4
 - asset_candidates: story-mode.png
+- src: compositions/frames/07-close.html
+- focal: story-mode.png
+- roles: story-phone = supporting · logo = hero
+- sfx: chime
 
-Close on narrative payoff and brand lockup.
+Scene 1 (0.0–2.5s): Story Mode phone shown then soft scale back.
+Scene 2 (2.5–5.5s): logo lockup assembles center as VO names AQX.
+Scene 3 (5.5–end): PERSONALIZED tagline holds; gentle fade settle (final frame).
