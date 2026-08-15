@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
@@ -10,6 +10,7 @@ import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
 import { fetchTimeoutRecommendation } from '@/data/live/momentum';
+import { useOnboarding } from '@/context/onboarding';
 
 const PERIODS = ['Q1', 'Q2', 'Q3', 'Q4', 'OT'];
 
@@ -25,7 +26,14 @@ function formatClock(minutes: number): string {
 }
 
 export default function TimeoutOptimizerScreen() {
-  const [sport, setSport] = useState<'NFL' | 'NBA'>('NFL');
+  const { activeSport } = useOnboarding();
+  // The optimizer's scenario grid only covers NFL and NBA — follow the
+  // user's stored sport when it is one of them, default to NFL otherwise.
+  const [sport, setSport] = useState<'NFL' | 'NBA'>(activeSport === 'NBA' ? 'NBA' : 'NFL');
+
+  useEffect(() => {
+    setSport(activeSport === 'NBA' ? 'NBA' : 'NFL');
+  }, [activeSport]);
   const [consecutive, setConsecutive] = useState(3);
   const [scoreDiff, setScoreDiff] = useState(-4);
   const [minutes, setMinutes] = useState(5);

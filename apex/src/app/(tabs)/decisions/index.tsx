@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
@@ -12,6 +12,7 @@ import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Coach } from '@/data/mock/coaches';
 import { DECISION_GAMES } from '@/data/mock/games';
 import { useCoachLeaderboard } from '@/data/live/decisions';
+import { useOnboarding } from '@/context/onboarding';
 
 const DECISION_TYPES = ['All', '4th Down', 'Timeout', '2-Point'];
 const GAME_TYPES = ['Regular', 'Playoff', 'All'];
@@ -31,10 +32,18 @@ const GAME_TYPE_KEYS: Record<string, string> = {
 
 export default function CoachLeaderboardScreen() {
   const router = useRouter();
-  const [sport, setSport] = useState<SportId>('NFL');
+  const { activeSport } = useOnboarding();
+  // Sport comes from device storage (the plan's rule) — the leaderboard
+  // follows the user's selected sport on load and when it changes. The chips
+  // below remain a per-screen browse override until the sport changes again.
+  const [sport, setSport] = useState<SportId>(activeSport);
   const [season, setSeason] = useState(SEASONS[0]);
   const [decisionType, setDecisionType] = useState('All');
   const [gameType, setGameType] = useState('All');
+
+  useEffect(() => {
+    setSport(activeSport);
+  }, [activeSport]);
 
   const { coaches } = useCoachLeaderboard(sport, {
     season,

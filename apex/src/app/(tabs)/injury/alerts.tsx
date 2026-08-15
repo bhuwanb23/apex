@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
 import { useLeagueAlerts } from '@/data/live/injury';
+import { useOnboarding } from '@/context/onboarding';
 
 type ZoneFilter = 'all' | 'red' | 'yellow';
 type SortKey = 'risk' | 'team' | 'position';
@@ -21,11 +22,18 @@ const SORT_LABEL: Record<SortKey, string> = { risk: 'Risk Score', team: 'Team', 
 export default function LeagueAlertsScreen() {
   const router = useRouter();
   const { sport: sportParam } = useLocalSearchParams<{ sport?: string }>();
-  const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? 'NBA');
+  const { activeSport } = useOnboarding();
+  // Follow the user's stored sport (the plan's rule) — the old hardcoded
+  // 'NBA' fallback meant an NFL user opening Alerts saw NBA players.
+  const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? activeSport);
   const [zone, setZone] = useState<ZoneFilter>('all');
   const [sort, setSort] = useState<SortKey>('risk');
   const [position, setPosition] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    setSport(activeSport);
+  }, [activeSport]);
 
   const alerts = useLeagueAlerts(sport, zone);
   const sportPlayers = alerts.data;
