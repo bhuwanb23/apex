@@ -28,6 +28,8 @@ export interface Player {
   intensityZ: number;
   backToBack: boolean;
   daysInZone: number;
+  /** When the backend last computed the risk score — drives freshness display. */
+  computedAt?: string;
 }
 
 export const PLAYERS: Player[] = [

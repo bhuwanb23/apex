@@ -26,6 +26,8 @@ export interface VerdictShape {
   gamesAnalyzed: number;
   season: string;
   explanation: string;
+  /** When the backend computed the analysis — drives freshness display. */
+  computedAt?: string | null;
 }
 
 function mapVerdictLabel(label: string): VerdictLabel {
@@ -43,6 +45,7 @@ export function verdictToShape(sport: SportId, v: {
   plainExplanation?: string;
   shortExplanation?: string;
   season?: string;
+  computedAt?: string | null;
   statistics?: {
     hazardCoefficient?: number | null;
     pValue?: number | null;
@@ -67,6 +70,7 @@ export function verdictToShape(sport: SportId, v: {
     gamesAnalyzed: v.context?.gamesAnalyzed ?? 0,
     season: v.season ?? '',
     explanation: v.plainExplanation ?? verdict.shortExplanation ?? v.shortExplanation ?? '',
+    computedAt: v.computedAt ?? null,
   };
 }
 
@@ -87,7 +91,8 @@ export function useMomentumAnalysis(sport: SportId) {
       return verdictToShape(sport, v);
     },
     fallback,
-    [sport]
+    [sport],
+    `momentum:${sport}`
   );
   return result;
 }

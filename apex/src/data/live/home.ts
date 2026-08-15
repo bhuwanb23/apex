@@ -70,7 +70,8 @@ export function useHomeInjuryWatch(sport: SportId) {
       return res.alerts.length > 0 ? res.alerts.map(a => alertToPlayer(a, sport)) : null;
     },
     fallback,
-    [sport]
+    [sport],
+    `home:injury:${sport}`
   );
   return result;
 }
@@ -109,7 +110,8 @@ export function useHomeDecisionSpotlight(sport: SportId) {
       };
     },
     fallback,
-    [sport]
+    [sport],
+    `home:decision:${sport}`
   );
   return result;
 }
@@ -146,7 +148,8 @@ export function useHomeMomentum(sport: SportId) {
       };
     },
     fallback,
-    [sport]
+    [sport],
+    `home:momentum:${sport}`
   );
   return result;
 }
@@ -186,7 +189,8 @@ export function useHomeGames(sport: SportId) {
       })) as Game[];
     },
     fallback,
-    [sport]
+    [sport],
+    `home:games:${sport}`
   );
   return result;
 }

@@ -6,7 +6,7 @@
  * the process-vs-outcome matrix; the app only renders them.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { api, type CoachDecision, type CoachScorecard } from '@/lib/api';
 import { useApiData, type DataSource } from '@/hooks/use-api-data';
@@ -74,6 +74,8 @@ function decisionToScreen(d: CoachDecision): Decision {
 export interface LeaderboardData {
   coaches: Coach[];
   source: DataSource;
+  /** When the backend last generated the ranking — drives freshness display. */
+  generatedAt: string | null;
 }
 
 export function useCoachLeaderboard(
@@ -87,18 +89,26 @@ export function useCoachLeaderboard(
         .sort((a, b) => a.rank - b.rank),
     [sport]
   );
+  const generatedAtRef = useRef<string | null>(null);
 
   const result = useApiData<Coach[]>(
     async () => {
       const board = await api.leaderboard(sport, { ...opts, limit: 50 });
       if (board.coaches.length === 0) return null;
+      generatedAtRef.current = board.generatedAt ?? null;
       return board.coaches.map(c => scorecardToCoach(c, sport));
     },
     fallback,
-    [sport, opts?.season, opts?.decisionType, opts?.gameType]
+    [sport, opts?.season, opts?.decisionType, opts?.gameType],
+    `leaderboard:${sport}:${opts?.season ?? ''}:${opts?.decisionType ?? 'all'}:${opts?.gameType ?? 'all'}`
   );
 
-  return { coaches: result.data, source: result.source, refetch: result.refetch };
+  return {
+    coaches: result.data,
+    source: result.source,
+    refetch: result.refetch,
+    generatedAt: result.source === 'live' ? generatedAtRef.current : null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +158,8 @@ export function useCoachDetail(coachId: string | undefined, sport: SportId) {
       };
     },
     fallback,
-    [coachId, sport]
+    [coachId, sport],
+    coachId ? `coachDetail:${coachId}` : undefined
   );
 
   return { ...result.data, source: result.source, refetch: result.refetch };
@@ -197,7 +208,8 @@ export function useGameDecisions(gameId: string | undefined, sport: SportId) {
       };
     },
     fallback,
-    [gameId, sport]
+    [gameId, sport],
+    gameId ? `gameDecisions:${gameId}` : undefined
   );
 
   return { ...result.data, source: result.source, refetch: result.refetch };

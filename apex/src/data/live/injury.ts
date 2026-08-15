@@ -6,7 +6,7 @@
  * returns (zones, triggers, scores) — it never computes them itself.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { api, type RiskAlert, type PlayerRiskProfile, type TeamRiskResponse } from '@/lib/api';
 import { useApiData, type DataSource } from '@/hooks/use-api-data';
@@ -71,6 +71,7 @@ function profileToPlayer(profile: PlayerRiskProfile, sport: SportId): Player {
     intensityZ: profile.intensityZScore ?? 0,
     backToBack: profile.backToBackFlag ?? false,
     daysInZone: 0,
+    computedAt: profile.computedAt ?? undefined,
   };
 }
 
@@ -133,7 +134,8 @@ export function useLeaguePlayers(sport: SportId) {
       };
     },
     fallback,
-    [sport]
+    [sport],
+    `league:${sport}`
   );
   return {
     players: result.data.players,
@@ -150,6 +152,7 @@ export function useLeagueAlerts(sport: SportId, zone: 'red' | 'yellow' | 'all') 
     () => PLAYERS.filter(p => p.sport === sport && (zone === 'all' ? p.zone !== 'green' : p.zone === zone)),
     [sport, zone]
   );
+  const generatedAtRef = useRef<string | null>(null);
   const result = useApiData<Player[]>(
     async () => {
       // "All" = red + yellow — the backend validates zone as red|yellow, so
@@ -159,12 +162,17 @@ export function useLeagueAlerts(sport: SportId, zone: 'red' | 'yellow' | 'all') 
       const responses = await Promise.all(zones.map(z => api.leagueAlerts(sport, z, 50)));
       const players = responses.flatMap(r => r.alerts.map(a => alertToPlayer(a, sport)));
       if (players.length === 0) return null;
+      generatedAtRef.current = responses[0]?.generatedAt ?? null;
       return players;
     },
     fallback,
-    [sport, zone]
+    [sport, zone],
+    `alerts:${sport}:${zone}`
   );
-  return result;
+  return {
+    ...result,
+    generatedAt: result.source === 'live' ? generatedAtRef.current : null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -184,7 +192,8 @@ export function usePlayerRisk(playerId: string | undefined, sport: SportId) {
       return profileToPlayer(profile, sport);
     },
     fallback,
-    [playerId, sport]
+    [playerId, sport],
+    playerId ? `player:${playerId}` : undefined
   );
   return result;
 }
@@ -231,7 +240,8 @@ export function useTeamRoster(teamRef: string | undefined, sport: SportId) {
       };
     },
     { players: fallback, lastUpdated: null },
-    [teamRef, sport, teamId]
+    [teamRef, sport, teamId],
+    teamRef ? `team:${teamRef}` : undefined
   );
   return {
     players: result.data.players,
