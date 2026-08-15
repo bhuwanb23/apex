@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  getInjuryCounts,
   getLeagueAlerts,
   getPlayerRisk,
   getPlayerRiskHistory,
@@ -150,3 +151,25 @@ injuryRouter.get(
   createValidator(historyQuerySchema, 'query'),
   getPlayerRiskHistory
 );
+
+/**
+ * @openapi
+ * /api/injury/counts/{sport}:
+ *   get:
+ *     summary: League-wide risk zone counts
+ *     description: Red / yellow / green counts across the whole league (not just the first page of alerts) plus the roster size.
+ *     tags: [Injury]
+ *     parameters:
+ *       - in: path
+ *         name: sport
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [NBA, NFL, MLB, NHL]
+ *     responses:
+ *       200:
+ *         description: Zone counts
+ *       404:
+ *         description: Sport not found
+ */
+injuryRouter.get('/counts/:sport', createValidator(sportParamsSchema, 'params'), getInjuryCounts);
