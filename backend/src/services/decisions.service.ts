@@ -315,6 +315,7 @@ function toCoachDecisionEntry(row: DecisionRow, coachTeamId: number): CoachDecis
     outcome: row.outcome,
     outcomeSuccess: row.outcomeSuccess,
     situation: buildSituation(row),
+    winProbabilityBefore: row.winProbabilityBefore,
     gameDateFormatted: format(row.game.date, 'MMM d, yyyy'),
     opponentName,
   };
@@ -464,6 +465,7 @@ function toGameDecisionDetail(
     outcome: row.outcome,
     outcomeSuccess: row.outcomeSuccess,
     situation: buildSituation(row),
+    winProbabilityBefore: row.winProbabilityBefore,
   };
 }
 
