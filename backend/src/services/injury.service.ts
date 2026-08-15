@@ -440,6 +440,7 @@ export async function getLeagueAlerts(
       include: {
         player: {
           select: {
+            id: true,
             name: true,
             position: true,
             externalId: true,
@@ -452,6 +453,41 @@ export async function getLeagueAlerts(
     }),
     prisma.injuryRiskScores.count({ where }),
   ]);
+
+  // "How long in this zone" — the plan's rule is the backend computes it.
+  // One batched query for every flagged player's recent score history (no
+  // N+1), then walk each player's scores newest→oldest while the zone keeps
+  // matching: the oldest score of that consecutive run is when the current
+  // streak began, and daysInZone is how long ago that was. A single score
+  // (streak length 1) means a brand-new flag → 0 days.
+  const alertPlayerIds = rows.map(a => a.player.id);
+  const recentScores =
+    alertPlayerIds.length > 0
+      ? await prisma.injuryRiskScores.findMany({
+          where: {
+            playerId: { in: alertPlayerIds },
+            computedAt: { gte: new Date(Date.now() - 90 * DAY_MS) },
+          },
+          orderBy: { computedAt: 'desc' },
+          select: { playerId: true, computedAt: true, zone: true },
+        })
+      : [];
+  const scoresByPlayer = new Map<number, { computedAt: Date; zone: string }[]>();
+  for (const s of recentScores) {
+    const list = scoresByPlayer.get(s.playerId) ?? [];
+    list.push(s);
+    scoresByPlayer.set(s.playerId, list);
+  }
+  const daysInZoneOf = (playerId: number, zoneName: string): number => {
+    const history = scoresByPlayer.get(playerId) ?? [];
+    let streakStart: Date | null = null;
+    for (const s of history) {
+      if (s.zone !== zoneName) break; // zone changed — streak ended
+      streakStart = s.computedAt;
+    }
+    if (!streakStart) return 0;
+    return Math.max(0, Math.round((Date.now() - streakStart.getTime()) / DAY_MS));
+  };
 
   // The real freshness signal: when the ML service last computed scores for
   // this sport — not the request time. The app shows "Risk scores updated X
@@ -474,6 +510,7 @@ export async function getLeagueAlerts(
       zone: a.zone as AlertZone,
       triggerMetric: a.triggerMetric,
       explanation: a.explanation,
+      daysInZone: daysInZoneOf(a.player.id, a.zone),
     })),
     totalAlerts: total,
     generatedAt: (latestComputed?.computedAt ?? new Date()).toISOString(),
