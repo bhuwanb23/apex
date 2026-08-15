@@ -105,6 +105,25 @@ function descShowsScore(desc: string): boolean {
 }
 
 /**
+ * Converts a play's `game_seconds_remaining` (nfl_data_py / ESPN convention:
+ * seconds LEFT in the game, counting DOWN from 3600) to elapsed seconds
+ * (seconds since kickoff, counting UP). The schema documents
+ * `eventTimeSeconds` as "Seconds elapsed in game" and the momentum model
+ * sorts ascending by it — storing seconds-remaining makes Python process
+ * NFL games backwards, breaking scorer attribution and the timeline.
+ *
+ * `maxRemaining` is the game's largest remaining value (the kickoff play);
+ * elapsed = maxRemaining − remaining so overtime plays stay monotonic.
+ */
+export function toElapsedSeconds(
+  remaining: number | null | undefined,
+  maxRemaining: number
+): number | null {
+  if (remaining == null) return null;
+  return Math.max(0, maxRemaining - remaining);
+}
+
+/**
  * nfl_data_py play → PlayByPlayRecord.
  * `prevScores` (optional) lets a batch caller compute isScoring from the
  * actual score change when absolute scores are available; without it, the
@@ -112,7 +131,8 @@ function descShowsScore(desc: string): boolean {
  */
 export function transformPlay(
   raw: NflPlay,
-  prevScores?: { home: number; away: number }
+  prevScores?: { home: number; away: number },
+  maxRemaining = 3600
 ): PlayByPlayRecord {
   const hasScores = raw.home_score != null && raw.away_score != null;
   const homeScore = hasScores ? (raw.home_score ?? 0) : 0;
@@ -126,7 +146,7 @@ export function transformPlay(
     eventNumber: raw.play_id,
     period: raw.qtr ?? 0,
     clock: formatClock(raw.game_seconds_remaining),
-    eventTimeSeconds: raw.game_seconds_remaining,
+    eventTimeSeconds: toElapsedSeconds(raw.game_seconds_remaining, maxRemaining),
     teamExternalId: raw.posteam,
     playerExternalId: null,
     eventType: raw.play_type ?? 'unknown',
@@ -145,8 +165,13 @@ export function transformPlay(
 /** Batch variant — tracks running scores to detect scoring plays precisely. */
 export function transformPlays(plays: NflPlay[]): PlayByPlayRecord[] {
   let prev: { home: number; away: number } | undefined;
+  // Per-game max seconds-remaining (kickoff) so elapsed stays monotonic.
+  const maxRemaining = plays.reduce(
+    (max, p) => Math.max(max, p.game_seconds_remaining ?? 0),
+    0
+  );
   return plays.map(play => {
-    const record = transformPlay(play, prev);
+    const record = transformPlay(play, prev, maxRemaining);
     if (play.home_score != null && play.away_score != null) {
       prev = { home: play.home_score, away: play.away_score };
     }

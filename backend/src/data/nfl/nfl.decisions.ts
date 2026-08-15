@@ -55,6 +55,13 @@ function fourthDownOutcome(play: NflPlay): {
  */
 export function extractCoachDecisions(plays: NflPlay[]): NflCoachDecision[] {
   const decisions: NflCoachDecision[] = [];
+  // Seconds-remaining is the nfl_data_py/ESPN convention; the schema and the
+  // chronological game-decisions sort expect elapsed seconds (see
+  // toElapsedSeconds in nfl.transformer.ts). Per-game max keeps OT monotonic.
+  const maxRemaining = plays.reduce(
+    (max, p) => Math.max(max, p.game_seconds_remaining ?? 0),
+    0
+  );
 
   for (const play of plays) {
     const base = {
@@ -62,7 +69,10 @@ export function extractCoachDecisions(plays: NflPlay[]): NflCoachDecision[] {
       playId: play.play_id,
       qtr: play.qtr ?? null,
       clock: formatClock(play.game_seconds_remaining),
-      gameTimeSeconds: play.game_seconds_remaining,
+      gameTimeSeconds:
+        play.game_seconds_remaining != null
+          ? Math.max(0, maxRemaining - play.game_seconds_remaining)
+          : null,
       scoreDiff: play.score_differential,
       team: play.posteam ?? null,
     };

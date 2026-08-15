@@ -84,6 +84,8 @@ export interface SyncResult {
   /** Any errors that occurred — the sync continues past them (partial success). */
   errors: string[];
   status: 'complete' | 'partial' | 'failed';
+  /** True when the sport was skipped (seeded but no sync adapter — e.g. NHL). */
+  skipped?: boolean;
 }
 
 export interface SyncOptions {
@@ -240,6 +242,9 @@ export async function syncSport(
   const resolvedSeason = season ?? sportRow.season;
   const adapter = ADAPTERS[sport];
   if (!adapter) {
+    // Seeded-but-unsupported sports (e.g. NHL with no data source yet) are a
+    // known gap, not an error — skipping keeps the all-sports scheduler run
+    // green while the sport still shows up in the momentum comparison panel.
     return {
       sport,
       season: resolvedSeason,
@@ -247,8 +252,9 @@ export async function syncSport(
       completedAt: new Date(),
       durationSeconds: 0,
       counts,
-      errors: [`No sync adapter for sport: ${sport}`],
-      status: 'failed',
+      errors: [`No sync adapter for sport: ${sport} — skipped (known gap)`],
+      status: 'complete',
+      skipped: true,
     };
   }
 

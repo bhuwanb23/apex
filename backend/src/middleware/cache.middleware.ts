@@ -589,6 +589,9 @@ export const comparisonCacheMiddleware = createCacheMiddleware({
   staleThreshold: STALE_WHILE_REVALIDATE.MOMENTUM_STALE_AFTER,
   dataType: CacheDataType.MOMENTUM_ANALYSIS,
   keyBuilder: req => momentumComparisonKey(req.query.season ? String(req.query.season) : undefined),
+  // ?recalculate=true — manual refresh must bypass both cache layers, same
+  // pattern as the momentum analysis + alerts middlewares.
+  skipRead: req => String(req.query.recalculate) === 'true',
 });
 
 /**
