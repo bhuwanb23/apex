@@ -33,7 +33,9 @@ function scorecardToCoach(score: CoachScorecard, sport: SportId): Coach {
     evRate: score.evRate,
     totalDecisions: score.totalDecisions,
     optimalDecisions: score.optimalDecisions,
-    avgEvLeft: score.avgEvLeft ?? 0,
+    // Backend reports the average EV left as a fraction (avgEvDifference);
+    // the screen shows it as a percentage.
+    avgEvLeft: (score.avgEvDifference ?? score.avgEvLeft ?? 0) * 100,
     trend: trendToScreen(score.trend),
     matrix: { 'good-good': 0, 'good-bad': 0, 'bad-good': 0, 'bad-bad': 0 },
   };
@@ -43,22 +45,23 @@ function decisionToScreen(d: CoachDecision): Decision {
   return {
     id: String(d.id),
     gameId: String(d.gameId),
-    coachId: String(d.coachId),
-    coachName: d.coachName,
-    team: d.team,
-    sport: d.sport as SportId,
-    date: d.date,
-    opponent: d.opponent,
-    type: (d.type as Decision['type']) ?? '4th_down',
-    situation: d.situation,
+    coachId: d.coachId != null ? String(d.coachId) : '',
+    coachName: d.coachName ?? '',
+    team: d.team ?? '',
+    sport: (d.sport as SportId) ?? 'NFL',
+    // Backend sends gameDate / decisionType; tolerate the older names too.
+    date: (d.gameDate ?? d.date ?? '').slice(0, 10),
+    opponent: d.opponent ?? '',
+    type: ((d.decisionType ?? d.type) as Decision['type']) ?? '4th_down',
+    situation: d.situation ?? '',
     chosenAction: d.chosenAction,
     evChosen: d.evChosen,
     evBest: d.evBest,
     isOptimal: d.isOptimal,
-    outcome: d.outcome,
-    outcomeSuccess: d.outcomeSuccess,
-    period: d.period,
-    clock: d.clock,
+    outcome: d.outcome ?? '',
+    outcomeSuccess: d.outcomeSuccess ?? false,
+    period: d.period != null ? String(d.period) : '',
+    clock: d.clock ?? '',
   };
 }
 
@@ -118,18 +121,27 @@ export function useCoachDetail(coachId: string | undefined, sport: SportId) {
       if (!coachId) return null;
       const detail = await api.coachDecisions(Number(coachId), { limit: 50 });
       if (!detail.coach) return null;
-      const { processVsOutcome } = detail;
-      const liveSport = (detail.coach as { sport?: string }).sport as SportId | undefined;
+      const { coach, summary, processVsOutcome } = detail;
       return {
         coach: {
-          ...scorecardToCoach(detail.coach, liveSport ?? sport),
+          id: String(coach.coachId),
+          name: coach.coachName,
+          team: coach.teamName,
+          sport: (coach.sport as SportId) ?? sport,
+          rank: summary.rank ?? 0,
+          evRate: summary.evRate,
+          totalDecisions: summary.totalDecisions,
+          optimalDecisions: summary.optimalDecisions,
+          // Backend fraction → percentage for the stat box.
+          avgEvLeft: (summary.avgEvDifference ?? 0) * 100,
+          trend: 'flat',
           matrix: {
             'good-good': processVsOutcome?.goodProcessGoodOutcome ?? 0,
             'good-bad': processVsOutcome?.goodProcessBadOutcome ?? 0,
             'bad-good': processVsOutcome?.badProcessGoodOutcome ?? 0,
             'bad-bad': processVsOutcome?.badProcessBadOutcome ?? 0,
           },
-        },
+        } as Coach,
         decisions: detail.decisions.map(decisionToScreen),
       };
     },

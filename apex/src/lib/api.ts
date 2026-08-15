@@ -185,6 +185,8 @@ export interface CoachScorecard {
   optimalDecisions: number;
   evRate: number;
   avgEvLeft?: number | null;
+  /** Average EV difference per decision (fraction) — "EV left on the table". */
+  avgEvDifference?: number | null;
   rank?: number | null;
   /** Direction vs the prior 30-day window — backend-computed. */
   trend?: 'up' | 'down' | 'same' | null;
@@ -201,24 +203,29 @@ export interface LeaderboardResponse {
 }
 
 export interface CoachDecision {
-  id: string;
-  gameId: string;
-  coachId: string;
-  coachName: string;
-  team: string;
-  sport: string;
-  date: string;
-  opponent: string;
-  type: string;
-  situation: string;
+  id: string | number;
+  gameId: string | number;
+  coachId?: string | number | null;
+  coachName?: string | null;
+  team?: string | null;
+  sport?: string | null;
+  /** Backend sends gameDate; the mock shape used date — accept both. */
+  gameDate?: string | null;
+  date?: string | null;
+  opponent?: string | null;
+  /** Backend sends decisionType; accept the old type alias too. */
+  decisionType?: string | null;
+  type?: string | null;
+  situation?: string | null;
   chosenAction: string;
   evChosen: number;
   evBest: number;
   isOptimal: boolean;
-  outcome: string;
-  outcomeSuccess: boolean;
-  period: string;
-  clock: string;
+  outcome?: string | null;
+  outcomeSuccess?: boolean | null;
+  period?: number | string | null;
+  clock?: string | null;
+  scoreDiff?: number | null;
 }
 
 export interface MomentumVerdict {
@@ -357,7 +364,8 @@ export const api = {
     apiFetch<LeaderboardResponse>(`/api/decisions/coaches/${sport}${qs({ ...opts, limit: opts?.limit ?? 30 })}`),
   coachDecisions: (coachId: number, opts?: { season?: string; decisionType?: string; limit?: number }) =>
     apiFetch<{
-      coach: CoachScorecard;
+      coach: { coachId: number; coachName: string; teamName: string; sport: string };
+      summary: { totalDecisions: number; optimalDecisions: number; evRate: number; avgEvDifference?: number | null; rank: number | null };
       decisions: CoachDecision[];
       processVsOutcome: { goodProcessGoodOutcome: number; goodProcessBadOutcome: number; badProcessGoodOutcome: number; badProcessBadOutcome: number };
     }>(

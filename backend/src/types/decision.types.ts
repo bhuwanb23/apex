@@ -83,6 +83,8 @@ export interface DecisionDetail {
   alternativeActions: AlternativeAction[] | Record<string, unknown>;
   outcome: string | null;
   outcomeSuccess: boolean | null;
+  /** Human-readable game context, e.g. "4:22 left · Q4 · down by 3 · 4th & 2". */
+  situation?: string;
   /** From the Python EV model — only present once EV has been computed. */
   explanation?: string;
 }
@@ -124,6 +126,8 @@ export interface CoachDrillDown {
     totalDecisions: number;
     optimalDecisions: number;
     evRate: number; // percentage of optimal decisions
+    /** Average EV difference per decision (fraction) — "EV left on the table". */
+    avgEvDifference: number | null;
     rank: number | null; // league rank for the season (null if unranked)
   };
   processVsOutcome: ProcessVsOutcome;
