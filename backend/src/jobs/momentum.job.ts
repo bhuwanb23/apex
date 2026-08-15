@@ -89,7 +89,7 @@ const momentumJob: JobDefinition = {
     });
     for (const sport of sports) {
       try {
-        const { stats } = await computeAndStoreSeasonAnalysis(
+        const { stats, season: resolvedSeason } = await computeAndStoreSeasonAnalysis(
           sport.name as SportAbbreviation,
           sport.id,
           sport.season
@@ -107,10 +107,13 @@ const momentumJob: JobDefinition = {
         // response for this sport (memory service keys + resp: middleware
         // entries + the CacheMetadata registry row) so the next request reads
         // the fresh row. The comparison route has no cache middleware.
+        // The resolved season may differ from the Sports-row seed (a stale
+        // seed like NBA "2024-25" would invalidate nothing) — use what was
+        // actually computed.
         if (stats.verdictLabel !== 'insufficient_data') {
-          await invalidateMomentumAnalysis(sport.name, sport.season);
+          await invalidateMomentumAnalysis(sport.name, resolvedSeason);
           logger.info(
-            { sport: sport.name },
+            { sport: sport.name, season: resolvedSeason },
             'momentum: season analysis refreshed, cached responses invalidated'
           );
         }

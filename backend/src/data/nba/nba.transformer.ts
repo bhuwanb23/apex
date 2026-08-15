@@ -1,6 +1,12 @@
-import type { GameRecord, PlayerGameLogRecord, PlayerRecord, TeamRecord } from '../db.writer.js';
+import type {
+  GameRecord,
+  PlayByPlayRecord,
+  PlayerGameLogRecord,
+  PlayerRecord,
+  TeamRecord,
+} from '../db.writer.js';
 import { computeWorkloads } from '../workload.util.js';
-import type { NBAGame, NBAPlayer, NBAStats, NBATeam } from './nba.types.js';
+import type { NBAGame, NBAPlayer, NBAStats, NBATeam, NbaPlay } from './nba.types.js';
 
 /**
  * Cleans and normalizes raw BallDontLie payloads into the DB-ready records
@@ -178,4 +184,60 @@ export function transformPlayerGameLogs(stats: NBAStats[]): PlayerGameLogRecord[
 // NBA has no coach data on the free tier — reserved for parity with the other sports.
 export function transformCoach(_raw: unknown): never {
   throw new Error('Not implemented: NBA coach data is unavailable on the BallDontLie free tier');
+}
+
+/**
+ * One ESPN-sourced NbaPlay → PlayByPlayRecord.
+ * `prevScores` lets the batch caller compute isScoring from the actual score
+ * change (the authoritative signal — ESPN's scoringPlay flag is a hint that
+ * can lag on free throws). Team attribution: the play's own team first, then
+ * the home/away side that actually scored (score delta), then null.
+ */
+export function transformPlay(
+  raw: NbaPlay,
+  prevScores?: { home: number; away: number }
+): PlayByPlayRecord {
+  const hasScores = raw.home_score != null && raw.away_score != null;
+  const homeScore = hasScores ? (raw.home_score ?? 0) : 0;
+  const awayScore = hasScores ? (raw.away_score ?? 0) : 0;
+  let isScoring = raw.is_scoring;
+  if (hasScores && prevScores) {
+    isScoring = homeScore !== prevScores.home || awayScore !== prevScores.away;
+  }
+
+  let teamExternalId: string | null = raw.team;
+  if (hasScores && prevScores && isScoring) {
+    if (homeScore !== prevScores.home) teamExternalId = raw.home_team ?? teamExternalId;
+    else if (awayScore !== prevScores.away) teamExternalId = raw.away_team ?? teamExternalId;
+  }
+
+  return {
+    sportId: NBA_SPORT_ID,
+    eventNumber: raw.play_id,
+    period: raw.period ?? 0,
+    clock: raw.clock,
+    eventTimeSeconds: raw.event_time_seconds,
+    teamExternalId,
+    playerExternalId: null,
+    eventType: raw.event_type,
+    eventSubtype: null,
+    description: raw.desc,
+    homeScore,
+    awayScore,
+    scoreDiff: homeScore - awayScore,
+    isScoring,
+    rawEvent: raw as unknown as Record<string, unknown>,
+  };
+}
+
+/** Batch variant — tracks running scores to flag scoring plays precisely. */
+export function transformPlays(plays: NbaPlay[]): PlayByPlayRecord[] {
+  let prev: { home: number; away: number } | undefined;
+  return plays.map(play => {
+    const record = transformPlay(play, prev);
+    if (play.home_score != null && play.away_score != null) {
+      prev = { home: play.home_score, away: play.away_score };
+    }
+    return record;
+  });
 }

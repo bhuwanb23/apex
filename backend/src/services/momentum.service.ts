@@ -109,6 +109,44 @@ async function loadSeasonPlays(sportId: number, season: string): Promise<PlayRow
   }) as Promise<PlayRow[]>;
 }
 
+/**
+ * Resolves the season that actually has play-by-play for a sport. The Sports
+ * row's `season` is a seed (e.g. NBA "2024-25") that goes stale as real games
+ * carry newer seasons ("2026-27") — a stale filter would silently return no
+ * plays and the analysis would report insufficient_data forever. Prefer the
+ * requested season, but fall back to the newest season present in the games
+ * table when it has no plays yet.
+ */
+async function resolveEffectiveSeason(
+  sportId: number,
+  preferred: string
+): Promise<string> {
+  const hasPlays = await prisma.playByPlay.count({
+    where: { game: { sportId, season: preferred } },
+  });
+  if (hasPlays > 0) return preferred;
+
+  // Preferred season has no plays (stale Sports-row seed, e.g. NBA
+  // "2024-25" while real games are "2026-27"). Fall back to the NEWEST
+  // season that actually has play-by-play for this sport — season strings
+  // are "2024-25" / "2025" / "2026-27" style, so a numeric-aware descending
+  // sort puts the newest on top.
+  const newestWithPlays = await prisma.games.findFirst({
+    where: { sportId, playByPlay: { some: {} } },
+    orderBy: { season: 'desc' },
+    select: { season: true },
+  });
+  if (!newestWithPlays || !newestWithPlays.season) return preferred;
+  const resolved = newestWithPlays.season;
+  if (resolved !== preferred) {
+    logger.info(
+      { sportId, preferred, resolved },
+      'Momentum: Sports-row season has no plays — resolved effective season from games table'
+    );
+  }
+  return resolved;
+}
+
 async function loadGamePlays(gameId: number): Promise<PlayRow[]> {
   return prisma.playByPlay.findMany({
     where: { gameId },
@@ -171,18 +209,21 @@ export async function computeAndStoreSeasonAnalysis(
   sport: SportAbbreviation,
   sportId: number,
   season: string
-): Promise<{ stats: SeasonMomentumResult; computedAt: string }> {
-  const plays = await loadSeasonPlays(sportId, season);
+): Promise<{ stats: SeasonMomentumResult; computedAt: string; season: string }> {
+  const resolvedSeason = await resolveEffectiveSeason(sportId, season);
+  const plays = await loadSeasonPlays(sportId, resolvedSeason);
   const result = await momentumML.computeSeasonMomentum({
     sport,
-    season,
+    // Pass the resolved season so the explanation text and the stored row
+    // agree (a stale Sports-row season would label real data as a past season).
+    season: resolvedSeason,
     plays: plays.map(toMomentumPlayInput),
   });
   const computedAt = new Date().toISOString();
 
   if (result.verdictLabel !== 'insufficient_data') {
     await prisma.momentumAnalysis.upsert({
-      where: { sportId_season: { sportId, season } },
+      where: { sportId_season: { sportId, season: resolvedSeason } },
       update: {
         gamesAnalyzed: result.gamesAnalyzed,
         hazardCoefficient: result.hazardCoefficient ?? 0,
@@ -198,7 +239,7 @@ export async function computeAndStoreSeasonAnalysis(
       },
       create: {
         sportId,
-        season,
+        season: resolvedSeason,
         gamesAnalyzed: result.gamesAnalyzed,
         hazardCoefficient: result.hazardCoefficient ?? 0,
         pValue: result.pValue ?? 1,
@@ -214,7 +255,7 @@ export async function computeAndStoreSeasonAnalysis(
     });
   }
 
-  return { stats: result, computedAt };
+  return { stats: result, computedAt, season: resolvedSeason };
 }
 
 /** Flat ML/DB result → the nested API response shape. */
@@ -285,7 +326,7 @@ export async function getMomentumAnalysis(
   season?: string
 ): Promise<MomentumAnalysisResponse> {
   const sportRow = await getSport(sport);
-  const resolvedSeason = season ?? sportRow.season;
+  const resolvedSeason = await resolveEffectiveSeason(sportRow.id, season ?? sportRow.season);
 
   const row = await prisma.momentumAnalysis.findUnique({
     where: { sportId_season: { sportId: sportRow.id, season: resolvedSeason } },

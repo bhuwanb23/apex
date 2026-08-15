@@ -31,9 +31,10 @@ import {
   transformGame as transformNbaGame,
   transformPlayer as transformNbaPlayer,
   transformPlayerGameLogs as transformNbaGameLogs,
+  transformPlays as transformNbaPlays,
   transformTeam as transformNbaTeam,
 } from './nba/nba.transformer.js';
-import type { NBAGame, NBAPlayer, NBAStats, NBATeam } from './nba/nba.types.js';
+import type { NBAGame, NBAPlayer, NBAStats, NBATeam, NbaPlay } from './nba/nba.types.js';
 import {
   transformGame as transformNflGame,
   transformPlays as transformNflPlays,
@@ -127,13 +128,13 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
     transformPlayers: data => (data as NBAPlayer[]).map(transformNbaPlayer),
     transformGames: data => (data as NBAGame[]).map(transformNbaGame),
     transformGameLogs: data => transformNbaGameLogs(data as NBAStats[]),
-    transformPlays: () => {
-      throw new Error('NBA play-by-play is unavailable on the BallDontLie free tier');
-    },
+    // Play-by-play comes from the ESPN NBA summary API (the NBA fetcher
+    // resolves BallDontLie game ids to ESPN event ids internally).
+    transformPlays: data => transformNbaPlays(data as NbaPlay[]),
     coachesPending: true,
     playersPending: false,
     gameLogsPending: false,
-    playByPlayPending: true,
+    playByPlayPending: false,
     decisionsPending: true,
   },
   nfl: {
@@ -364,10 +365,33 @@ export async function syncSport(
     });
   }
 
+  // Self-heal the Sports row's current season: the seed (e.g. NBA
+  // "2024-25") goes stale as real games carry newer seasons ("2026-27"), and
+  // every downstream season filter (momentum analysis, leaderboards) reads
+  // this column — a stale value silently returns nothing. Align it with the
+  // newest season actually present in the games table after each sync.
+  {
+    const newest = await prisma.games.findFirst({
+      where: { sportId },
+      orderBy: { season: 'desc' },
+      select: { season: true },
+    });
+    if (newest && newest.season && newest.season !== sportRow.season) {
+      await prisma.sports.update({
+        where: { id: sportId },
+        data: { season: newest.season },
+      });
+      logger.info(
+        { sport, from: sportRow.season, to: newest.season },
+        'Sports row season advanced to newest synced games'
+      );
+    }
+  }
+
   // Stage 5 — per completed game: play-by-play + player game logs.
   {
     const stage = await runStage('playByPlay', async () => {
-      if (adapter.playByPlayPending) return; // NBA free tier has no pbp — known gap
+      if (adapter.playByPlayPending) return; // known gap (none today — NBA uses ESPN pbp)
       // Respect the sync window (syncRecentGames only touches the last N days).
       const dateFilter = options.dateRange ? { gte: options.dateRange.startDate } : undefined;
       const games = await prisma.games.findMany({
