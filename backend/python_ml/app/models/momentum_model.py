@@ -369,6 +369,78 @@ class MomentumModel:
         return shifts
 
 
+def _load_local_plays() -> list[dict]:
+    """Loads play-by-play for the startup Cox fit from the local NFL dataset
+    (app/data/nfl_local/plays.json — exported from the backend DB) and maps
+    the nflfastR shape to the momentum plays shape (gameId, eventTimeSeconds,
+    teamId, isScoring, homeScore, awayScore, period, description)."""
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[2] / "app" / "data" / "nfl_local" / "plays.json"
+    if not path.exists():
+        return []
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    if not isinstance(raw, list):
+        return []
+
+    by_game: dict[str, list[dict]] = defaultdict(list)
+    for play in raw:
+        by_game[str(play.get("game_id"))].append(play)
+
+    mapped: list[dict] = []
+    for game_plays in by_game.values():
+        game_plays.sort(key=lambda p: (p.get("game_seconds_remaining") is None, -(p.get("game_seconds_remaining") or 0)))
+        prev_home = 0
+        prev_away = 0
+        for play in game_plays:
+            home = play.get("home_score")
+            away = play.get("away_score")
+            if home is None or away is None:
+                continue
+            is_scoring = home != prev_home or away != prev_away
+            seconds_left = play.get("game_seconds_remaining")
+            mapped.append(
+                {
+                    "gameId": str(play.get("game_id")),
+                    "eventTimeSeconds": float(3600 - seconds_left) if seconds_left is not None else 0.0,
+                    "teamId": str(play.get("posteam")) if play.get("posteam") is not None else None,
+                    "isScoring": is_scoring,
+                    "homeScore": home,
+                    "awayScore": away,
+                    "period": play.get("qtr") or 1,
+                    "description": play.get("desc"),
+                }
+            )
+            prev_home, prev_away = home, away
+    return mapped
+
+
 def warmup() -> None:
-    """Imports lifelines so the first real fit is fast."""
-    logger.info("momentum model warmup complete (lifelines imported)")
+    """Imports lifelines and fits the Cox model from local NFL play-by-play so
+    /health reports the momentum model as loaded and game timelines get a real
+    hazard weight. Degrades gracefully when data is insufficient."""
+    try:
+        plays = _load_local_plays()
+        if not plays:
+            logger.info("momentum warmup: no local plays — model stays unloaded")
+            return
+        result = MomentumModel().compute_season("nfl", "2025", plays)
+        if result.get("hazardCoefficient") is not None:
+            logger.info(
+                "momentum warmup: Cox fitted for nfl (hazard ratio %.3f, p=%.3f, %d games)",
+                result.get("hazardRateChange") is not None
+                and (1 + result.get("hazardRateChange", 0) / 100) or 0,
+                result.get("pValue") or 0,
+                result.get("gamesAnalyzed") or 0,
+            )
+        else:
+            logger.info(
+                "momentum warmup: Cox not fitted (%s) — model stays unloaded",
+                result.get("verdictLabel"),
+            )
+    except Exception as exc:  # noqa: BLE001 — warmup must never block startup
+        logger.warning("momentum warmup failed (%s)", exc)

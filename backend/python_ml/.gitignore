@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Generated ML artifacts — never commit binaries. The WP model retrains
+# automatically at startup from app/data/training/wp_training.json (committed).
+models/
+
+# Local secrets / config (also covered by backend/.gitignore's .env rule)
+.env

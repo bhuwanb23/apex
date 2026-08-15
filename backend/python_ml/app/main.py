@@ -6,9 +6,15 @@
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Load python_ml/.env (WP_MODEL_PATH, TIMEOUT_TRAINING_DATA, ...) — uvicorn is
+# launched from the python_ml directory, so the .env next to it is the one.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from app.data.model_cache import model_cache
 from app.data.nfl_bridge import is_available as nfl_data_available
