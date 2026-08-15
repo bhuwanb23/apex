@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" role="img" aria-label="AQX social promo">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5C8A"/>
+      <stop offset="50%" stop-color="#5856D6"/>
+      <stop offset="100%" stop-color="#FFA058"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1080" fill="#14121F"/>
+  <circle cx="540" cy="320" r="140" fill="url(#g)"/>
+  <circle cx="540" cy="320" r="72" fill="rgba(255,255,255,0.22)"/>
+  <text x="540" y="350" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="110" font-weight="900" fill="#FFFFFF">A</text>
+  <text x="540" y="560" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="56" font-weight="800" fill="#FFFFFF">Raw sports data</text>
+  <text x="540" y="630" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="56" font-weight="800" fill="#FFFFFF">becomes clear</text>
+  <text x="540" y="700" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="56" font-weight="800" fill="#FFA058">intelligence.</text>
+  <text x="540" y="820" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600" letter-spacing="4" fill="#9AA0B5">AQX · SPORTS INTELLIGENCE</text>
+  <text x="540" y="880" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" fill="#6E7280">Personalized for trainers, coaches, analysts &amp; fans</text>
+</svg>

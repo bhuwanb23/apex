@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-label="AQX logo lockup">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5C8A"/>
+      <stop offset="50%" stop-color="#5856D6"/>
+      <stop offset="100%" stop-color="#FFA058"/>
+    </linearGradient>
+    <style>
+      .wm { font-family: Inter, system-ui, Arial, sans-serif; font-weight: 900; font-size: 120px; fill: #14121F; }
+      .dot { fill: #5856D6; }
+      .tg { font-family: Inter, system-ui, Arial, sans-serif; font-weight: 600; font-size: 28px; fill: #6E7280; letter-spacing: 4px; }
+    </style>
+  </defs>
+  <rect width="1200" height="400" fill="#F0F1F5"/>
+  <circle cx="220" cy="200" r="110" fill="url(#g)"/>
+  <circle cx="220" cy="200" r="57" fill="rgba(255,255,255,0.22)"/>
+  <text x="220" y="218" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="900" fill="#FFFFFF">A</text>
+  <text x="380" y="210" class="wm">AQX<tspan class="dot">.</tspan></text>
+  <text x="385" y="265" class="tg">SPORTS INTELLIGENCE</text>
+</svg>

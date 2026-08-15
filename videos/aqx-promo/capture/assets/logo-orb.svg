@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="AQX orb">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5C8A"/>
+      <stop offset="50%" stop-color="#5856D6"/>
+      <stop offset="100%" stop-color="#FFA058"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#g)"/>
+  <circle cx="256" cy="256" r="125" fill="rgba(255,255,255,0.22)"/>
+  <text x="256" y="286" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="180" font-weight="900" fill="#FFFFFF">A</text>
+</svg>

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="AQX feature flow">
+  <rect width="1920" height="1080" fill="#F0F1F5"/>
+  <text x="160" y="140" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="4" fill="#5856D6">PRODUCT FLOW</text>
+  <text x="160" y="210" font-family="Inter, Arial, sans-serif" font-size="56" font-weight="800" fill="#14121F">From onboarding to insight</text>
+  <!-- boxes -->
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="120" y="420" width="340" height="220" rx="24" fill="#FFFFFF" stroke="#E4E5EC"/>
+    <text x="290" y="510" text-anchor="middle" font-size="22" font-weight="700" fill="#6E7280">01</text>
+    <text x="290" y="560" text-anchor="middle" font-size="28" font-weight="800" fill="#14121F">Onboarding</text>
+    <text x="290" y="600" text-anchor="middle" font-size="18" fill="#6E7280">Sport + role</text>
+
+    <path d="M480 530 H560" stroke="#5856D6" stroke-width="4"/>
+    <polygon points="560,520 580,530 560,540" fill="#5856D6"/>
+
+    <rect x="600" y="420" width="340" height="220" rx="24" fill="#FFFFFF" stroke="#E4E5EC"/>
+    <text x="770" y="510" text-anchor="middle" font-size="22" font-weight="700" fill="#6E7280">02</text>
+    <text x="770" y="560" text-anchor="middle" font-size="28" font-weight="800" fill="#14121F">Home brief</text>
+    <text x="770" y="600" text-anchor="middle" font-size="18" fill="#6E7280">Daily snapshot</text>
+
+    <path d="M960 530 H1040" stroke="#5856D6" stroke-width="4"/>
+    <polygon points="1040,520 1060,530 1040,540" fill="#5856D6"/>
+
+    <rect x="1080" y="420" width="340" height="220" rx="24" fill="#FFFFFF" stroke="#E4E5EC"/>
+    <text x="1250" y="510" text-anchor="middle" font-size="22" font-weight="700" fill="#6E7280">03</text>
+    <text x="1250" y="560" text-anchor="middle" font-size="28" font-weight="800" fill="#14121F">Deep insight</text>
+    <text x="1250" y="600" text-anchor="middle" font-size="18" fill="#6E7280">Risk · EV · Replay</text>
+
+    <path d="M1440 530 H1520" stroke="#5856D6" stroke-width="4"/>
+    <polygon points="1520,520 1540,530 1520,540" fill="#5856D6"/>
+
+    <rect x="1560" y="420" width="240" height="220" rx="24" fill="#5856D6"/>
+    <text x="1680" y="510" text-anchor="middle" font-size="22" font-weight="700" fill="#EFEEFB">04</text>
+    <text x="1680" y="560" text-anchor="middle" font-size="26" font-weight="800" fill="#FFFFFF">Story Mode</text>
+    <text x="1680" y="600" text-anchor="middle" font-size="16" fill="#EFEEFB">Shareable brief</text>
+  </g>
+</svg>

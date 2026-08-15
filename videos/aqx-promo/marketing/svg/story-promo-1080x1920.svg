@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-label="AQX story promo">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5C8A"/>
+      <stop offset="50%" stop-color="#5856D6"/>
+      <stop offset="100%" stop-color="#FFA058"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1A1830"/>
+      <stop offset="100%" stop-color="#14121F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <circle cx="540" cy="520" r="200" fill="url(#g)"/>
+  <circle cx="540" cy="520" r="104" fill="rgba(255,255,255,0.22)"/>
+  <text x="540" y="560" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="160" font-weight="900" fill="#FFFFFF">A</text>
+  <text x="540" y="860" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="900" fill="#FFFFFF">Sports</text>
+  <text x="540" y="940" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="900" fill="#FF5C8A">Intelligence.</text>
+  <text x="540" y="1020" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="900" fill="#FFFFFF">Personalized.</text>
+  <text x="540" y="1180" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" fill="#9AA0B5">Injury · Decisions · Momentum</text>
+  <rect x="290" y="1320" width="500" height="72" rx="36" fill="#5856D6"/>
+  <text x="540" y="1366" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700" fill="#FFFFFF">Open AQX</text>
+</svg>
