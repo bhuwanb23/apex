@@ -5,17 +5,17 @@
   <g transform="translate(160,340)">
     <rect width="500" height="520" rx="28" fill="#FFFFFF" stroke="#E4E5EC"/>
     <circle cx="80" cy="90" r="36" fill="#FDEBEC"/>
-    <text x="80" y="100" text-anchor="middle" font-size="28">d</text>
+    <text x="80" y="100" text-anchor="middle" font-size="28">d</text>
     <text x="140" y="100" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="800" fill="#E5484D">Injury Risk</text>
     <text x="56" y="180" font-family="Inter, Arial, sans-serif" font-size="24" fill="#6E7280">Traffic-light scores,</text>
     <text x="56" y="220" font-family="Inter, Arial, sans-serif" font-size="24" fill="#6E7280">workload charts, alerts</text>
-    <text x="56" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#14121F">Know whos at risk</text>
+    <text x="56" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#14121F">Know whos at risk</text>
     <text x="56" y="340" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#14121F">before they get hurt.</text>
   </g>
   <g transform="translate(710,340)">
     <rect width="500" height="520" rx="28" fill="#FFFFFF" stroke="#E4E5EC"/>
     <circle cx="80" cy="90" r="36" fill="#EFEEFB"/>
-    <text x="80" y="100" text-anchor="middle" font-size="28"></text>
+    <text x="80" y="100" text-anchor="middle" font-size="28"></text>
     <text x="140" y="100" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="800" fill="#5856D6">Decisions</text>
     <text x="56" y="180" font-family="Inter, Arial, sans-serif" font-size="24" fill="#6E7280">EV grading, leaderboards,</text>
     <text x="56" y="220" font-family="Inter, Arial, sans-serif" font-size="24" fill="#6E7280">process vs outcome</text>
@@ -25,11 +25,11 @@
   <g transform="translate(1260,340)">
     <rect width="500" height="520" rx="28" fill="#FFFFFF" stroke="#E4E5EC"/>
     <circle cx="80" cy="90" r="36" fill="#FFF4DF"/>
-    <text x="80" y="100" text-anchor="middle" font-size="28">¡</text>
+    <text x="80" y="100" text-anchor="middle" font-size="28"></text>
     <text x="140" y="100" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="800" fill="#FFA058">Momentum</text>
     <text x="56" y="180" font-family="Inter, Arial, sans-serif" font-size="24" fill="#6E7280">Real / Myth verdicts,</text>
     <text x="56" y="220" font-family="Inter, Arial, sans-serif" font-size="24" fill="#6E7280">Game Replay scrubber</text>
-    <text x="56" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#14121F">Is momentum real </text>
+    <text x="56" y="300" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#14121F">Is momentum real </text>
     <text x="56" y="340" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#14121F">or just a story?</text>
   </g>
 </svg>
