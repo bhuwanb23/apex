@@ -57,6 +57,17 @@ export default function HomeScreen() {
           ? 'Analyst'
           : 'Fan';
 
+  // The story mode pill — placed up top for fans, at the bottom otherwise.
+  const storyButton = (
+    <PillButton
+      label="📖 Tell me what's happening today"
+      variant="primary"
+      size="lg"
+      onPress={() => router.push({ pathname: '/story', params: { module: 'home', sport } })}
+      icon={<AppIcon name="sparkles" size={18} color="#FFFFFF" />}
+    />
+  );
+
   return (
     <Screen>
       {/* Top bar */}
@@ -92,6 +103,9 @@ export default function HomeScreen() {
           {sportInfo.short} 2025-26 season
         </Text>
       </View>
+
+      {/* Story mode — prominent up top for fans (plain-English first) */}
+      {role === 'fan' ? <View style={styles.storyTop}>{storyButton}</View> : null}
 
       {/* Quick stats */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsRow}>
@@ -177,6 +191,22 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* Timeout optimizer — highlighted for the coach role */}
+      {role === 'coach' ? (
+        <Pressable onPress={() => router.push('/momentum/timeout')}>
+          <GradientView colors={['#FFA058', '#FF8A5C']} style={styles.timeoutCard}>
+            <View style={styles.timeoutIcon}>
+              <AppIcon name="timer" size={18} color="#FFFFFF" />
+            </View>
+            <View style={styles.timeoutBody}>
+              <Text style={styles.timeoutTitle}>Timeout optimizer</Text>
+              <Text style={styles.timeoutDesc}>Should you burn a timeout right now? Get an instant recommendation.</Text>
+            </View>
+            <AppIcon name="chevron.right" size={16} color="rgba(255,255,255,0.85)" />
+          </GradientView>
+        </Pressable>
+      ) : null}
+
       {/* Last night's games */}
       <View>
         <SectionHeader title="Last Night's Games" emoji="🏀" actionLabel="Replays" onAction={() => router.push('/momentum')} />
@@ -220,14 +250,8 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      {/* Story mode */}
-      <PillButton
-        label="📖 Tell me what's happening today"
-        variant="primary"
-        size="lg"
-        onPress={() => router.push({ pathname: '/story', params: { module: 'home', sport } })}
-        icon={<AppIcon name="sparkles" size={18} color="#FFFFFF" />}
-      />
+      {/* Story mode — bottom placement for non-fan roles */}
+      {role === 'fan' ? null : storyButton}
     </Screen>
   );
 }
@@ -391,6 +415,38 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: '#6E7280',
     lineHeight: 20,
+  },
+  storyTop: {
+    marginTop: 16,
+  },
+  timeoutCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 20,
+    padding: 16,
+  },
+  timeoutIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeoutBody: {
+    flex: 1,
+    gap: 2,
+  },
+  timeoutTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  timeoutDesc: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    lineHeight: 17,
   },
   gamesRow: {
     gap: 12,

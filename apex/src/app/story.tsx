@@ -97,31 +97,41 @@ function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'te
 
 export default function StoryModal() {
   const router = useRouter();
-  const { module, sport } = useLocalSearchParams<{ module?: string; sport?: string }>();
+  const { module, sport, entityId } = useLocalSearchParams<{ module?: string; sport?: string; entityId?: string }>();
   const { storyLanguage, role } = useOnboarding();
 
+  const mod = module === 'home' ? 'momentum' : (module ?? 'momentum');
+
   const [liveStory, setLiveStory] = useState<{ headlineText: string; storyText: string; generatedBy: string; keyMetrics?: Record<string, unknown> | null } | null>(null);
-  const [liveError, setLiveError] = useState(false);
 
   // Ask the backend for a generated story; fall back to the local template.
+  // The backend caches by (module, sport, role, entityId) for 1 hour, so an
+  // entity story ("for player 237") is its own cache key.
   useEffect(() => {
     let cancelled = false;
-    const mod = module === 'home' ? 'momentum' : (module ?? 'momentum');
     api
-      .story(mod, sport ?? 'NBA', { role: role ?? 'fan' })
+      .story(mod, sport ?? 'NBA', { role: role ?? 'fan', entityId })
       .then(res => {
         if (cancelled) return;
         setLiveStory({ headlineText: res.headlineText, storyText: res.storyText, generatedBy: res.generatedBy, keyMetrics: res.keyMetrics });
       })
       .catch(() => {
-        if (!cancelled) setLiveError(true);
+        // Backend unreachable — the local template below renders instead.
       });
     return () => {
       cancelled = true;
     };
-  }, [module, sport, role]);
+  }, [mod, sport, role, entityId]);
 
   const localStory = buildStory(module ?? 'home', sport ?? 'NBA', storyLanguage, role ?? 'fan');
+  // Read-more target: an entity story always points back at that entity; the
+  // module fallback covers league-level (momentum/home) stories.
+  const detailRoute: DetailRoute | undefined =
+    entityId && mod === 'injury'
+      ? { pathname: '/injury/player', params: { playerId: entityId } }
+      : entityId && mod === 'decisions'
+        ? { pathname: '/decisions/coach', params: { coachId: entityId } }
+        : localStory.detailRoute;
   const story = liveStory
     ? {
         headline: liveStory.headlineText,
@@ -130,6 +140,7 @@ export default function StoryModal() {
           .filter(([, v]) => typeof v === 'number' || typeof v === 'string')
           .slice(0, 3)
           .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1')}: ${v}`) as string[]) || localStory.metrics,
+        detailRoute,
       }
     : localStory;
   const generatedBy = liveStory?.generatedBy ?? (storyLanguage === 'technical' ? 'AI enhanced' : 'template');

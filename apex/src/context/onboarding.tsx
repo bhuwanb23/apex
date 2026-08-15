@@ -38,6 +38,17 @@ interface OnboardingContextValue extends OnboardingState {
   cycleActiveSport: () => void;
 }
 
+/**
+ * The role's recommended landing tab (integration plan: "How Role Affects
+ * Every Screen"). Trainers live in Injury, coaches in Decisions; analysts and
+ * fans land on Home. Display-only — it never changes any backend request.
+ */
+function defaultModuleForRole(role: RoleId): OnboardingState['defaultModule'] {
+  if (role === 'trainer') return 'injury';
+  if (role === 'coach') return 'decisions';
+  return 'home';
+}
+
 const STORAGE_KEY = 'aqx.onboarding.v1';
 
 const DEFAULT_STATE: OnboardingState = {
@@ -85,7 +96,15 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   const completeOnboarding = useCallback(
     (sports: SportId[], role: RoleId) => {
-      persist({ ...DEFAULT_STATE, hasOnboarded: true, sports, activeSport: sports[0], role });
+      persist({
+        ...DEFAULT_STATE,
+        hasOnboarded: true,
+        sports,
+        activeSport: sports[0],
+        role,
+        // Land on the tab that fits the chosen role.
+        defaultModule: defaultModuleForRole(role),
+      });
     },
     [persist]
   );
@@ -102,7 +121,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     const next = state.sports[(state.sports.indexOf(state.activeSport) + 1) % Math.max(1, state.sports.length)];
     persist({ ...state, activeSport: next ?? state.activeSport });
   }, [persist, state]);
-  const setRole = useCallback((role: RoleId) => persist({ ...state, role }), [persist, state]);
+  const setRole = useCallback(
+    (role: RoleId) =>
+      // Changing role reconfigures the app — the default landing tab follows
+      // the new role too ("The app reconfigures on save").
+      persist({ ...state, role, defaultModule: defaultModuleForRole(role) }),
+    [persist, state]
+  );
   const setDefaultModule = useCallback(
     (defaultModule: OnboardingState['defaultModule']) => persist({ ...state, defaultModule }),
     [persist, state]

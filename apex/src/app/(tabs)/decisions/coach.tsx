@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { QualityBadge, TypeChip } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
+import { PillButton } from '@/components/ui/button';
 import { useOnboarding } from '@/context/onboarding';
 import { type OutcomeCell } from '@/data/mock/coaches';
 import { useCoachDetail } from '@/data/live/decisions';
@@ -24,8 +25,11 @@ type DecisionFilter = 'all' | 'optimal' | 'suboptimal';
 export default function CoachDetailScreen() {
   const router = useRouter();
   const { coachId } = useLocalSearchParams<{ coachId: string }>();
-  const { activeSport } = useOnboarding();
+  const { activeSport, role } = useOnboarding();
   const { coach, decisions: coachDecisions } = useCoachDetail(coachId, activeSport);
+  // Display-only (the plan's role rules): fans get the plain view without the
+  // statistics sections; the backend request never changes.
+  const isFan = role === 'fan';
   const [filter, setFilter] = useState<DecisionFilter>('all');
   const [cellFilter, setCellFilter] = useState<OutcomeCell | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -76,33 +80,36 @@ export default function CoachDetailScreen() {
         <Text style={styles.headerEv}>{coach.evRate}%</Text>
       </Card>
 
-      {/* Stat boxes */}
-      <View style={styles.statsGrid}>
-        {stats.map(stat => (
-          <Card key={stat.label} style={styles.statBox}>
-            <Text style={styles.statValue}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
-          </Card>
-        ))}
-      </View>
+      {/* Stat boxes + process-vs-outcome matrix — statistics, hidden for fans */}
+      {!isFan ? (
+        <>
+          <View style={styles.statsGrid}>
+            {stats.map(stat => (
+              <Card key={stat.label} style={styles.statBox}>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
+              </Card>
+            ))}
+          </View>
 
-      {/* Process vs outcome */}
-      <View>
-        <Text style={styles.sectionTitle}>Process vs Outcome</Text>
-        <Card style={styles.matrixCard}>
-          <View style={styles.matrixRow}>
-            {MATRIX_CELLS.slice(0, 2).map(cell => (
-              <MatrixCell key={cell.key} cell={cell} count={coach.matrix[cell.key]} pct={Math.round((coach.matrix[cell.key] / total) * 100)} selected={cellFilter === cell.key} onPress={() => setCellFilter(cellFilter === cell.key ? null : cell.key)} />
-            ))}
+          <View>
+            <Text style={styles.sectionTitle}>Process vs Outcome</Text>
+            <Card style={styles.matrixCard}>
+              <View style={styles.matrixRow}>
+                {MATRIX_CELLS.slice(0, 2).map(cell => (
+                  <MatrixCell key={cell.key} cell={cell} count={coach.matrix[cell.key]} pct={Math.round((coach.matrix[cell.key] / total) * 100)} selected={cellFilter === cell.key} onPress={() => setCellFilter(cellFilter === cell.key ? null : cell.key)} />
+                ))}
+              </View>
+              <View style={styles.matrixRow}>
+                {MATRIX_CELLS.slice(2).map(cell => (
+                  <MatrixCell key={cell.key} cell={cell} count={coach.matrix[cell.key]} pct={Math.round((coach.matrix[cell.key] / total) * 100)} selected={cellFilter === cell.key} onPress={() => setCellFilter(cellFilter === cell.key ? null : cell.key)} />
+                ))}
+              </View>
+              <Text style={styles.matrixNote}>A good outcome does not mean a good decision — process is what matters</Text>
+            </Card>
           </View>
-          <View style={styles.matrixRow}>
-            {MATRIX_CELLS.slice(2).map(cell => (
-              <MatrixCell key={cell.key} cell={cell} count={coach.matrix[cell.key]} pct={Math.round((coach.matrix[cell.key] / total) * 100)} selected={cellFilter === cell.key} onPress={() => setCellFilter(cellFilter === cell.key ? null : cell.key)} />
-            ))}
-          </View>
-          <Text style={styles.matrixNote}>A good outcome does not mean a good decision — process is what matters</Text>
-        </Card>
-      </View>
+        </>
+      ) : null}
 
       {/* Decisions */}
       <View>
@@ -163,6 +170,20 @@ export default function CoachDetailScreen() {
           ) : null}
         </View>
       </View>
+
+      {/* Story mode — entity story for this coach */}
+      <PillButton
+        label={`Explain ${coach.name.split(' ')[0]}'s decisions simply`}
+        variant="outline"
+        size="lg"
+        onPress={() =>
+          router.push({
+            pathname: '/story',
+            params: { module: 'decisions', sport: activeSport, entityId: coach.id },
+          })
+        }
+        icon={<AppIcon name="wand.and.stars" size={16} color="#5856D6" />}
+      />
     </Screen>
   );
 }
