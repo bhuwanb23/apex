@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { AppIcon, type IconName } from '@/components/ui/icon';
@@ -10,7 +10,7 @@ import { Chip } from '@/components/ui/chip';
 import { ROLES, useOnboarding } from '@/context/onboarding';
 import { useAuth } from '@/context/auth';
 import { useBackend } from '@/context/backend';
-import { api, API_BASE_URL, type CacheStatsResponse, type JobsStatusResponse } from '@/lib/api';
+import { api, getApiBaseUrl, setApiBaseUrl, resetApiBaseUrl, type CacheStatsResponse, type JobsStatusResponse } from '@/lib/api';
 import { clearDeviceCache } from '@/lib/storage';
 import { timeAgo } from '@/lib/time';
 
@@ -61,6 +61,8 @@ export default function SettingsScreen() {
   const [aboutOpen, setAboutOpen] = useState<string | null>(null);
   const [cacheStats, setCacheStats] = useState<CacheStatsResponse | null>(null);
   const [jobs, setJobs] = useState<JobsStatusResponse | null>(null);
+  const [apiUrl, setApiUrl] = useState(getApiBaseUrl());
+  const [urlSaved, setUrlSaved] = useState(false);
 
   // Live service health derived from the ping (no effect/state — fix #lint).
   const services = health ? servicesFromHealth(health) : SERVICES;
@@ -140,6 +142,26 @@ export default function SettingsScreen() {
     await clearDeviceCache();
     api.cacheStats().then(setCacheStats).catch(() => {});
     setTimeout(() => setCleared(false), 1500);
+  };
+
+  /**
+   * "Backend URL" — switch between local and deployed backends without a
+   * rebuild. Persists on the device; the very next request uses the new URL.
+   * The health re-ping confirms the new address is reachable.
+   */
+  const saveApiUrl = async () => {
+    await setApiUrl(apiUrl);
+    setUrlSaved(true);
+    void refresh();
+    setTimeout(() => setUrlSaved(false), 1500);
+  };
+
+  const restoreApiUrl = async () => {
+    await resetApiBaseUrl();
+    setApiUrl(getApiBaseUrl());
+    setUrlSaved(true);
+    void refresh();
+    setTimeout(() => setUrlSaved(false), 1500);
   };
 
   /** Mock auth logout — clears the session; the root layout swaps to login. */
@@ -240,7 +262,26 @@ export default function SettingsScreen() {
       {/* App */}
       <Section title="App">
         <SettingRow icon="doc.fill" label="Version" value={health?.version ?? Constants.expoConfig?.version ?? '1.0.0'} />
-        <SettingRow icon="location.fill" label="Backend URL" value={API_BASE_URL.replace(/^https?:\/\//, '')} />
+        <SettingBlock label="Backend URL">
+          <TextInput
+            style={styles.urlInput}
+            value={apiUrl}
+            onChangeText={setApiUrl}
+            placeholder="http://192.168.1.50:8000"
+            placeholderTextColor="#9AA0B5"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
+          <View style={styles.urlActions}>
+            <Pressable style={[styles.urlBtn, styles.urlBtnPrimary]} onPress={saveApiUrl}>
+              <Text style={styles.urlBtnPrimaryText}>{urlSaved ? 'Saved ✓' : 'Save'}</Text>
+            </Pressable>
+            <Pressable style={styles.urlBtn} onPress={restoreApiUrl}>
+              <Text style={styles.urlBtnText}>Reset</Text>
+            </Pressable>
+          </View>
+        </SettingBlock>
         <SettingRow
           icon="info.circle.fill"
           label="System health"
@@ -503,6 +544,40 @@ const styles = StyleSheet.create({
   chipRow: {
     flexDirection: 'row',
     gap: 8,
+  },
+  urlInput: {
+    alignSelf: 'stretch',
+    backgroundColor: '#F0F1F5',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    fontSize: 13.5,
+    color: '#14121F',
+  },
+  urlActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  urlBtn: {
+    paddingHorizontal: 16,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: '#EFEEFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  urlBtnPrimary: {
+    backgroundColor: '#5856D6',
+  },
+  urlBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#5856D6',
+  },
+  urlBtnPrimaryText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   healthWrap: {
     flexDirection: 'row',

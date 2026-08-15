@@ -17,7 +17,11 @@
  */
 import Constants from 'expo-constants';
 
+import { storage } from '@/lib/storage';
+
 const BACKEND_PORT = 8000;
+/** Storage key for a user-chosen backend URL override (Settings screen). */
+const API_URL_STORAGE_KEY = 'aqx.apiUrl.v1';
 
 export function resolveApiBaseUrl(): string {
   const explicit = process.env.EXPO_PUBLIC_API_URL;
@@ -33,7 +37,47 @@ export function resolveApiBaseUrl(): string {
   return `http://localhost:${BACKEND_PORT}`;
 }
 
-export const API_BASE_URL: string = resolveApiBaseUrl();
+/**
+ * Runtime backend URL.
+ *
+ * Defaults to the auto-detected URL, but a user can override it in Settings
+ * ("Backend URL" field) — the choice persists on the device, so switching
+ * between a local backend and a deployed one needs no rebuild or code change.
+ * apiFetch reads this every request.
+ */
+let apiBaseUrl: string = resolveApiBaseUrl();
+
+let loadPromise: Promise<void> | null = null;
+/** Load a persisted override from device storage once (idempotent). */
+function loadStoredBaseUrl(): Promise<void> {
+  if (!loadPromise) {
+    loadPromise = storage
+      .getItem(API_URL_STORAGE_KEY)
+      .then(raw => {
+        if (raw) apiBaseUrl = raw;
+      })
+      .catch(() => {});
+  }
+  return loadPromise;
+}
+
+export function getApiBaseUrl(): string {
+  return apiBaseUrl;
+}
+
+/** Save a new backend URL (Settings). Persists on the device. */
+export async function setApiBaseUrl(url: string): Promise<void> {
+  const cleaned = url.trim().replace(/\/+$/, '');
+  if (!cleaned) return;
+  apiBaseUrl = cleaned;
+  await storage.setItem(API_URL_STORAGE_KEY, cleaned).catch(() => {});
+}
+
+/** Clear the override and go back to the auto-detected URL. */
+export async function resetApiBaseUrl(): Promise<void> {
+  apiBaseUrl = resolveApiBaseUrl();
+  await storage.removeItem(API_URL_STORAGE_KEY).catch(() => {});
+}
 
 /** Backend envelope: { success, status, data, timestamp }. */
 interface ApiEnvelope<T> {
@@ -59,10 +103,12 @@ const REQUEST_TIMEOUT_MS = 8000;
 
 /** Fetch with a timeout, unwraps the { success, data } envelope, throws ApiError. */
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // Make sure any saved override is applied before the first request.
+  await loadStoredBaseUrl();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_BASE_URL}${path}`, {
+    const res = await fetch(`${apiBaseUrl}${path}`, {
       ...init,
       signal: controller.signal,
       headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
