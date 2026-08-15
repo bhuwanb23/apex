@@ -507,6 +507,9 @@ export const momentumCacheMiddleware = createCacheMiddleware({
   staleThreshold: STALE_WHILE_REVALIDATE.MOMENTUM_STALE_AFTER,
   dataType: CacheDataType.MOMENTUM_ANALYSIS,
   keyBuilder: req => momentumSeasonKey(String(req.params.sport), String(req.query.season ?? '')),
+  // ?recalculate=true — a manual refresh from the app forces a fresh read so
+  // the Cox model recomputes instead of serving the cached verdict.
+  skipRead: req => String(req.query.recalculate) === 'true',
 });
 
 /**
