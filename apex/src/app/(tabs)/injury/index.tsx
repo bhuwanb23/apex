@@ -4,10 +4,9 @@ import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInp
 
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
-import { StackHeader } from '@/components/stack-header';
+import { AppHeader } from '@/components/app-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
-import { Chip } from '@/components/ui/chip';
 import { DistributionBar } from '@/components/ui/bar';
 import { ZoneBadge, type Zone } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
@@ -15,7 +14,7 @@ import { PillButton } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/components/ui/skeleton';
-import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
+import { SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
 import { useLeaguePlayers, useTeamRoster, useTeams } from '@/data/live/injury';
 import { formatRiskScore } from '@/lib/format';
@@ -86,22 +85,19 @@ export default function InjuryDashboardScreen() {
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#5856D6" colors={['#5856D6']} />
       }>
-      <StackHeader
+      <AppHeader
         title="Injury Risk"
-        subtitle={sport}
+        subtitle="Workload & recovery risk"
+        activeSport={sport}
+        onSelectSport={selectSport}
         right={
-          <Pressable onPress={refresh} hitSlop={10}>
+          <Pressable onPress={refresh} hitSlop={10} style={styles.headerAction} accessibilityRole="button" accessibilityLabel="Refresh risk scores">
             <AppIcon name="refresh" size={18} color="#5856D6" />
           </Pressable>
         }
       />
 
-      {/* Sport filter + view toggle */}
-      <View style={styles.sportTabs}>
-        {SPORTS.map(s => (
-          <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => selectSport(s.id)} />
-        ))}
-      </View>
+      {/* View toggle */}
       <View style={styles.segment}>
         {(['league', 'team'] as const).map(v => (
           <Pressable key={v} style={[styles.segmentBtn, view === v && styles.segmentActive]} onPress={() => setView(v)}>
@@ -396,10 +392,13 @@ function SummaryBlock({ label, value, color }: { label: string; value: number; c
 }
 
 const styles = StyleSheet.create({
-  sportTabs: {
-    flexDirection: 'row',
+  headerAction: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
   },
   segment: {
     flexDirection: 'row',

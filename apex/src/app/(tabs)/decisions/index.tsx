@@ -2,15 +2,14 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { StackHeader } from '@/components/stack-header';
+import { AppHeader } from '@/components/app-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
-import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Skeleton, SkeletonGames } from '@/components/ui/skeleton';
-import { SPORTS, type SportId } from '@/data/mock/sports';
+import { type SportId } from '@/data/mock/sports';
 import { type Coach } from '@/data/mock/coaches';
 import { useRecentGames } from '@/data/live/games';
 import { formatPercent } from '@/lib/format';
@@ -149,17 +148,15 @@ export default function CoachLeaderboardScreen() {
 
   return (
     <Screen refreshControl={refreshControl}>
-      <StackHeader title="Coach Leaderboard" subtitle="Decision quality · EV Rate" />
+      <AppHeader
+        title="Decisions"
+        subtitle="Coach leaderboard · EV Rate"
+        activeSport={sport}
+        onSelectSport={pickSport}
+      />
 
       {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
       {generatedAt ? <DataFreshness timestamp={generatedAt} onRefresh={refetchLeaderboard} /> : null}
-
-      {/* Sport tabs */}
-      <View style={styles.sportTabs}>
-        {SPORTS.map(s => (
-          <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => pickSport(s.id)} />
-        ))}
-      </View>
 
       {/* Search + filter button */}
       <View style={styles.searchRow}>
@@ -438,11 +435,6 @@ function evColor(rate: number): string {
 }
 
 const styles = StyleSheet.create({
-  sportTabs: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',

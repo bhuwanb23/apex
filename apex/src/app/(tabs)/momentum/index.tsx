@@ -5,17 +5,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
-import { StackHeader } from '@/components/stack-header';
+import { AppHeader } from '@/components/app-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
-import { Chip } from '@/components/ui/chip';
 import { AppIcon, type IconName } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/error-state';
 import { DataFreshness } from '@/components/ui/data-freshness';
-import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
+import { SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { useMomentumAnalysis, type VerdictLabel } from '@/data/live/momentum';
 import { useRecentGames } from '@/data/live/games';
 
@@ -68,14 +67,12 @@ export default function MomentumOverviewScreen() {
 
   return (
     <Screen refreshControl={refreshControl}>
-      <StackHeader title="Momentum" subtitle="Is momentum real?" />
-
-      {/* Sport selector */}
-      <View style={styles.sportRow}>
-        {SPORTS.map(s => (
-          <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => setSport(s.id)} />
-        ))}
-      </View>
+      <AppHeader
+        title="Momentum"
+        subtitle="Is momentum real?"
+        activeSport={sport}
+        onSelectSport={setSport}
+      />
 
       {error != null && !backendOffline ? (
         <ErrorState message={`Could not load momentum analysis for ${sport}`} onRetry={refetchMomentum} />
@@ -266,11 +263,6 @@ function HeroStat({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
-  sportRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
   // --- Verdict hero ---
   verdictHero: {
     borderRadius: 20,
