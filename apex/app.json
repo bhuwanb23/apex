@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "AQX Sports Intelligence",
-    "slug": "aqx",
+    "name": "Apex Sports Intelligence",
+    "slug": "apex",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "aqx",
+    "scheme": "apex",
     "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon"

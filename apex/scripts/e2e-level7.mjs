@@ -104,7 +104,7 @@ console.log('\n=== 1. Onboarding flow ===');
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
   // Wait for the splash overlay to fade (650ms + callback) and the auth screen.
-  const authVisible = await expectText(page, 'AQX Sports Intelligence', { timeout: 30000 });
+  const authVisible = await expectText(page, 'Apex Sports Intelligence', { timeout: 30000 });
   report('fresh install shows auth screen (splash clears)', authVisible);
   if (!authVisible) {
     const body = await page.evaluate(() => document.body.innerText.slice(0, 300));
@@ -116,7 +116,7 @@ console.log('\n=== 1. Onboarding flow ===');
 
   // Demo account fill + sign in (mock auth).
   await page.getByText('Use demo account', { exact: true }).click();
-  await expectText(page, 'demo@aqx.app');
+  await expectText(page, 'demo@apex.app');
   await page.getByText('Sign in', { exact: true }).click();
 
   // Onboarding screen 1: Welcome.
@@ -131,7 +131,7 @@ console.log('\n=== 1. Onboarding flow ===');
   await tapText(page, 'Continue');
 
   // Onboarding screen 3: Role select.
-  const roleSelect = await expectText(page, 'How will you use AQX?');
+  const roleSelect = await expectText(page, 'How will you use Apex?');
   report('onboarding screen 3 (role select)', roleSelect);
   await page.getByText('Front Office Analyst', { exact: true }).click();
   await tapText(page, 'Continue as Front Office Analyst');
@@ -165,7 +165,7 @@ console.log('\n=== 2. Tab navigation + player drill-down ===');
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
   // Fast path to Home: login -> skip onboarding (analyst default).
-  await expectText(page, 'AQX Sports Intelligence', { timeout: 30000 });
+  await expectText(page, 'Apex Sports Intelligence', { timeout: 30000 });
   await page.getByText('Use demo account', { exact: true }).click();
   await page.getByText('Sign in', { exact: true }).click();
   await expectText(page, 'Sports Intelligence', { timeout: 20000 });
@@ -228,7 +228,7 @@ console.log('\n=== 3. Offline resilience ===');
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
   // Login + skip onboarding quickly (demo account path: welcome -> skip).
-  await expectText(page, 'AQX Sports Intelligence', { timeout: 30000 });
+  await expectText(page, 'Apex Sports Intelligence', { timeout: 30000 });
   await page.getByText('Use demo account', { exact: true }).click();
   await page.getByText('Sign in', { exact: true }).click();
   await expectText(page, 'Sports Intelligence', { timeout: 20000 });
@@ -273,7 +273,7 @@ console.log('\n=== 4. Search ===');
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
   // Fast path to Home: login -> skip onboarding (analyst default).
-  await expectText(page, 'AQX Sports Intelligence', { timeout: 30000 });
+  await expectText(page, 'Apex Sports Intelligence', { timeout: 30000 });
   await page.getByText('Use demo account', { exact: true }).click();
   await page.getByText('Sign in', { exact: true }).click();
   await expectText(page, 'Sports Intelligence', { timeout: 20000 });
@@ -327,7 +327,7 @@ console.log('\n=== 5. Story mode ===');
   await page.addInitScript(freshInstallInitScript());
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-  await expectText(page, 'AQX Sports Intelligence', { timeout: 30000 });
+  await expectText(page, 'Apex Sports Intelligence', { timeout: 30000 });
   await page.getByText('Use demo account', { exact: true }).click();
   await page.getByText('Sign in', { exact: true }).click();
   await expectText(page, 'Sports Intelligence', { timeout: 20000 });
@@ -347,7 +347,7 @@ console.log('\n=== 5. Story mode ===');
   })();
   report('story mode opens from Home', storyOpened);
 
-  const storyHeadline = await expectText(page, 'AQX Story Mode', { timeout: 15000 });
+  const storyHeadline = await expectText(page, 'Apex Story Mode', { timeout: 15000 });
   report('story modal renders', storyHeadline);
 
   // Paragraph should be a readable sentence (not empty / not an error).
@@ -370,7 +370,7 @@ console.log('\n=== 5. Story mode ===');
     shareOk = false;
   }
   report('share button tappable without crashing', shareOk);
-  const stillAlive = await expectText(page, 'AQX Story Mode', { timeout: 8000 });
+  const stillAlive = await expectText(page, 'Apex Story Mode', { timeout: 8000 });
   report('app still responsive after share tap', stillAlive);
 
   ctx.close();
@@ -386,7 +386,7 @@ console.log('\n=== 6. Role changes ===');
   await page.addInitScript(freshInstallInitScript());
   await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-  await expectText(page, 'AQX Sports Intelligence', { timeout: 30000 });
+  await expectText(page, 'Apex Sports Intelligence', { timeout: 30000 });
   await page.getByText('Use demo account', { exact: true }).click();
   await page.getByText('Sign in', { exact: true }).click();
   await expectText(page, 'Sports Intelligence', { timeout: 20000 });
