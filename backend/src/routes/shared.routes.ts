@@ -47,6 +47,21 @@ export const sharedRouter = Router();
  *                             type: boolean
  *                     total:
  *                       type: integer
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   sports:
+ *                     - id: 1
+ *                       name: NBA
+ *                       abbreviation: NBA
+ *                       season: '2026-27'
+ *                       isActive: true
+ *                     - id: 2
+ *                       name: NFL
+ *                       abbreviation: NFL
+ *                       season: '2026'
+ *                       isActive: true
+ *                   total: 4
  */
 sharedRouter.get('/', listSports);
 
@@ -67,6 +82,28 @@ sharedRouter.get('/', listSports);
  *     responses:
  *       200:
  *         description: Teams for the sport
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   sport: NBA
+ *                   teams:
+ *                     - id: 149
+ *                       name: Los Angeles Lakers
+ *                       abbreviation: LAL
+ *                       city: Los Angeles
+ *                       conference: West
+ *                       division: Pacific
+ *                     - id: 150
+ *                       name: Golden State Warriors
+ *                       abbreviation: GSW
+ *                       city: San Francisco
+ *                       conference: West
+ *                       division: Pacific
+ *                   total: 30
  *       404:
  *         description: Sport not found
  */
@@ -109,6 +146,30 @@ sharedRouter.get(
  *     responses:
  *       200:
  *         description: Paginated players
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   sport: NBA
+ *                   players:
+ *                     - id: 4926
+ *                       name: LeBron James
+ *                       firstName: LeBron
+ *                       lastName: James
+ *                       position: SF
+ *                       jerseyNumber: 23
+ *                       teamId: 149
+ *                       teamName: Los Angeles Lakers
+ *                       teamAbbreviation: LAL
+ *                   meta:
+ *                     page: 1
+ *                     limit: 50
+ *                     total: 450
+ *                     totalPages: 9
+ *                     hasNext: true
  *       404:
  *         description: Sport not found
  */

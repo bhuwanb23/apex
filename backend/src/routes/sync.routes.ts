@@ -28,6 +28,18 @@ export const syncRouter = Router();
  *     responses:
  *       202:
  *         description: Job accepted — returns the JobLogs id to track
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   jobId: 894
+ *                   jobName: data_sync
+ *                   sport: NBA
+ *                   status: accepted
+ *                   note: Poll GET /api/jobs/history?jobName=data_sync to track completion
  *       400:
  *         description: Invalid sport
  */

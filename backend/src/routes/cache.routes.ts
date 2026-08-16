@@ -46,6 +46,30 @@ export const cacheRouter = Router();
  *     responses:
  *       200:
  *         description: Cache statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   memory:
+ *                     keys: 42
+ *                     hits: 1284
+ *                     misses: 96
+ *                     hitRate: 0.93
+ *                     ksize: 1.2
+ *                   sqlite:
+ *                     totalEntries: 87
+ *                     validEntries: 71
+ *                     expiredEntries: 16
+ *                     byDataType:
+ *                       coach_leaderboard: 8
+ *                       risk_scores: 40
+ *                       momentum_analysis: 4
+ *                   performance:
+ *                     avgHitMs: 4
+ *                     avgMissMs: 220
  */
 cacheRouter.get('/stats', async (_req, res) => {
   const [memory, sqlite] = await Promise.all([getMemoryCacheStats(), getCacheStats()]);
@@ -79,6 +103,39 @@ cacheRouter.get('/stats', async (_req, res) => {
  *     responses:
  *       200:
  *         description: Cache entries with computed fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   total: 2
+ *                   entries:
+ *                     - cacheKey: 'leaderboard:NFL:2026:all:all'
+ *                       dataType: coach_leaderboard
+ *                       sportId: 2
+ *                       entityId: null
+ *                       season: '2026'
+ *                       cachedAt: '2026-08-16T08:30:00.000Z'
+ *                       expiresAt: '2026-08-17T08:30:00.000Z'
+ *                       isValid: true
+ *                       recordCount: 32
+ *                       isExpired: false
+ *                       age: 1800
+ *                       ttlRemaining: 84600
+ *                     - cacheKey: 'risk:player:4926'
+ *                       dataType: risk_scores
+ *                       sportId: 1
+ *                       entityId: '4926'
+ *                       season: null
+ *                       cachedAt: '2026-08-16T09:00:00.000Z'
+ *                       expiresAt: '2026-08-16T15:00:00.000Z'
+ *                       isValid: true
+ *                       recordCount: 1
+ *                       isExpired: false
+ *                       age: 120
+ *                       ttlRemaining: 21480
  */
 cacheRouter.get('/entries', createValidator(cacheEntriesQuerySchema, 'query'), async (req, res) => {
   const { dataType, sport, valid } = req.validatedQuery as {
@@ -148,6 +205,18 @@ cacheRouter.get('/entries', createValidator(cacheEntriesQuerySchema, 'query'), a
  *     responses:
  *       200:
  *         description: Invalidated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   invalidated: key
+ *                   key: 'leaderboard:NFL:2026:all:all'
+ *                   memoryDeleted: true
+ *                   respDeleted: true
+ *                   registryInvalidated: true
  *       400:
  *         description: No invalidation option provided
  *       403:
@@ -229,6 +298,19 @@ cacheRouter.delete(
  *     responses:
  *       200:
  *         description: Warmup result with per-category counts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   sports: 4
+ *                   teams: 4
+ *                   redZoneAlerts: 4
+ *                   leaderboards: 4
+ *                   entriesWarmed: 22
+ *                   durationMs: 312
  */
 cacheRouter.get('/warmup', async (_req, res) => {
   const result = await warmUpCache();

@@ -26,6 +26,17 @@ export const routes = Router();
  *     responses:
  *       200:
  *         description: Service metadata
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   name: apex-sports-intelligence
+ *                   version: 1.2.0
+ *                   docs: /api-docs
+ *                   health: /api/health
  */
 routes.get('/', (_req, res) => {
   sendSuccess(res, {

@@ -44,6 +44,17 @@ export const healthRouter = Router();
  *                           type: string
  *                         mlService:
  *                           type: string
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   status: ok
+ *                   environment: development
+ *                   version: 1.2.0
+ *                   uptime: 15234
+ *                   services:
+ *                     database: connected
+ *                     cache: ready
+ *                     mlService: connected
  */
 healthRouter.get('/', healthCheck);
 
@@ -57,6 +68,24 @@ healthRouter.get('/', healthCheck);
  *     responses:
  *       200:
  *         description: Error summary (counts, rates, recentErrors, status)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   status: healthy
+ *                   totalErrors: 12
+ *                   errorRatePerHour: 3.4
+ *                   recentErrors:
+ *                     - timestamp: '2026-08-16T09:41:22.000Z'
+ *                       level: error
+ *                       message: BallDontLie API rate limit reached — retrying with backoff
+ *                       context: sports-api
+ *                   currentHour:
+ *                     count: 2
+ *                     rate: 0.4
  */
 healthRouter.get('/errors', (_req, res) => {
   sendSuccess(res, getErrorSummary());

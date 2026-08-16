@@ -51,6 +51,26 @@ export const logsRouter = Router();
  *     responses:
  *       200:
  *         description: Matching log entries
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   file: logs/combined.log
+ *                   count: 2
+ *                   entries:
+ *                     - timestamp: '2026-08-16T09:40:11.000Z'
+ *                       level: info
+ *                       context: jobs
+ *                       message: data_sync completed — 450 players synced
+ *                       requestId: req_ab12cd
+ *                     - timestamp: '2026-08-16T09:40:10.000Z'
+ *                       level: info
+ *                       context: ml-client
+ *                       message: Injury risk model responded in 142ms
+ *                       requestId: req_ab12cd
  *       401:
  *         description: Missing or invalid X-Admin-Key
  */

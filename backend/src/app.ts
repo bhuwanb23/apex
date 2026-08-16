@@ -36,6 +36,8 @@ export function createApp(): express.Express {
 
   // API docs (auto-generated from route annotations)
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  // Alias — judges often type /api/docs (matching the Python service's /docs).
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
   // Raw OpenAPI spec (swagger-ui-express embeds it in the UI, but expose it for tooling too)
   app.get('/api-docs.json', (_req, res) => {
     res.json(swaggerSpec);

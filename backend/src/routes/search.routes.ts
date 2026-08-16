@@ -45,6 +45,22 @@ export const searchRouter = Router();
  *     responses:
  *       200:
  *         description: Matching players
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   players:
+ *                     - playerId: 4926
+ *                       playerName: LeBron James
+ *                       position: SF
+ *                       teamName: Los Angeles Lakers
+ *                       teamAbbreviation: LAL
+ *                       sport: NBA
+ *                       injuryStatus: active
+ *                       zone: red
  *       400:
  *         description: Query too short
  */
@@ -76,6 +92,19 @@ searchRouter.get(
  *     responses:
  *       200:
  *         description: Matching teams
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   teams:
+ *                     - teamId: 149
+ *                       teamName: Los Angeles Lakers
+ *                       abbreviation: LAL
+ *                       city: Los Angeles
+ *                       sport: NBA
  */
 searchRouter.get(
   '/teams',
@@ -105,6 +134,18 @@ searchRouter.get(
  *     responses:
  *       200:
  *         description: Matching coaches
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   coaches:
+ *                     - coachId: 12
+ *                       coachName: Andy Reid
+ *                       teamName: Kansas City Chiefs
+ *                       sport: NFL
  */
 searchRouter.get('/coaches', createValidator(simpleSearchQuerySchema, 'query'), searchCoaches);
 
@@ -157,5 +198,28 @@ searchRouter.get('/coaches', createValidator(simpleSearchQuerySchema, 'query'), 
  *     responses:
  *       200:
  *         description: Paginated game list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   games:
+ *                     - gameId: 5892
+ *                       date: '2026-08-15'
+ *                       season: '2026-27'
+ *                       gameType: regular
+ *                       status: final
+ *                       homeTeamName: Los Angeles Lakers
+ *                       awayTeamName: Golden State Warriors
+ *                       homeScore: 112
+ *                       awayScore: 104
+ *                       finalScore: '112-104'
+ *                       sport: NBA
+ *                   meta:
+ *                     page: 1
+ *                     limit: 20
+ *                     total: 10
  */
 searchRouter.get('/games', createValidator(gamesSearchQuerySchema, 'query'), searchGames);

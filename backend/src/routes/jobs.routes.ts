@@ -23,6 +23,29 @@ export const jobsRouter = Router();
  *     responses:
  *       200:
  *         description: Job statuses with ML availability
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   mlAvailable: true
+ *                   jobs:
+ *                     - name: data_sync
+ *                       description: Sync teams, players and game logs
+ *                       running: false
+ *                       lastRunAt: '2026-08-16T08:00:00.000Z'
+ *                       lastStatus: success
+ *                       nextRunAt: '2026-08-16T12:00:00.000Z'
+ *                       schedule: every 4 hours
+ *                     - name: risk_compute
+ *                       description: Recompute injury risk scores
+ *                       running: false
+ *                       lastRunAt: '2026-08-16T09:00:00.000Z'
+ *                       lastStatus: success
+ *                       nextRunAt: '2026-08-16T10:00:00.000Z'
+ *                       schedule: hourly
  */
 jobsRouter.get('/status', getJobsStatus);
 
@@ -48,6 +71,35 @@ jobsRouter.get('/status', getJobsStatus);
  *     responses:
  *       200:
  *         description: Recent job runs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   total: 2
+ *                   runs:
+ *                     - id: 892
+ *                       jobName: data_sync
+ *                       status: success
+ *                       startedAt: '2026-08-16T08:00:00.000Z'
+ *                       finishedAt: '2026-08-16T08:02:14.000Z'
+ *                       durationMs: 134000
+ *                       error: null
+ *                       summary:
+ *                         teams: 30
+ *                         players: 450
+ *                         gameLogs: 3600
+ *                     - id: 891
+ *                       jobName: risk_compute
+ *                       status: success
+ *                       startedAt: '2026-08-16T09:00:00.000Z'
+ *                       finishedAt: '2026-08-16T09:01:02.000Z'
+ *                       durationMs: 62000
+ *                       error: null
+ *                       summary:
+ *                         scored: 450
  */
 jobsRouter.get('/history', createValidator(jobHistoryQuerySchema, 'query'), getJobsHistory);
 
@@ -81,6 +133,17 @@ jobsRouter.get('/history', createValidator(jobHistoryQuerySchema, 'query'), getJ
  *     responses:
  *       202:
  *         description: Job accepted — returns the JobLogs id to track
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   jobId: 893
+ *                   jobName: data_sync
+ *                   status: accepted
+ *                   note: Poll GET /api/jobs/history?jobName=data_sync to track completion
  *       403:
  *         description: Missing or invalid X-Admin-Key
  *       404:
@@ -102,5 +165,18 @@ jobsRouter.post('/trigger', createValidator(triggerJobBodySchema, 'body'), trigg
  *     responses:
  *       200:
  *         description: ML service health
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   available: true
+ *                   baseUrl: http://127.0.0.1:8001
+ *                   modelsReady: true
+ *                   latencyMs: 42
+ *                   consecutiveFailures: 0
+ *                   lastCheckedAt: '2026-08-16T09:00:00.000Z'
  */
 jobsRouter.get('/ml-health', getMLHealth);

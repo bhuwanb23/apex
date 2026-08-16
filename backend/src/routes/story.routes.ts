@@ -47,6 +47,27 @@ export const storyRouter = Router();
  *     responses:
  *       200:
  *         description: Generated story with headline and tone
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   module: injury
+ *                   sport: NBA
+ *                   role: analyst
+ *                   entityId: '4926'
+ *                   entityName: LeBron James
+ *                   storyText: LeBron James is at high injury risk this week. His minutes spiked 27% above his personal average over the last 5 games, pushing his risk score to 68/100 — firmly in the red zone. Trainers may want to manage his workload and watch for fatigue in the next back-to-back.
+ *                   headlineText: LeBron James is at high injury risk this week
+ *                   toneLabel: professional
+ *                   generatedBy: python-story-generator
+ *                   keyMetrics:
+ *                     riskScore: 68
+ *                     triggerMetric: ↑ Minutes
+ *                     daysInRedZone: 3
+ *                   generatedAt: '2026-08-16T09:00:00.000Z'
  *       400:
  *         description: Missing entityId for injury/decisions modules
  *       404:
