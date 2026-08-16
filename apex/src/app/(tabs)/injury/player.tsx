@@ -18,6 +18,8 @@ import { usePlayerRisk } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { api } from '@/lib/api';
+import { saveOrSharePdf } from '@/lib/pdf-export';
 import { formatRiskScore } from '@/lib/format';
 
 type MetricKey = 'minutes' | 'distance' | 'intensity';
@@ -84,6 +86,8 @@ export default function PlayerRiskScreen() {
   const { refreshControl } = usePullRefresh(refetchPlayer);
   const [metric, setMetric] = useState<MetricKey>('minutes');
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const zone = player.zone as Zone;
   const metricDef = METRICS.find(m => m.key === metric)!;
@@ -131,6 +135,22 @@ export default function PlayerRiskScreen() {
     Share.share({
       message: `${player.name} (${player.team}) — Apex risk score ${formatRiskScore(player.riskScore)}/100. ${player.explanation}`,
     }).catch(() => {});
+  };
+
+  /** Export PDF — backend generates the report, then download/share it. */
+  const exportReport = async () => {
+    if (exporting || !playerId) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const bytes = await api.playerReportPdf(playerId);
+      const filename = `${player.name.replace(/[^\w-]+/g, '-')}-risk-report.pdf`;
+      await saveOrSharePdf(bytes, filename);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Could not export the report');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const backToBackDays = [1, 3, 5, 6, 8, 10, 12];
@@ -358,15 +378,26 @@ export default function PlayerRiskScreen() {
 
       {/* Actions */}
       <View style={styles.actionsRow}>
-        <Pressable style={[styles.actionBtn, styles.actionExport]} onPress={() => {}}>
+        <Pressable
+          style={[styles.actionBtn, styles.actionExport, exporting && styles.actionExportBusy]}
+          onPress={exportReport}
+          disabled={exporting}
+          accessibilityRole="button"
+          accessibilityLabel="Export PDF">
           <AppIcon name="doc.fill" size={16} color="#5856D6" />
-          <Text style={styles.actionExportText}>Export PDF</Text>
+          <Text style={styles.actionExportText}>{exporting ? 'Generating…' : 'Export PDF'}</Text>
         </Pressable>
         <Pressable style={[styles.actionBtn, styles.actionShare]} onPress={share}>
           <AppIcon name="square.and.arrow.up" size={16} color="#FFFFFF" />
           <Text style={styles.actionShareText}>Share</Text>
         </Pressable>
       </View>
+      {exportError ? (
+        <View style={styles.exportErrorRow}>
+          <AppIcon name="exclamationmark.triangle.fill" size={13} color="#E5484D" />
+          <Text style={styles.exportErrorText}>{exportError}</Text>
+        </View>
+      ) : null}
 
       {player.zone === 'insufficient_data' ? (
         <EmptyState icon="info.circle.fill" title="No risk data" subtitle="No game logs available for this player yet." />
@@ -599,10 +630,24 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#5856D6',
   },
+  actionExportBusy: {
+    opacity: 0.6,
+  },
   actionExportText: {
     color: '#5856D6',
     fontWeight: '700',
     fontSize: 14,
+  },
+  exportErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  exportErrorText: {
+    fontSize: 12,
+    color: '#E5484D',
+    fontWeight: '600',
   },
   actionShare: {
     backgroundColor: '#5856D6',

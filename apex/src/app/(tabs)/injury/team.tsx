@@ -1,8 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import * as Sharing from 'expo-sharing';
-import { File, Paths } from 'expo-file-system';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
@@ -23,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/error-state';
 import { DataFreshness } from '@/components/ui/data-freshness';
 import { api } from '@/lib/api';
+import { saveOrSharePdf } from '@/lib/pdf-export';
 
 type ZoneFilter = 'all' | 'red' | 'yellow' | 'green';
 type SortKey = 'risk' | 'name' | 'position';
@@ -114,33 +113,8 @@ export default function TeamRiskScreen() {
     setExportError(null);
     try {
       const bytes = await api.teamReportPdf(teamId);
-      const blob = new Blob([bytes], { type: 'application/pdf' });
       const filename = `${teamName.replace(/[^\w-]+/g, '-')}-risk-report.pdf`;
-
-      if (Platform.OS === 'web') {
-        // Browser download: object URL + anchor click (no native modules needed).
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 4000);
-      } else {
-        // Native: write to the cache dir, then open the share sheet with it.
-        const file = new File(Paths.cache, filename);
-        await file.write(new Uint8Array(bytes));
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(file.uri, {
-            mimeType: 'application/pdf',
-            dialogTitle: 'Export team risk report',
-            UTI: 'com.adobe.pdf',
-          });
-        } else {
-          setExportError('Sharing is not available on this device');
-        }
-      }
+      await saveOrSharePdf(bytes, filename);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Could not export the report');
     } finally {

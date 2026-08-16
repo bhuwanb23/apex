@@ -508,13 +508,13 @@ export const api = {
     apiFetch<TeamRiskResponse>(`/api/injury/team/${teamId}${qs({ recalculate: recalculate || undefined })}`),
   teamRiskHistory: (teamId: number, days = 30) =>
     apiFetch<TeamRiskHistoryResponse>(`/api/injury/team/${teamId}/history${qs({ days })}`),
-  /** Fetches the team report PDF as an ArrayBuffer (not JSON). */
-  teamReportPdf: async (teamId: number): Promise<ArrayBuffer> => {
+  /** Fetches a backend-generated PDF as an ArrayBuffer (not JSON). */
+  reportPdf: async (path: string): Promise<ArrayBuffer> => {
     await loadStoredBaseUrl();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15000);
     try {
-      const res = await fetch(`${apiBaseUrl}/api/injury/team/${teamId}/report`, {
+      const res = await fetch(`${apiBaseUrl}${path}`, {
         signal: controller.signal,
         headers: { Accept: 'application/pdf' },
       });
@@ -528,6 +528,10 @@ export const api = {
       clearTimeout(timer);
     }
   },
+  /** Team report PDF (the trainer dashboard export). */
+  teamReportPdf: (teamId: number) => api.reportPdf(`/api/injury/team/${teamId}/report`),
+  /** Player report PDF (the player risk screen export). */
+  playerReportPdf: (playerId: number | string) => api.reportPdf(`/api/injury/player/${playerId}/report`),
   playerRiskHistory: (playerId: string | number, days = 60) =>
     apiFetch<RiskHistoryResponse>(`/api/injury/player/${playerId}/history${qs({ days })}`),
   injuryCounts: (sport: string) => apiFetch<InjuryCountsResponse>(`/api/injury/counts/${sport}`),
