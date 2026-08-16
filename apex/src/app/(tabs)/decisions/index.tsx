@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
@@ -80,6 +80,13 @@ export default function CoachLeaderboardScreen() {
   const [season, setSeason] = useState<string | undefined>(undefined);
   const [decisionType, setDecisionType] = useState('All');
   const [gameType, setGameType] = useState('All');
+  const [query, setQuery] = useState('');
+  // Filter popup (the search + filter pattern used across the app). Draft
+  // values only apply on "Apply".
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [draftSeason, setDraftSeason] = useState<string | undefined>(undefined);
+  const [draftDecisionType, setDraftDecisionType] = useState('All');
+  const [draftGameType, setDraftGameType] = useState('All');
 
   // Follow the stored sport when it changes (e.g. the Home badge) without a
   // setState-in-effect — the guarded render-time adjustment is the React-
@@ -105,8 +112,30 @@ export default function CoachLeaderboardScreen() {
   // hardcoded DECISION_GAMES were NFL-only mock rows that never changed).
   const recentGames = useRecentGames(sport, 8);
   const reviewGames = recentGames.data;
-  const podium = coaches.slice(0, 3);
-  const rest = coaches.slice(3);
+  // Coach name search — live local filter over the fetched board (the plan's
+  // "filtering happens locally, no new backend request" behavior).
+  const searched = useMemo(
+    () => coaches.filter(c => c.name.toLowerCase().includes(query.trim().toLowerCase())),
+    [coaches, query]
+  );
+  const podium = searched.slice(0, 3);
+  const rest = searched.slice(3);
+
+  /** Open the filter sheet seeded with the currently applied values. */
+  const openPicker = () => {
+    setDraftSeason(season);
+    setDraftDecisionType(decisionType);
+    setDraftGameType(gameType);
+    setPickerOpen(true);
+  };
+
+  /** Apply the draft filter choices and close the sheet. */
+  const applyPicker = () => {
+    setSeason(draftSeason);
+    setDecisionType(draftDecisionType);
+    setGameType(draftGameType);
+    setPickerOpen(false);
+  };
 
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
@@ -125,24 +154,45 @@ export default function CoachLeaderboardScreen() {
       {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
       {generatedAt ? <DataFreshness timestamp={generatedAt} onRefresh={refetchLeaderboard} /> : null}
 
-      {/* Filters */}
-      <View style={styles.filters}>
-        <View style={styles.chipRow}>
-          {SPORTS.map(s => (
-            <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => pickSport(s.id)} />
-          ))}
+      {/* Sport tabs */}
+      <View style={styles.sportTabs}>
+        {SPORTS.map(s => (
+          <Chip key={s.id} label={s.short} small selected={sport === s.id} onPress={() => pickSport(s.id)} />
+        ))}
+      </View>
+
+      {/* Search + filter button */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchBar}>
+          <AppIcon name="magnifyingglass" size={16} color="#9AA0B5" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search coaches…"
+            placeholderTextColor="#9AA0B5"
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
         </View>
-        <View style={styles.chipRow}>
-          {seasons.map(se => (
-            <Chip key={se} label={se} small selected={season === se} onPress={() => setSeason(se)} />
-          ))}
-          {DECISION_TYPES.map(dt => (
-            <Chip key={dt} label={dt} small selected={decisionType === dt} onPress={() => setDecisionType(dt)} />
-          ))}
-          {GAME_TYPES.map(gt => (
-            <Chip key={gt} label={gt} small selected={gameType === gt} onPress={() => setGameType(gt)} />
-          ))}
-        </View>
+        <Pressable
+          style={styles.filterBtn}
+          onPress={openPicker}
+          accessibilityRole="button"
+          accessibilityLabel="Filter leaderboard">
+          <AppIcon name="slider.horizontal.3" size={18} color="#5856D6" />
+        </Pressable>
+      </View>
+
+      {/* Count banner — active filter summary + filter shortcut */}
+      <View style={styles.countBanner}>
+        <Text style={styles.countText}>
+          {showBoardSkeleton ? 'Loading leaderboard…' : `${searched.length} coach${searched.length === 1 ? '' : 'es'}`}
+        </Text>
+        <Pressable style={styles.bannerFilterBtn} onPress={openPicker} accessibilityRole="button" accessibilityLabel="Open filters">
+          <AppIcon name="slider.horizontal.3" size={13} color="#FFFFFF" />
+          <Text style={styles.bannerFilterText}>{activeFilterLabel(season, decisionType, gameType)}</Text>
+        </Pressable>
       </View>
 
       {error != null && !backendOffline ? (
@@ -172,11 +222,19 @@ export default function CoachLeaderboardScreen() {
             ))}
           </Card>
         </>
-      ) : coaches.length === 0 ? (
+      ) : searched.length === 0 ? (
         <EmptyState
-          icon="trophy.fill"
-          title={`No coach data for ${sport} · ${season ?? 'current season'}`}
-          subtitle="Decision grades are available once a season has enough games analyzed."
+          icon={query.trim() ? 'magnifyingglass' : 'trophy.fill'}
+          title={
+            query.trim()
+              ? `No coaches match “${query.trim()}”`
+              : `No coach data for ${sport} · ${season ?? 'current season'}`
+          }
+          subtitle={
+            query.trim()
+              ? 'Try a different name, or clear the search.'
+              : 'Decision grades are available once a season has enough games analyzed.'
+          }
           accent="#5856D6"
         />
       ) : (
@@ -214,6 +272,55 @@ export default function CoachLeaderboardScreen() {
         <AppIcon name="info.circle.fill" size={13} color="#9AA0B5" />
         <Text style={styles.noteText}>EV Rate measures how often a coach chose the statistically optimal decision</Text>
       </View>
+
+      {/* Filter sheet — season / decision type / game type, Apply to confirm */}
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+        <View style={styles.pickerBackdrop}>
+          <View style={styles.pickerSheet}>
+            <View style={styles.pickerHandle} />
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Filter leaderboard</Text>
+              <Pressable onPress={() => setPickerOpen(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
+                <AppIcon name="xmark" size={16} color="#6E7280" />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.pickerList} showsVerticalScrollIndicator={false}>
+              <Text style={styles.pickerSection}>Season</Text>
+              <PickerRow
+                label="Current season"
+                selected={draftSeason === undefined}
+                onPress={() => setDraftSeason(undefined)}
+              />
+              {seasons.map(se => (
+                <PickerRow key={`season-${se}`} label={se} selected={draftSeason === se} onPress={() => setDraftSeason(se)} />
+              ))}
+
+              <Text style={styles.pickerSection}>Decision type</Text>
+              {DECISION_TYPES.map(dt => (
+                <PickerRow
+                  key={`dt-${dt}`}
+                  label={dt}
+                  selected={draftDecisionType === dt}
+                  onPress={() => setDraftDecisionType(dt)}
+                />
+              ))}
+
+              <Text style={styles.pickerSection}>Game type</Text>
+              {GAME_TYPES.map(gt => (
+                <PickerRow
+                  key={`gt-${gt}`}
+                  label={gt === 'All' ? 'All game types' : gt}
+                  selected={draftGameType === gt}
+                  onPress={() => setDraftGameType(gt)}
+                />
+              ))}
+            </ScrollView>
+            <Pressable style={styles.applyBtn} onPress={applyPicker} accessibilityRole="button">
+              <Text style={styles.applyText}>Apply</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Game reviews — live recent games for the sport */}
       <View>
@@ -254,6 +361,27 @@ export default function CoachLeaderboardScreen() {
 
 function open(router: ReturnType<typeof useRouter>, coach: Coach) {
   router.push({ pathname: '/decisions/coach', params: { coachId: coach.id } });
+}
+
+/** Compact summary of the active filters for the banner pill. */
+function activeFilterLabel(season: string | undefined, decisionType: string, gameType: string): string {
+  const parts: string[] = [];
+  parts.push(season ?? 'Current season');
+  parts.push(decisionType === 'All' ? 'All decisions' : decisionType);
+  parts.push(gameType === 'All' ? 'All games' : gameType);
+  return parts.join(' · ');
+}
+
+/** One radio row in the filter sheet — purple dot + label when selected. */
+function PickerRow({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  return (
+    <Pressable style={styles.pickerRow} onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected }}>
+      <Text style={[styles.pickerRowText, selected && styles.pickerRowTextActive]}>{label}</Text>
+      <View style={[styles.radio, selected && styles.radioActive]}>
+        {selected ? <View style={styles.radioDot} /> : null}
+      </View>
+    </Pressable>
+  );
 }
 
 function PodiumSpot({ coach, rank, onPress }: { coach: Coach; rank: 1 | 2 | 3; onPress: () => void }) {
@@ -310,13 +438,159 @@ function evColor(rate: number): string {
 }
 
 const styles = StyleSheet.create({
-  filters: {
+  sportTabs: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     gap: 8,
   },
-  chipRow: {
+  searchRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 44,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#14121F',
+  },
+  filterBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E5EC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#5856D6',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  countText: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '600',
+    flex: 1,
+  },
+  bannerFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    height: 28,
+  },
+  bannerFilterText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20,18,31,0.45)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+    gap: 12,
+    maxHeight: '80%',
+  },
+  pickerHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D5D7E0',
+    alignSelf: 'center',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pickerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#14121F',
+  },
+  pickerList: {
+    flexGrow: 0,
+  },
+  pickerSection: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#9AA0B5',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F1F5',
+  },
+  pickerRowText: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#14121F',
+  },
+  pickerRowTextActive: {
+    color: '#5856D6',
+  },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#C6C8D2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: {
+    borderColor: '#5856D6',
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#5856D6',
+  },
+  applyBtn: {
+    backgroundColor: '#5856D6',
+    borderRadius: 14,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   podiumRow: {
     flexDirection: 'row',
