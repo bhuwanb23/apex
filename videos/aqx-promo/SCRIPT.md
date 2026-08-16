@@ -1,4 +1,4 @@
-# SCRIPT — aqx-promo
+# SCRIPT — Apex-promo
 
 **Voice:** Kokoro `am_michael` (offline — HeyGen not signed in)
 **Voice settings:** clear · medium pace · premium product tone
@@ -11,16 +11,16 @@
 **Time:** 0.0 – 7.0s
 **Delivery:** Soft, assured. Land “Personalized.”
 
-    This is AQX. Sports intelligence. Personalized.
+    This is Apex. Sports intelligence. Personalized.
 
 ## Line 2 — The promise (Frame 2)
 
 **Time:** 7.0 – 16.0s
 **Delivery:** Slight tension on “noise,” release on “act on.”
 
-    Every game dumps noise — box scores, play-by-play, gut feel. AQX turns it into a brief you can act on.
+    Every game dumps noise — box scores, play-by-play, gut feel. Apex turns it into a brief you can act on.
 
-## Line 3 — Meet AQX (Frame 3)
+## Line 3 — Meet Apex (Frame 3)
 
 **Time:** 16.0 – 24.0s
 **Delivery:** Warm roll-call; pause between roles.
@@ -53,4 +53,4 @@
 **Time:** 52.0 – 60.0s
 **Delivery:** Warm lockup; final period lands.
 
-    AQX Sports Intelligence. Clear insights. Personalized for how you work.
+    Apex Sports Intelligence. Clear insights. Personalized for how you work.

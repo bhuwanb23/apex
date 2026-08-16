@@ -6,19 +6,19 @@ message: "Raw sports data becomes clear, personalized intelligence"
 destination: youtube
 aspect: 1920x1080
 language: en
-audience: "trainers, coaches, analysts, and sports fans evaluating AQX"
+audience: "trainers, coaches, analysts, and sports fans evaluating Apex"
 length: 60s
 angle: "three-pillar product film — Injury, Decisions, Momentum — ending on Story Mode"
 ---
 
 ## Intent
 
-High-end company-style promo for **AQX Sports Intelligence** (“Sports Intelligence. Personalized.”). Calm Apple/Linear energy — not sports-highlight chaos. Brand orb opens → one clear promise → three polished feature beats with **real UI in phone frames** → Story Mode share moment → logo lockup. Tone: confident, clear, premium.
+High-end company-style promo for **Apex Sports Intelligence** (“Sports Intelligence. Personalized.”). Calm Apple/Linear energy — not sports-highlight chaos. Brand orb opens → one clear promise → three polished feature beats with **real UI in phone frames** → Story Mode share moment → logo lockup. Tone: confident, clear, premium.
 
 ## Assets
 
 - App UI screenshots (staged from Expo) — Welcome, Home, Player Risk, Coach Leaderboard, Momentum Replay, Story Mode — featured inside device frames.
-- Brand mark derived from `apex/src/components/aqx-logo.tsx` (gradient orb + AQX. wordmark).
+- Brand mark derived from `apex/src/components/apex-logo.tsx` (gradient orb + Apex. wordmark).
 
 ## Customizations
 

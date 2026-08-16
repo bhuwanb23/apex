@@ -1,6 +1,6 @@
-# AQX Sports Intelligence — Promo Pack
+# Apex Sports Intelligence — Promo Pack
 
-High-end product promo + marketing art for **AQX Sports Intelligence**.
+High-end product promo + marketing art for **Apex Sports Intelligence**.
 
 ## Video
 

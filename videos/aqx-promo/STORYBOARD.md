@@ -3,7 +3,7 @@ format: 1920x1080
 duration: 42s
 message: "Raw sports data becomes clear, personalized intelligence"
 arc: "Demo Loop — question → product → three UI proofs → Story Mode → CTA"
-audience: "trainers, coaches, analysts, and sports fans evaluating AQX"
+audience: "trainers, coaches, analysts, and sports fans evaluating Apex"
 mode: collaborative
 music: cinematic ambient · confident · light pulse · premium product
 captions: on
@@ -11,7 +11,7 @@ captions: on
 
 ## Video direction
 
-Premium product film: soft `#F0F1F5` canvas, AQX purple `#5856D6` as the only primary accent, pink→purple→orange orb as brand spectacle. Phone devices float with soft depth; UI screenshots are the truth. Motion is restrained and timed to VO cues — no sports-highlight chaos. Crossfades between pillars; logo lockup closes clean.
+Premium product film: soft `#F0F1F5` canvas, Apex purple `#5856D6` as the only primary accent, pink→purple→orange orb as brand spectacle. Phone devices float with soft depth; UI screenshots are the truth. Motion is restrained and timed to VO cues — no sports-highlight chaos. Crossfades between pillars; logo lockup closes clean.
 
 ## Frame 1 — Brand open
 - status: animated
@@ -19,8 +19,8 @@ Premium product film: soft `#F0F1F5` canvas, AQX purple `#5856D6` as the only pr
 - transition_in: cut
 - type: branding
 - blueprint: logo-assemble-lockup
-- scene: Gradient orb assembles; AQX. wordmark locks; tagline whispers in
-- voiceover: This is AQX. Sports intelligence. Personalized.
+- scene: Gradient orb assembles; Apex. wordmark locks; tagline whispers in
+- voiceover: This is Apex. Sports intelligence. Personalized.
 - poster: 4
 - asset_candidates: logo-orb.png
 - src: compositions/frames/01-brand-open.html
@@ -29,7 +29,7 @@ Premium product film: soft `#F0F1F5` canvas, AQX purple `#5856D6` as the only pr
 - sfx: whoosh-soft
 
 Scene 1 (0.0–1.5s): soft canvas ground; gradient orb scales from 0→1 center — Centered.
-Scene 2 (1.5–4.0s): wordmark AQX. locks beside/below orb as VO names intelligence.
+Scene 2 (1.5–4.0s): wordmark Apex. locks beside/below orb as VO names intelligence.
 Scene 3 (4.0–end): tagline PERSONALIZED holds still; subtle orb glow only.
 
 ## Frame 2 — The promise
@@ -39,7 +39,7 @@ Scene 3 (4.0–end): tagline PERSONALIZED holds still; subtle orb glow only.
 - type: hook
 - blueprint: kinetic-type-beats
 - scene: Kinetic line — chaos of sports data → one clear brief
-- voiceover: Every game dumps noise — box scores, play-by-play, gut feel. AQX turns it into a brief you can act on.
+- voiceover: Every game dumps noise — box scores, play-by-play, gut feel. Apex turns it into a brief you can act on.
 - poster: 3
 - asset_candidates: welcome.png
 - src: compositions/frames/02-promise.html
@@ -51,7 +51,7 @@ Scene 1 (0.0–2.5s): kinetic tokens NOISE / BOX SCORES / PLAY-BY-PLAY swap cent
 Scene 2 (2.5–5.5s): line resolves to ONE CLEAR BRIEF as VO lands the promise.
 Scene 3 (5.5–end): hold payoff with soft purple accent bar.
 
-## Frame 3 — Meet AQX
+## Frame 3 — Meet Apex
 - status: animated
 - duration: 5.632s
 - transition_in: crossfade
@@ -61,7 +61,7 @@ Scene 3 (5.5–end): hold payoff with soft purple accent bar.
 - voiceover: Built for trainers. Coaches. Analysts. And fans who want the plain-English version.
 - poster: 4
 - asset_candidates: welcome.png
-- src: compositions/frames/03-meet-aqx.html
+- src: compositions/frames/03-meet-Apex.html
 - focal: welcome.png
 - roles: phone = hero · role-chips = supporting
 - sfx: ui-pop
@@ -133,8 +133,8 @@ Scene 3 (4.5–end): hold with soft pulse on badge.
 - transition_in: crossfade
 - type: cta
 - blueprint: logo-assemble-lockup
-- scene: Story Mode card → share moment → AQX lockup and tagline
-- voiceover: AQX Sports Intelligence. Clear insights. Personalized for how you work.
+- scene: Story Mode card → share moment → Apex lockup and tagline
+- voiceover: Apex Sports Intelligence. Clear insights. Personalized for how you work.
 - poster: 4
 - asset_candidates: story-mode.png
 - src: compositions/frames/07-close.html
@@ -143,5 +143,5 @@ Scene 3 (4.5–end): hold with soft pulse on badge.
 - sfx: chime
 
 Scene 1 (0.0–2.5s): Story Mode phone shown then soft scale back.
-Scene 2 (2.5–5.5s): logo lockup assembles center as VO names AQX.
+Scene 2 (2.5–5.5s): logo lockup assembles center as VO names Apex.
 Scene 3 (5.5–end): PERSONALIZED tagline holds; gentle fade settle (final frame).
