@@ -1,4 +1,4 @@
-# SCRIPT — aqx-storyboard
+# SCRIPT — Apex-storyboard
 
 **Voice:** Kokoro `am_michael` (offline — HeyGen not signed in)
 **Voice settings:** clear · medium pace · premium explainer
@@ -11,7 +11,7 @@
 **Time:** 0.0 – 8.0s
 **Delivery:** Soft open; land Personalized.
 
-    This is AQX. Sports intelligence — made personal for how you work.
+    This is Apex. Sports intelligence — made personal for how you work.
 
 ## Line 2 — Sports noise (Frame 2)
 
@@ -25,7 +25,7 @@
 **Time:** 18.0 – 28.0s
 **Delivery:** Release into clarity; roll-call roles.
 
-    AQX turns that chaos into a brief you can act on — shaped for trainers, coaches, analysts, and fans.
+    Apex turns that chaos into a brief you can act on — shaped for trainers, coaches, analysts, and fans.
 
 ## Line 4 — Injury (Frame 4)
 
@@ -53,4 +53,4 @@
 **Time:** 56.0 – 65.0s
 **Delivery:** Warm lockup.
 
-    Then plain-English insight you can share. AQX Sports Intelligence. Clear. Personalized.
+    Then plain-English insight you can share. Apex Sports Intelligence. Clear. Personalized.

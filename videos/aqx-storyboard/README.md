@@ -1,4 +1,4 @@
-# AQX Descriptive Storyboard Explainer
+# Apex Descriptive Storyboard Explainer
 
 Fully new concept video — **no app UI**. Kinetic type + abstract pillar diagrams only.
 
@@ -10,11 +10,11 @@ Fully new concept video — **no app UI**. Kinetic type + abstract pillar diagra
 
 ## Story arc
 
-Brand → sports noise → one clear brief (+ roles) → Injury / Decisions / Momentum as ideas → plain-English payoff + AQX lockup.
+Brand → sports noise → one clear brief (+ roles) → Injury / Decisions / Momentum as ideas → plain-English payoff + Apex lockup.
 
 ## Notes
 
 - Workflow: `faceless-explainer`
 - Voice: Kokoro `am_michael` (offline)
 - Final render: `npx hyperframes render --docker` (native Windows Chrome hit `spawn EINVAL`)
-- Sibling app-demo promo remains in `../aqx-promo`
+- Sibling app-demo promo remains in `../Apex-promo`

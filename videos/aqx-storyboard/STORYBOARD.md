@@ -3,7 +3,7 @@ format: 1920x1080
 duration: 45s
 message: "Raw sports chaos becomes clear, personalized intelligence"
 arc: "Narrative — noise → brief → three pillars → story payoff → lockup"
-audience: "trainers, coaches, analysts, and sports fans learning what AQX is"
+audience: "trainers, coaches, analysts, and sports fans learning what Apex is"
 mode: autonomous
 music: cinematic ambient · confident · clean · premium explainer
 captions: on
@@ -11,7 +11,7 @@ captions: on
 
 ## Video direction
 
-Light `#F0F1F5` canvas, AQX purple `#5856D6` accent, pink→purple→orange orb as brand mark. No devices, no UI screenshots — only kinetic type, abstract pillar cards, and diagrams. Crossfades between beats; still holds on payoffs. Premium calm pacing timed to VO.
+Light `#F0F1F5` canvas, Apex purple `#5856D6` accent, pink→purple→orange orb as brand mark. No devices, no UI screenshots — only kinetic type, abstract pillar cards, and diagrams. Crossfades between beats; still holds on payoffs. Premium calm pacing timed to VO.
 
 ## Frame 1 — Brand + thesis
 - status: animated
@@ -19,14 +19,14 @@ Light `#F0F1F5` canvas, AQX purple `#5856D6` accent, pink→purple→orange orb 
 - transition_in: cut
 - type: branding
 - blueprint: logo-assemble-lockup
-- scene: Orb assembles; AQX. locks; thesis line
-- voiceover: This is AQX. Sports intelligence — personalized.
+- scene: Orb assembles; Apex. locks; thesis line
+- voiceover: This is Apex. Sports intelligence — personalized.
 - poster: 3
 - src: compositions/frames/01-brand.html
 - sfx: whoosh-soft
 
 Scene 1 (0.0–1.5s): canvas; orb scales in center.
-Scene 2 (1.5–4.0s): AQX. wordmark locks as VO names AQX.
+Scene 2 (1.5–4.0s): Apex. wordmark locks as VO names Apex.
 Scene 3 (4.0–end): short thesis PERSONALIZED holds.
 
 ## Frame 2 — Sports noise
@@ -52,7 +52,7 @@ Scene 3 (6.5–end): hold last token slightly dimmed.
 - type: product_intro
 - blueprint: kinetic-type-beats
 - scene: Chaos resolves into ONE CLEAR BRIEF; roles appear
-- voiceover: AQX turns it into a brief you can act on — for trainers, coaches, analysts, and fans.
+- voiceover: Apex turns it into a brief you can act on — for trainers, coaches, analysts, and fans.
 - poster: 4
 - src: compositions/frames/03-brief.html
 - sfx: ui-pop
@@ -115,12 +115,12 @@ Scene 3 (5.0–end): hold REAL.
 - transition_in: crossfade
 - type: cta
 - blueprint: logo-assemble-lockup
-- scene: Plain-English payoff line then AQX lockup
-- voiceover: Plain-English insight. AQX Sports Intelligence. Personalized.
+- scene: Plain-English payoff line then Apex lockup
+- voiceover: Plain-English insight. Apex Sports Intelligence. Personalized.
 - poster: 4
 - src: compositions/frames/07-close.html
 - sfx: chime
 
 Scene 1 (0.0–3.0s): PLAIN-ENGLISH INSIGHT line.
-Scene 2 (3.0–6.0s): orb + AQX. assemble.
+Scene 2 (3.0–6.0s): orb + Apex. assemble.
 Scene 3 (6.0–end): PERSONALIZED tagline holds (final frame settle).
