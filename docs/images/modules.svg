@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="520" viewBox="0 0 1240 520" font-family="Inter, -apple-system, Segoe UI, Roboto, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f1224"/>
+      <stop offset="1" stop-color="#171a33"/>
+    </linearGradient>
+    <linearGradient id="indigo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6d6af0"/>
+      <stop offset="1" stop-color="#5856D6"/>
+    </linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff7aa3"/>
+      <stop offset="1" stop-color="#FF5C8A"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffb878"/>
+      <stop offset="1" stop-color="#FFA058"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3dd68c"/>
+      <stop offset="1" stop-color="#22b573"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1240" height="520" fill="url(#bg)"/>
+
+  <text x="620" y="44" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">Three Modules, One Product</text>
+  <text x="620" y="68" font-size="13" fill="#9aa0c3" text-anchor="middle">Role-aware (Trainer · Coach · Analyst · Fan) — every screen adapts to who's looking</text>
+
+  <!-- Module 1: Injury -->
+  <g filter="url(#shadow)">
+    <rect x="36" y="110" width="376" height="360" rx="18" fill="#1b1e3a" stroke="#2c3057"/>
+  </g>
+  <rect x="36" y="110" width="376" height="6" rx="3" fill="url(#pink)"/>
+  <text x="60" y="152" font-size="18" font-weight="700" fill="#ffffff">🏥 Injury Risk</text>
+  <text x="60" y="172" font-size="11.5" fill="#8b8fb8">Personal-baseline workload risk — no league averages</text>
+
+  <g>
+    <rect x="60" y="192" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="76" y="212" font-size="12" font-weight="600" fill="#ffffff">Dashboard & league alerts</text>
+    <text x="76" y="231" font-size="10.5" fill="#aab0d6">red/yellow/green zones · days-in-zone · pull to refresh</text>
+  </g>
+  <g>
+    <rect x="60" y="256" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="76" y="276" font-size="12" font-weight="600" fill="#ffffff">Player & team risk</text>
+    <text x="76" y="295" font-size="10.5" fill="#aab0d6">0–100 score · z-scores · workload chart · 60-day trend</text>
+  </g>
+  <g>
+    <rect x="60" y="320" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="76" y="340" font-size="12" font-weight="600" fill="#ffffff">Why it's different</text>
+    <text x="76" y="359" font-size="10.5" fill="#aab0d6">>1.5 SD above their OWN baseline = flagged, not league mean</text>
+  </g>
+  <text x="60" y="410" font-size="11.5" fill="#8b8fb8">Data: BallDontLie + ESPN game logs, recomputed after each 6h sync</text>
+  <text x="60" y="430" font-size="11.5" fill="#8b8fb8">Model: z-scores (minutes 40 / distance 25 / intensity 20 pts)</text>
+
+  <!-- Module 2: Decisions -->
+  <g filter="url(#shadow)">
+    <rect x="432" y="110" width="376" height="360" rx="18" fill="#1b1e3a" stroke="#2c3057"/>
+  </g>
+  <rect x="432" y="110" width="376" height="6" rx="3" fill="url(#orange)"/>
+  <text x="456" y="152" font-size="18" font-weight="700" fill="#ffffff">📊 Coaching Decisions</text>
+  <text x="456" y="172" font-size="11.5" fill="#8b8fb8">Expected-value grading — process over outcome</text>
+
+  <g>
+    <rect x="456" y="192" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="472" y="212" font-size="12" font-weight="600" fill="#ffffff">Coach leaderboard</text>
+    <text x="472" y="231" font-size="10.5" fill="#aab0d6">EV rate ranked · podium · filter by decision type / game type</text>
+  </g>
+  <g>
+    <rect x="456" y="256" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="472" y="276" font-size="12" font-weight="600" fill="#ffffff">Coach drill-down</text>
+    <text x="472" y="295" font-size="10.5" fill="#aab0d6">process-vs-outcome 2×2 · every decision with EVs</text>
+  </g>
+  <g>
+    <rect x="456" y="320" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="472" y="340" font-size="12" font-weight="600" fill="#ffffff">Decision drill-down</text>
+    <text x="472" y="359" font-size="10.5" fill="#aab0d6">all alternatives · EVs · win probability · gold = best EV</text>
+  </g>
+  <text x="456" y="410" font-size="11.5" fill="#8b8fb8">Data: ESPN NFL play-by-play → extracted coaching decisions</text>
+  <text x="456" y="430" font-size="11.5" fill="#8b8fb8">Model: logistic win-prob → EV of every option, 24h cached</text>
+
+  <!-- Module 3: Momentum -->
+  <g filter="url(#shadow)">
+    <rect x="828" y="110" width="376" height="360" rx="18" fill="#1b1e3a" stroke="#2c3057"/>
+  </g>
+  <rect x="828" y="110" width="376" height="6" rx="3" fill="url(#indigo)"/>
+  <text x="852" y="152" font-size="18" font-weight="700" fill="#ffffff">📈 Momentum</text>
+  <text x="852" y="172" font-size="11.5" fill="#8b8fb8">Is momentum real? The statistics decide — honestly</text>
+
+  <g>
+    <rect x="852" y="192" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="868" y="212" font-size="12" font-weight="600" fill="#ffffff">Season verdict</text>
+    <text x="868" y="231" font-size="10.5" fill="#aab0d6">significant / inconclusive / myth + p-value & CI</text>
+  </g>
+  <g>
+    <rect x="852" y="256" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="868" y="276" font-size="12" font-weight="600" fill="#ffffff">Game replay</text>
+    <text x="868" y="295" font-size="10.5" fill="#aab0d6">momentum lines · event dots · scrubber · play/pause</text>
+  </g>
+  <g>
+    <rect x="852" y="320" width="328" height="52" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="868" y="340" font-size="12" font-weight="600" fill="#ffffff">Comparison + timeouts</text>
+    <text x="868" y="359" font-size="10.5" fill="#aab0d6">all-sport bars · timeout optimizer (6,761 scenarios)</text>
+  </g>
+  <text x="852" y="410" font-size="11.5" fill="#8b8fb8">Data: ESPN play-by-play scoring sequences, all 4 sports</text>
+  <text x="852" y="430" font-size="11.5" fill="#8b8fb8">Model: Cox proportional-hazard (lifelines), pre-computed</text>
+
+  <!-- Bottom banner -->
+  <g filter="url(#shadow)">
+    <rect x="36" y="486" width="1168" height="0" rx="10" fill="#14172e"/>
+  </g>
+</svg>

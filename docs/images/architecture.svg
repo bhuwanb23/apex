@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="660" viewBox="0 0 1240 660" font-family="Inter, -apple-system, Segoe UI, Roboto, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f1224"/>
+      <stop offset="1" stop-color="#171a33"/>
+    </linearGradient>
+    <linearGradient id="indigo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6d6af0"/>
+      <stop offset="1" stop-color="#5856D6"/>
+    </linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff7aa3"/>
+      <stop offset="1" stop-color="#FF5C8A"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffb878"/>
+      <stop offset="1" stop-color="#FFA058"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3dd68c"/>
+      <stop offset="1" stop-color="#22b573"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4cc3f5"/>
+      <stop offset="1" stop-color="#2aa8e0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b8fb8"/>
+    </marker>
+  </defs>
+
+  <rect width="1240" height="660" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="620" y="44" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">System Architecture</text>
+  <text x="620" y="68" font-size="13" fill="#9aa0c3" text-anchor="middle">React Native app · Node.js backend · Python ML service · SQLite · Free sports APIs</text>
+
+  <!-- ============ Column 1: Data sources ============ -->
+  <g filter="url(#shadow)">
+    <rect x="28" y="110" width="250" height="430" rx="16" fill="#1b1e3a" stroke="#2c3057" stroke-width="1"/>
+  </g>
+  <text x="153" y="140" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">Sports APIs</text>
+  <text x="153" y="158" font-size="11" fill="#8b8fb8" text-anchor="middle">free, open, no keys</text>
+
+  <g>
+    <rect x="52" y="178" width="202" height="86" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="153" y="204" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">NBA</text>
+    <text x="153" y="223" font-size="11" fill="#aab0d6" text-anchor="middle">BallDontLie + ESPN</text>
+    <text x="153" y="241" font-size="10.5" fill="#7e83ad" text-anchor="middle">teams · players · game logs</text>
+  </g>
+  <g>
+    <rect x="52" y="278" width="202" height="86" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="153" y="304" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">NFL</text>
+    <text x="153" y="323" font-size="11" fill="#aab0d6" text-anchor="middle">ESPN public API</text>
+    <text x="153" y="341" font-size="10.5" fill="#7e83ad" text-anchor="middle">play-by-play · coaching decisions</text>
+  </g>
+  <g>
+    <rect x="52" y="378" width="202" height="86" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="153" y="404" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">MLB</text>
+    <text x="153" y="423" font-size="11" fill="#aab0d6" text-anchor="middle">Official MLB Stats API</text>
+    <text x="153" y="441" font-size="10.5" fill="#7e83ad" text-anchor="middle">schedules · play-by-play</text>
+  </g>
+  <text x="153" y="496" font-size="11" fill="#7e83ad" text-anchor="middle">scheduled sync every 6h</text>
+  <text x="153" y="514" font-size="11" fill="#7e83ad" text-anchor="middle">+ manual trigger endpoint</text>
+
+  <!-- Arrow 1: APIs -> Backend -->
+  <line x1="278" y1="325" x2="392" y2="325" stroke="#8b8fb8" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="335" y="312" font-size="11" fill="#8b8fb8" text-anchor="middle">fetch</text>
+
+  <!-- ============ Column 2: Node backend ============ -->
+  <g filter="url(#shadow)">
+    <rect x="400" y="110" width="320" height="430" rx="16" fill="#1b1e3a" stroke="#2c3057" stroke-width="1"/>
+  </g>
+  <text x="560" y="140" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">Node.js Backend</text>
+  <text x="560" y="158" font-size="11" fill="#8b8fb8" text-anchor="middle">Express · TypeScript · port 8000</text>
+
+  <g>
+    <rect x="424" y="178" width="272" height="72" rx="10" fill="url(#indigo)"/>
+    <text x="560" y="204" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">REST API · 34 endpoints</text>
+    <text x="560" y="224" font-size="11" fill="#e2e4ff" text-anchor="middle">injury · decisions · momentum · search · story</text>
+  </g>
+  <g>
+    <rect x="424" y="264" width="272" height="72" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="560" y="290" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Data sync jobs</text>
+    <text x="560" y="310" font-size="11" fill="#aab0d6" text-anchor="middle">node-cron · every 6h + on boot</text>
+  </g>
+  <g>
+    <rect x="424" y="350" width="272" height="72" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="560" y="376" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Cache layer</text>
+    <text x="560" y="396" font-size="11" fill="#aab0d6" text-anchor="middle">in-memory + SQLite · stale-while-revalidate</text>
+  </g>
+  <g>
+    <rect x="424" y="436" width="272" height="72" rx="10" fill="#222651" stroke="#3a3f74"/>
+    <text x="560" y="462" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Swagger docs</text>
+    <text x="560" y="482" font-size="11" fill="#aab0d6" text-anchor="middle">/api/docs — try every endpoint live</text>
+  </g>
+
+  <!-- Arrow 2: Backend -> ML -->
+  <line x1="720" y1="272" x2="834" y2="272" stroke="#8b8fb8" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="777" y="259" font-size="11" fill="#8b8fb8" text-anchor="middle">model calls</text>
+
+  <!-- ============ Column 3: Python ML ============ -->
+  <g filter="url(#shadow)">
+    <rect x="842" y="110" width="250" height="430" rx="16" fill="#1b1e3a" stroke="#2c3057" stroke-width="1"/>
+  </g>
+  <text x="967" y="140" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">Python ML Service</text>
+  <text x="967" y="158" font-size="11" fill="#8b8fb8" text-anchor="middle">FastAPI · port 8001</text>
+
+  <g>
+    <rect x="866" y="178" width="202" height="64" rx="10" fill="url(#pink)"/>
+    <text x="967" y="200" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Injury risk</text>
+    <text x="967" y="219" font-size="11" fill="#ffe4ee" text-anchor="middle">z-score vs personal 21-day baseline</text>
+  </g>
+  <g>
+    <rect x="866" y="256" width="202" height="64" rx="10" fill="url(#orange)"/>
+    <text x="967" y="278" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Decision EV</text>
+    <text x="967" y="297" font-size="11" fill="#fff0e0" text-anchor="middle">logistic win-prob · expected value</text>
+  </g>
+  <g>
+    <rect x="866" y="334" width="202" height="64" rx="10" fill="url(#green)"/>
+    <text x="967" y="356" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Momentum</text>
+    <text x="967" y="375" font-size="11" fill="#e2f9ee" text-anchor="middle">Cox proportional-hazard (lifelines)</text>
+  </g>
+  <g>
+    <rect x="866" y="412" width="202" height="64" rx="10" fill="url(#cyan)"/>
+    <text x="967" y="434" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Story + timeouts</text>
+    <text x="967" y="453" font-size="11" fill="#e2f4fd" text-anchor="middle">plain-English narratives · timeout EV</text>
+  </g>
+
+  <!-- Arrow 3: ML -> SQLite -->
+  <path d="M 842 470 L 752 470 L 752 540" stroke="#8b8fb8" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="790" y="500" font-size="11" fill="#8b8fb8" text-anchor="middle">results</text>
+
+  <!-- ============ Bottom: SQLite ============ -->
+  <g filter="url(#shadow)">
+    <rect x="380" y="530" width="360" height="86" rx="14" fill="#1b1e3a" stroke="#3a3f74" stroke-width="1"/>
+  </g>
+  <text x="560" y="562" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">SQLite · Prisma</text>
+  <text x="560" y="582" font-size="11" fill="#aab0d6" text-anchor="middle">teams · players · game logs · risk scores ·</text>
+  <text x="560" y="599" font-size="11" fill="#aab0d6" text-anchor="middle">coach decisions · momentum verdicts · timelines</text>
+
+  <!-- Arrow 4: SQLite -> Backend (up) -->
+  <line x1="480" y1="530" x2="480" y2="508" stroke="#8b8fb8" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- ============ Column 4: App (top right, spans) ============ -->
+  <g filter="url(#shadow)">
+    <rect x="968" y="540" width="244" height="86" rx="14" fill="#1b1e3a" stroke="#3a3f74" stroke-width="1"/>
+  </g>
+  <text x="1090" y="570" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">React Native App (Expo)</text>
+  <text x="1090" y="589" font-size="11" fill="#aab0d6" text-anchor="middle">iOS · Android · Web — display layer only</text>
+
+  <!-- Arrow 5: Backend -> App -->
+  <path d="M 720 170 L 760 170 L 760 596 L 960 596" stroke="#8b8fb8" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="830" y="616" font-size="11" fill="#8b8fb8" text-anchor="middle">JSON responses (cached, fast)</text>
+  <!-- Arrow 5b: App -> Backend -->
+  <path d="M 960 570 L 720 570 L 720 470" stroke="#8b8fb8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" stroke-dasharray="6 5"/>
+  <text x="830" y="546" font-size="11" fill="#8b8fb8" text-anchor="middle">requests (sport + role filters)</text>
+
+  <!-- Footer legend -->
+  <g>
+    <rect x="28" y="580" width="340" height="62" rx="10" fill="#14172e"/>
+    <circle cx="52" cy="602" r="6" fill="#8b8fb8"/>
+    <text x="66" y="606" font-size="11" fill="#aab0d6">data flows one way: sports → API → ML → SQLite → app</text>
+    <circle cx="52" cy="624" r="6" fill="none" stroke="#8b8fb8" stroke-width="2" stroke-dasharray="4 3"/>
+    <text x="66" y="628" font-size="11" fill="#aab0d6">dashed = app requests (preferences never change the query shape)</text>
+  </g>
+</svg>
