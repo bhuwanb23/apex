@@ -1,4 +1,4 @@
-# AQX ML Microservice — FastAPI entry point (Step 3).
+# Apex ML Microservice — FastAPI entry point (Step 3).
 # Runs independently on its own port (default 8001). Node.js calls it over
 # HTTP for all heavy statistical work: injury risk, decision EV, momentum Cox,
 # timeout recommendations and story generation.
@@ -23,8 +23,8 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-APP_TITLE = "AQX ML Microservice"
-APP_DESCRIPTION = "Statistical and ML models for AQX Sports Intelligence"
+APP_TITLE = "Apex ML Microservice"
+APP_DESCRIPTION = "Statistical and ML models for Apex Sports Intelligence"
 APP_VERSION = "1.0.0"
 
 # Node backend (8000) and the frontend (3000) may call us directly.

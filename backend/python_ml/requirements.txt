@@ -1,4 +1,4 @@
-# AQX ML Microservice — Python dependencies
+# Apex ML Microservice — Python dependencies
 # Install into the project venv only:  python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
 
 # Web framework

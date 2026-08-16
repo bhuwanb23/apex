@@ -26,7 +26,7 @@ def test_health():
     assert res.status_code == 200
     body = res.json()
     assert body["status"] == "ok"
-    assert body["service"] == "AQX ML Microservice"
+    assert body["service"] == "Apex ML Microservice"
 
 
 def test_compute_risk_endpoint_spike():

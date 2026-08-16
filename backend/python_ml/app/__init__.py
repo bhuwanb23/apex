@@ -1,1 +1,1 @@
-# AQX ML Microservice — application package.
+# Apex ML Microservice — application package.
