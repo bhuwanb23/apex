@@ -205,6 +205,8 @@ export interface HomeData {
   decision: { decision: Decision; coach: Coach; source: DataSource; loading: boolean };
   momentum: { verdict: (typeof MOMENTUM_VERDICTS)[number]; source: DataSource; loading: boolean };
   games: { games: Game[]; source: DataSource; loading: boolean };
+  /** Re-run all four section fetchers (pull-to-refresh). */
+  refetch: () => void;
 }
 
 export function useHomeData(): HomeData {
@@ -214,11 +216,19 @@ export function useHomeData(): HomeData {
   const momentum = useHomeMomentum(activeSport);
   const games = useHomeGames(activeSport);
 
+  const refetch = () => {
+    injury.refetch();
+    decision.refetch();
+    momentum.refetch();
+    games.refetch();
+  };
+
   return {
     sport: activeSport,
     injury: { players: injury.data, source: injury.source, loading: injury.loading },
     decision: { decision: decision.data.decision, coach: decision.data.coach, source: decision.source, loading: decision.loading },
     momentum: { verdict: momentum.data, source: momentum.source, loading: momentum.loading },
     games: { games: games.data, source: games.source, loading: games.loading },
+    refetch,
   };
 }

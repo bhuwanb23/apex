@@ -16,6 +16,7 @@ import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useHomeData } from '@/data/live/home';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 function relativeNightLabel(nightsAgo: number): string {
   if (nightsAgo <= 1) return 'Last night';
@@ -26,8 +27,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const { role, cycleActiveSport } = useOnboarding();
   const { status } = useBackend();
-  const { sport, injury, decision, momentum, games } = useHomeData();
+  const { sport, injury, decision, momentum, games, refetch: refetchHome } = useHomeData();
   const sportInfo = SPORT_BY_ID[sport];
+  const { refreshControl } = usePullRefresh(refetchHome);
 
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
@@ -70,7 +72,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <Screen>
+    <Screen refreshControl={refreshControl}>
       {/* Top bar */}
       <View style={styles.topBar}>
         <ApexLogo size={38} />

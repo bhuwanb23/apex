@@ -14,6 +14,7 @@ import { useRecentGames } from '@/data/live/games';
 import { useGameMomentum } from '@/data/live/momentum';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 const MAX_MOMENTUM = 70; // clamp chart domain to ±70 for readability
 
@@ -32,7 +33,7 @@ export default function GameReplayScreen() {
   // stacked a second interval — the scrubber never stopped).
   const playTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data: gameData, loading } = useGameMomentum(selectedId, activeSport);
+  const { data: gameData, loading, refetch: refetchGameMomentum } = useGameMomentum(selectedId, activeSport);
   const game = gameData ?? GAMES.find(g => g.id === selectedId) ?? GAMES[0];
   const lastTime = game.timeline[game.timeline.length - 1].time;
   // Real recent games for the sport fill the picker (fix #13 — the old mock
@@ -84,6 +85,11 @@ export default function GameReplayScreen() {
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
   const showSkeleton = loading && !backendOffline;
+  // Pull-to-refresh re-runs the selected game's timeline and the game picker.
+  const { refreshControl } = usePullRefresh(() => {
+    refetchGameMomentum();
+    recentGames.refetch();
+  });
 
   const currentTime = progress * lastTime;
   const homeMomentum = Math.round(interpAt('home', currentTime));
@@ -125,7 +131,7 @@ export default function GameReplayScreen() {
   const jumpTo = (time: number) => setProgress(time / lastTime);
 
   return (
-    <Screen>
+    <Screen refreshControl={refreshControl}>
       <StackHeader title="Game Replay" subtitle="Momentum in motion" />
 
       {/* Game selector with search */}

@@ -13,6 +13,7 @@ import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useMomentumComparison } from '@/data/live/momentum';
 import { useBackend } from '@/context/backend';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 const SEASONS = ['2025', '2026', '2024-25'];
 
@@ -23,11 +24,12 @@ export default function SportComparisonScreen() {
   const [season, setSeason] = useState<string | undefined>(undefined);
   const { status } = useBackend();
 
-  const { data: rankedData, loading } = useMomentumComparison(season);
+  const { data: rankedData, loading, refetch: refetchComparison } = useMomentumComparison(season);
 
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
   const showSkeleton = loading && !backendOffline;
+  const { refreshControl } = usePullRefresh(refetchComparison);
   const ranked = (rankedData ?? []).map(v => ({
     sport: v.sport,
     verdict: v.verdict,
@@ -39,7 +41,7 @@ export default function SportComparisonScreen() {
   const maxEffect = Math.max(...ranked.map(v => v.effectSize), 0.01);
 
   return (
-    <Screen>
+    <Screen refreshControl={refreshControl}>
       <StackHeader title="Sport Comparison" subtitle="Is momentum real? Depends on the sport." />
 
       <View style={styles.seasonRow}>

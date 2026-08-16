@@ -15,6 +15,7 @@ import { useRecentGames } from '@/data/live/games';
 import { useCoachLeaderboard } from '@/data/live/decisions';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { DataFreshness } from '@/components/ui/data-freshness';
 import { api, type SportInfo } from '@/lib/api';
 
@@ -106,9 +107,14 @@ export default function CoachLeaderboardScreen() {
   const backendOffline = status === 'offline';
   const showBoardSkeleton = loading && !backendOffline;
   const showGamesSkeleton = recentGames.loading && !backendOffline;
+  // Pull-to-refresh re-runs the leaderboard and the game reviews together.
+  const { refreshControl } = usePullRefresh(() => {
+    refetchLeaderboard();
+    recentGames.refetch();
+  });
 
   return (
-    <Screen>
+    <Screen refreshControl={refreshControl}>
       <StackHeader title="Coach Leaderboard" subtitle="Decision quality · EV Rate" />
 
       {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}

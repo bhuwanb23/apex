@@ -15,6 +15,7 @@ import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useTeamRoster } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataFreshness } from '@/components/ui/data-freshness';
 
@@ -39,6 +40,7 @@ export default function TeamRiskScreen() {
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
   const showSkeleton = loading && !backendOffline;
+  const { refreshControl } = usePullRefresh(refetchRoster);
 
   const counts = {
     red: roster.filter(p => p.zone === 'red').length,
@@ -60,7 +62,7 @@ export default function TeamRiskScreen() {
   }));
 
   return (
-    <Screen>
+    <Screen refreshControl={refreshControl}>
       <StackHeader title="Team Risk" subtitle={teamName} />
 
       {/* Team banner */}

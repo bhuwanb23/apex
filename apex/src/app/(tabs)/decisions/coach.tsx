@@ -13,6 +13,7 @@ import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { type OutcomeCell } from '@/data/mock/coaches';
 import { useCoachDetail } from '@/data/live/decisions';
 
@@ -30,7 +31,7 @@ export default function CoachDetailScreen() {
   const { coachId } = useLocalSearchParams<{ coachId: string }>();
   const { activeSport, role } = useOnboarding();
   const { status } = useBackend();
-  const { coach, decisions: coachDecisions, loading } = useCoachDetail(coachId, activeSport);
+  const { coach, decisions: coachDecisions, loading, refetch: refetchCoach } = useCoachDetail(coachId, activeSport);
   // Display-only (the plan's role rules): fans get the plain view without the
   // statistics sections; the backend request never changes.
   const isFan = role === 'fan';
@@ -38,6 +39,7 @@ export default function CoachDetailScreen() {
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
   const showSkeleton = loading && !backendOffline;
+  const { refreshControl } = usePullRefresh(refetchCoach);
   const [filter, setFilter] = useState<DecisionFilter>('all');
   const [cellFilter, setCellFilter] = useState<OutcomeCell | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export default function CoachDetailScreen() {
   ];
 
   return (
-    <Screen>
+    <Screen refreshControl={refreshControl}>
       <StackHeader title={coach.name} subtitle={`${coach.team} · Rank #${coach.rank}`} />
 
       {showSkeleton ? (

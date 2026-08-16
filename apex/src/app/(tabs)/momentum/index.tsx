@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
@@ -37,6 +38,7 @@ export default function MomentumOverviewScreen() {
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
   const showSkeleton = loading && !backendOffline;
+  const { refreshControl } = usePullRefresh(refetchMomentum);
 
   const stats = [
     { label: 'Hazard Coefficient', value: verdict.hazardCoefficient.toFixed(2), note: '> 1 means scoring increases opponent hazard' },
@@ -46,7 +48,7 @@ export default function MomentumOverviewScreen() {
   ];
 
   return (
-    <Screen>
+    <Screen refreshControl={refreshControl}>
       <StackHeader title="Momentum" subtitle="Is momentum real?" />
 
       {/* Sport selector */}

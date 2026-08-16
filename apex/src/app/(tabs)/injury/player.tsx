@@ -16,6 +16,7 @@ import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { usePlayerRisk } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 type MetricKey = 'minutes' | 'distance' | 'intensity';
 
@@ -78,6 +79,7 @@ export default function PlayerRiskScreen() {
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
   const showSkeleton = loading && !backendOffline;
+  const { refreshControl } = usePullRefresh(refetchPlayer);
   const [metric, setMetric] = useState<MetricKey>('minutes');
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
 
@@ -132,7 +134,7 @@ export default function PlayerRiskScreen() {
   const backToBackDays = [1, 3, 5, 6, 8, 10, 12];
 
   return (
-    <Screen>
+    <Screen refreshControl={refreshControl}>
       <StackHeader title={player.name} subtitle={`${player.team} · ${player.position}`} />
 
       {showSkeleton ? (

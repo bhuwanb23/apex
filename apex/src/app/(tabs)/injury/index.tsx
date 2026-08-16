@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
@@ -78,7 +78,10 @@ export default function InjuryDashboardScreen() {
   };
 
   return (
-    <Screen>
+    <Screen
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#5856D6" colors={['#5856D6']} />
+      }>
       <StackHeader
         title="Injury Risk"
         subtitle={sport}
