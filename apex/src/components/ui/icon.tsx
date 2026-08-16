@@ -47,7 +47,8 @@ export type IconName =
   | 'timer'
   | 'wand.and.stars'
   | 'shield.checkered'
-  | 'cross.case.fill';
+  | 'cross.case.fill'
+  | 'slider.horizontal.3';
 
 /** SF Symbol per icon key (iOS). Keys whose names are not valid SF Symbols map to a close valid one. */
 const SF_NAMES: Record<IconName, string> = {
@@ -97,6 +98,7 @@ const SF_NAMES: Record<IconName, string> = {
   'wand.and.stars': 'wand.and.stars',
   'shield.checkered': 'shield.fill',
   'cross.case.fill': 'cross.case.fill',
+  'slider.horizontal.3': 'slider.horizontal.3',
 };
 
 /** Material Symbol name per icon (android + web fallback). */
@@ -147,6 +149,7 @@ const MATERIAL_NAMES: Record<IconName, string> = {
   'wand.and.stars': 'auto_fix_high',
   'shield.checkered': 'shield',
   'cross.case.fill': 'medical_services',
+  'slider.horizontal.3': 'tune',
 };
 
 interface AppIconProps {

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
@@ -39,6 +39,8 @@ export default function InjuryDashboardScreen() {
   const [teamQuery, setTeamQuery] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [draftTeam, setDraftTeam] = useState<string | null>(null);
 
   const league = useLeaguePlayers(sport);
   const sportPlayers = league.players;
@@ -52,12 +54,12 @@ export default function InjuryDashboardScreen() {
   const liveTeams = useTeams(sport);
   const teamNames = liveTeams.data.map(t => t.name);
   const activeTeam = selectedTeam ?? teamNames[0] ?? SPORT_BY_ID[sport].teams[0] ?? null;
-  const filteredTeams = teamNames.filter(t => t.toLowerCase().includes(teamQuery.toLowerCase()));
 
   // Team view hits the backend team endpoint directly — the full roster with
   // every player's zone (green included), not the league alert list.
   const team = useTeamRoster(activeTeam ?? undefined, sport);
   const roster = team.players;
+  const filteredRoster = roster.filter(p => p.name.toLowerCase().includes(teamQuery.toLowerCase()));
 
   const refresh = () => {
     setRefreshing(true);
@@ -203,28 +205,28 @@ export default function InjuryDashboardScreen() {
         </>
       ) : (
         <>
-          <View style={styles.searchBar}>
-            <AppIcon name="magnifyingglass" size={16} color="#9AA0B5" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search team…"
-              placeholderTextColor="#9AA0B5"
-              value={teamQuery}
-              onChangeText={setTeamQuery}
-            />
-          </View>
-
-          {teamNames.length > 0 ? (
-            <View style={styles.teamChips}>
-              {filteredTeams.length > 0 ? (
-                filteredTeams.map(team => (
-                  <Chip key={team} label={team} small selected={activeTeam === team} onPress={() => setSelectedTeam(team)} />
-                ))
-              ) : (
-                <Text style={styles.noTeam}>No team matches “{teamQuery}”</Text>
-              )}
+          <View style={styles.searchRow}>
+            <View style={styles.searchBar}>
+              <AppIcon name="magnifyingglass" size={16} color="#9AA0B5" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search players…"
+                placeholderTextColor="#9AA0B5"
+                value={teamQuery}
+                onChangeText={setTeamQuery}
+              />
             </View>
-          ) : null}
+            <Pressable
+              style={styles.filterBtn}
+              onPress={() => {
+                setDraftTeam(activeTeam);
+                setPickerOpen(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Filter by team">
+              <AppIcon name="slider.horizontal.3" size={18} color="#5856D6" />
+            </Pressable>
+          </View>
 
           <Card style={styles.rosterCard}>
             <View style={styles.rosterHeader}>
@@ -252,18 +254,69 @@ export default function InjuryDashboardScreen() {
               </View>
             ) : (
               <View style={styles.rosterList}>
-                {roster.map(player => (
+                {filteredRoster.map(player => (
                   <Pressable
                     key={player.id}
                     onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
                     <RosterRow player={player} />
                   </Pressable>
                 ))}
+                {filteredRoster.length === 0 ? (
+                  <View style={styles.emptyRoster}>
+                    <Text style={styles.emptyRosterText}>No players match “{teamQuery}”</Text>
+                  </View>
+                ) : null}
               </View>
             )}
           </Card>
         </>
       )}
+
+      {/* Team picker — single-select radio list, Apply to confirm */}
+      <Modal
+        visible={pickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPickerOpen(false)}>
+        <View style={styles.pickerBackdrop}>
+          <View style={styles.pickerSheet}>
+            <View style={styles.pickerHandle} />
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Filter by team</Text>
+              <Pressable onPress={() => setPickerOpen(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
+                <AppIcon name="xmark" size={16} color="#6E7280" />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.pickerList} showsVerticalScrollIndicator={false}>
+              {teamNames.map(team => {
+                const selected = draftTeam === team;
+                return (
+                  <Pressable
+                    key={team}
+                    style={styles.pickerRow}
+                    onPress={() => setDraftTeam(team)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}>
+                    <Text style={[styles.pickerTeam, selected && styles.pickerTeamActive]}>{team}</Text>
+                    <View style={[styles.radio, selected && styles.radioActive]}>
+                      {selected ? <View style={styles.radioDot} /> : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Pressable
+              style={styles.applyBtn}
+              onPress={() => {
+                if (draftTeam) setSelectedTeam(draftTeam);
+                setPickerOpen(false);
+              }}
+              accessibilityRole="button">
+              <Text style={styles.applyText}>Apply</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Data freshness — the plan's tiers: gray note for 1-6h, yellow/orange/red banner for 6h+ */}
       {lastUpdated ? <DataFreshness timestamp={lastUpdated} onRefresh={refresh} /> : null}
@@ -473,7 +526,13 @@ const styles = StyleSheet.create({
     minWidth: 34,
     textAlign: 'right',
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   searchBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -487,14 +546,96 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#14121F',
   },
-  teamChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  filterBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E5EC',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  noTeam: {
-    fontSize: 13,
-    color: '#6E7280',
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20,18,31,0.45)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+    gap: 14,
+    maxHeight: '75%',
+  },
+  pickerHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D5D7E0',
+    alignSelf: 'center',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pickerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#14121F',
+  },
+  pickerList: {
+    flexGrow: 0,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F1F5',
+  },
+  pickerTeam: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#14121F',
+  },
+  pickerTeamActive: {
+    color: '#5856D6',
+  },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#C6C8D2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: {
+    borderColor: '#5856D6',
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#5856D6',
+  },
+  applyBtn: {
+    backgroundColor: '#5856D6',
+    borderRadius: 14,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   rosterCard: {
     gap: 14,
