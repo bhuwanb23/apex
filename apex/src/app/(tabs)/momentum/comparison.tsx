@@ -9,8 +9,10 @@ import { Chip } from '@/components/ui/chip';
 import { VerdictBadge } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { GradientView } from '@/components/ui/gradient';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useMomentumComparison } from '@/data/live/momentum';
+import { useBackend } from '@/context/backend';
 
 const SEASONS = ['2025', '2026', '2024-25'];
 
@@ -19,8 +21,13 @@ export default function SportComparisonScreen() {
   // The comparison is backend-driven; "current" (undefined) matches each
   // sport's own season and shows the strongest effect first.
   const [season, setSeason] = useState<string | undefined>(undefined);
+  const { status } = useBackend();
 
-  const { data: rankedData } = useMomentumComparison(season);
+  const { data: rankedData, loading } = useMomentumComparison(season);
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showSkeleton = loading && !backendOffline;
   const ranked = (rankedData ?? []).map(v => ({
     sport: v.sport,
     verdict: v.verdict,
@@ -42,72 +49,105 @@ export default function SportComparisonScreen() {
         ))}
       </View>
 
-      {/* Effect size chart */}
-      <Card style={styles.chartCard}>
-        <Text style={styles.chartTitle}>Momentum effect size by sport</Text>
-        <Text style={styles.chartSub}>Cox hazard model · {season ? `${season} season` : 'current seasons'}</Text>
-        <View style={styles.bars}>
-          {ranked.map(v => {
-            const sport = SPORT_BY_ID[v.sport];
-            const significant = v.verdict === 'real';
-            return (
-              <Pressable
-                key={v.sport}
-                onPress={() => router.push({ pathname: '/momentum', params: { sport: v.sport } })}
-                style={styles.barRow}>
-                <View style={styles.barLabel}>
-                  <GradientView colors={sport.gradient} style={styles.barLogo}>
-                    <Text style={styles.barLogoText}>{sport.short.slice(0, 1)}</Text>
-                  </GradientView>
-                  <Text style={styles.barName}>{sport.short}</Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      {
-                        width: `${(v.effectSize / maxEffect) * 100}%`,
-                        backgroundColor: significant ? '#2FA36B' : '#B9BDCC',
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.barValue}>{v.effectSize.toFixed(2)}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <View style={styles.legendRow}>
-          <Legend color="#2FA36B" label="Statistically significant" />
-          <Legend color="#B9BDCC" label="Not significant" />
-        </View>
-      </Card>
-
-      {/* Sport rows */}
-      <View style={styles.listGap}>
-        {ranked.map(v => {
-          const sport = SPORT_BY_ID[v.sport];
-          return (
-            <Pressable key={v.sport} onPress={() => router.push({ pathname: '/momentum', params: { sport: v.sport } })}>
-              <Card style={styles.sportCard}>
-                <GradientView colors={sport.gradient} style={styles.sportLogo}>
-                  <Text style={styles.sportLogoText}>{sport.short.slice(0, 1)}</Text>
-                </GradientView>
-                <View style={styles.sportBody}>
-                  <View style={styles.sportNameRow}>
-                    <Text style={styles.sportName}>{sport.name}</Text>
-                    <VerdictBadge verdict={v.verdict} />
+      {showSkeleton ? (
+        <>
+          {/* Chart skeleton */}
+          <Card style={styles.chartCard}>
+            <Skeleton width="55%" height={16} radius={6} />
+            <Skeleton width="70%" height={11} radius={6} />
+            <View style={styles.bars}>
+              {[0, 1, 2, 3].map(i => (
+                <View key={i} style={styles.barRow}>
+                  <View style={styles.barLabel}>
+                    <Skeleton width={28} height={28} radius={14} />
+                    <Skeleton width={36} height={13} radius={6} />
                   </View>
-                  <Text style={styles.sportMeta}>
-                    Effect {v.effectSize.toFixed(2)} · p = {v.pValue < 0.001 ? '< 0.001' : v.pValue.toFixed(3)}
-                  </Text>
+                  <View style={styles.barTrack}>
+                    <Skeleton width="100%" height={14} radius={7} />
+                  </View>
+                  <Skeleton width={30} height={13} radius={6} />
                 </View>
-                <AppIcon name="chevron.right" size={15} color="#9AA0B5" />
-              </Card>
-            </Pressable>
-          );
-        })}
-      </View>
+              ))}
+            </View>
+          </Card>
+          {/* Sport rows skeleton */}
+          <View style={styles.listGap}>
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Effect size chart */}
+          <Card style={styles.chartCard}>
+            <Text style={styles.chartTitle}>Momentum effect size by sport</Text>
+            <Text style={styles.chartSub}>Cox hazard model · {season ? `${season} season` : 'current seasons'}</Text>
+            <View style={styles.bars}>
+              {ranked.map(v => {
+                const sport = SPORT_BY_ID[v.sport];
+                const significant = v.verdict === 'real';
+                return (
+                  <Pressable
+                    key={v.sport}
+                    onPress={() => router.push({ pathname: '/momentum', params: { sport: v.sport } })}
+                    style={styles.barRow}>
+                    <View style={styles.barLabel}>
+                      <GradientView colors={sport.gradient} style={styles.barLogo}>
+                        <Text style={styles.barLogoText}>{sport.short.slice(0, 1)}</Text>
+                      </GradientView>
+                      <Text style={styles.barName}>{sport.short}</Text>
+                    </View>
+                    <View style={styles.barTrack}>
+                      <View
+                        style={[
+                          styles.barFill,
+                          {
+                            width: `${(v.effectSize / maxEffect) * 100}%`,
+                            backgroundColor: significant ? '#2FA36B' : '#B9BDCC',
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.barValue}>{v.effectSize.toFixed(2)}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View style={styles.legendRow}>
+              <Legend color="#2FA36B" label="Statistically significant" />
+              <Legend color="#B9BDCC" label="Not significant" />
+            </View>
+          </Card>
+
+          {/* Sport rows */}
+          <View style={styles.listGap}>
+            {ranked.map(v => {
+              const sport = SPORT_BY_ID[v.sport];
+              return (
+                <Pressable key={v.sport} onPress={() => router.push({ pathname: '/momentum', params: { sport: v.sport } })}>
+                  <Card style={styles.sportCard}>
+                    <GradientView colors={sport.gradient} style={styles.sportLogo}>
+                      <Text style={styles.sportLogoText}>{sport.short.slice(0, 1)}</Text>
+                    </GradientView>
+                    <View style={styles.sportBody}>
+                      <View style={styles.sportNameRow}>
+                        <Text style={styles.sportName}>{sport.name}</Text>
+                        <VerdictBadge verdict={v.verdict} />
+                      </View>
+                      <Text style={styles.sportMeta}>
+                        Effect {v.effectSize.toFixed(2)} · p = {v.pValue < 0.001 ? '< 0.001' : v.pValue.toFixed(3)}
+                      </Text>
+                    </View>
+                    <AppIcon name="chevron.right" size={15} color="#9AA0B5" />
+                  </Card>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
 
       {/* Insight callout */}
       <Card style={styles.insightCard}>

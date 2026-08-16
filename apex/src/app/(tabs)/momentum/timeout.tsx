@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
@@ -45,36 +45,43 @@ export default function TimeoutOptimizerScreen() {
   const [period, setPeriod] = useState('Q4');
   const [timeouts, setTimeouts] = useState(2);
   const [recommendation, setRecommendation] = useState<null | { should: boolean; withTimeout: number; without: number; note: string; confidence: string; demo: boolean }>(null);
+  const [fetching, setFetching] = useState(false);
 
   /** Ask the backend; fall back to the local heuristic when it has no scenario. */
   const getRecommendation = async () => {
-    const live = await fetchTimeoutRecommendation(sport, { consecutiveScores: consecutive, scoreDiff, minutes, period, timeoutsAvailable: timeouts });
-    if (live) {
+    if (fetching) return;
+    setFetching(true);
+    try {
+      const live = await fetchTimeoutRecommendation(sport, { consecutiveScores: consecutive, scoreDiff, minutes, period, timeoutsAvailable: timeouts });
+      if (live) {
+        setRecommendation({
+          should: live.shouldCallTimeout,
+          withTimeout: live.stopProbabilityWith,
+          without: live.stopProbabilityWithout,
+          note: live.recommendationText,
+          confidence: `${live.confidenceLevel} confidence — based on ${live.basedOnSampleSize} similar situations`,
+          demo: false,
+        });
+        return;
+      }
+      const urgency = period === 'Q4' || period === 'OT' ? 1.15 : 1;
+      const baseWith = 0.48 + Math.min(0.28, consecutive * 0.05) + (scoreDiff < 0 ? 0.06 : 0) + (timeouts > 0 ? 0.04 : 0);
+      const baseWithout = baseWith - 0.09 - Math.min(0.08, consecutive * 0.015);
+      const should = baseWith - baseWithout > 0.06 && timeouts > 0;
+      const withTimeout = Math.round(Math.min(0.92, baseWith * urgency) * 100);
+      const without = Math.round(Math.min(0.92, baseWithout * urgency) * 100);
+      const diff = Math.max(0, withTimeout - without);
       setRecommendation({
-        should: live.shouldCallTimeout,
-        withTimeout: live.stopProbabilityWith,
-        without: live.stopProbabilityWithout,
-        note: live.recommendationText,
-        confidence: `${live.confidenceLevel} confidence — based on ${live.basedOnSampleSize} similar situations`,
-        demo: false,
+        should,
+        withTimeout,
+        without,
+        note: `After ${consecutive}+ consecutive opponent scores with under ${Math.round(minutes)} minutes remaining in ${period}, calling timeout has historically improved stop probability by ${Math.max(0, diff)}%.`,
+        confidence: 'High confidence — based on 847 similar situations',
+        demo: true,
       });
-      return;
+    } finally {
+      setFetching(false);
     }
-    const urgency = period === 'Q4' || period === 'OT' ? 1.15 : 1;
-    const baseWith = 0.48 + Math.min(0.28, consecutive * 0.05) + (scoreDiff < 0 ? 0.06 : 0) + (timeouts > 0 ? 0.04 : 0);
-    const baseWithout = baseWith - 0.09 - Math.min(0.08, consecutive * 0.015);
-    const should = baseWith - baseWithout > 0.06 && timeouts > 0;
-    const withTimeout = Math.round(Math.min(0.92, baseWith * urgency) * 100);
-    const without = Math.round(Math.min(0.92, baseWithout * urgency) * 100);
-    const diff = Math.max(0, withTimeout - without);
-    setRecommendation({
-      should,
-      withTimeout,
-      without,
-      note: `After ${consecutive}+ consecutive opponent scores with under ${Math.round(minutes)} minutes remaining in ${period}, calling timeout has historically improved stop probability by ${Math.max(0, diff)}%.`,
-      confidence: 'High confidence — based on 847 similar situations',
-      demo: true,
-    });
   };
 
   const reset = () => {
@@ -159,7 +166,19 @@ export default function TimeoutOptimizerScreen() {
           </Text>
         </GradientView>
       ) : (
-        <PillButton label="Get Recommendation" size="lg" onPress={getRecommendation} icon={<AppIcon name="sparkles" size={17} color="#FFFFFF" />} />
+        <PillButton
+          label={fetching ? 'Analyzing…' : 'Get Recommendation'}
+          size="lg"
+          onPress={getRecommendation}
+          disabled={fetching}
+          icon={
+            fetching ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <AppIcon name="sparkles" size={17} color="#FFFFFF" />
+            )
+          }
+        />
       )}
 
       {recommendation ? (

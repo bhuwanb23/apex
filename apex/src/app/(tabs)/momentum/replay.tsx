@@ -8,16 +8,19 @@ import { Card } from '@/components/ui/card';
 import { LineChart, type ChartPoint, type ChartMarker } from '@/components/ui/chart';
 import { Slider } from '@/components/ui/slider';
 import { AppIcon } from '@/components/ui/icon';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { GAMES, type Game } from '@/data/mock/games';
 import { useRecentGames } from '@/data/live/games';
 import { useGameMomentum } from '@/data/live/momentum';
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
 
 const MAX_MOMENTUM = 70; // clamp chart domain to ±70 for readability
 
 export default function GameReplayScreen() {
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
   const { activeSport } = useOnboarding();
+  const { status } = useBackend();
   const [selectedId, setSelectedId] = useState(gameId ?? GAMES[0].id);
   const [progress, setProgress] = useState(1); // 0..1 through the game
   const [playing, setPlaying] = useState(false);
@@ -29,7 +32,7 @@ export default function GameReplayScreen() {
   // stacked a second interval — the scrubber never stopped).
   const playTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data: gameData } = useGameMomentum(selectedId, activeSport);
+  const { data: gameData, loading } = useGameMomentum(selectedId, activeSport);
   const game = gameData ?? GAMES.find(g => g.id === selectedId) ?? GAMES[0];
   const lastTime = game.timeline[game.timeline.length - 1].time;
   // Real recent games for the sport fill the picker (fix #13 — the old mock
@@ -77,6 +80,10 @@ export default function GameReplayScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [game, lastTime, progress]
   );
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showSkeleton = loading && !backendOffline;
 
   const currentTime = progress * lastTime;
   const homeMomentum = Math.round(interpAt('home', currentTime));
@@ -147,115 +154,159 @@ export default function GameReplayScreen() {
         ))}
       </ScrollView>
 
-      {/* Game header */}
-      <Card style={styles.headerCard}>
-        <View style={styles.scoreRow}>
-          <View style={styles.team}>
-            <Text style={styles.teamName}>{game.homeTeam}</Text>
-            <Text style={[styles.teamScore, homeMomentum > awayMomentum && styles.teamScoreLead]}>{game.homeScore}</Text>
+      {showSkeleton ? (
+        <>
+          {/* Game header skeleton */}
+          <Card style={styles.headerCard}>
+            <View style={styles.scoreRow}>
+              <View style={styles.team}>
+                <Skeleton width="70%" height={15} radius={6} />
+                <Skeleton width={44} height={26} radius={6} />
+              </View>
+              <Skeleton width={44} height={10} radius={5} />
+              <View style={[styles.team, styles.teamRight]}>
+                <Skeleton width="70%" height={15} radius={6} />
+                <Skeleton width={44} height={26} radius={6} />
+              </View>
+            </View>
+          </Card>
+          {/* Chart skeleton */}
+          <Card style={styles.chartCard}>
+            <View style={styles.legendRow}>
+              <Skeleton width={70} height={12} radius={6} />
+              <Skeleton width={70} height={12} radius={6} />
+            </View>
+            <Skeleton width="100%" height={190} radius={10} />
+            <Skeleton width="100%" height={18} radius={9} />
+            <View style={styles.playRow}>
+              <Skeleton width={34} height={34} radius={17} />
+              <Skeleton width={140} height={13} radius={6} />
+            </View>
+          </Card>
+          {/* Current moment skeleton */}
+          <SkeletonCard lines={3} />
+          {/* Peaks skeleton */}
+          <View>
+            <Skeleton width={120} height={16} radius={6} />
+            <View style={styles.listGap}>
+              <SkeletonCard lines={2} />
+              <SkeletonCard lines={2} />
+            </View>
           </View>
-          <Text style={styles.final}>{game.date}</Text>
-          <View style={[styles.team, styles.teamRight]}>
-            <Text style={styles.teamName}>{game.awayTeam}</Text>
-            <Text style={[styles.teamScore, awayMomentum > homeMomentum && styles.teamScoreLead]}>{game.awayScore}</Text>
-          </View>
-        </View>
-      </Card>
+        </>
+      ) : (
+        <>
+          {/* Game header */}
+          <Card style={styles.headerCard}>
+            <View style={styles.scoreRow}>
+              <View style={styles.team}>
+                <Text style={styles.teamName}>{game.homeTeam}</Text>
+                <Text style={[styles.teamScore, homeMomentum > awayMomentum && styles.teamScoreLead]}>{game.homeScore}</Text>
+              </View>
+              <Text style={styles.final}>{game.date}</Text>
+              <View style={[styles.team, styles.teamRight]}>
+                <Text style={styles.teamName}>{game.awayTeam}</Text>
+                <Text style={[styles.teamScore, awayMomentum > homeMomentum && styles.teamScoreLead]}>{game.awayScore}</Text>
+              </View>
+            </View>
+          </Card>
 
-      {/* Momentum chart */}
-      <Card style={styles.chartCard}>
-        <View style={styles.legendRow}>
-          <LegendDot color="#5856D6" label={game.homeTeam} />
-          <LegendDot color="#FF5C8A" label={game.awayTeam} />
-        </View>
-        <LineChart
-          series={series}
-          height={190}
-          gridLabels={['Q1', 'Q2', 'Q3', 'Q4']}
-          yLabels={['+50', '0', '-50']}
-          scrubber={progress}
-          markers={markers}
-          onMarkerPress={i => jumpTo(game.events[i].time)}
-        />
-        <Slider value={progress} min={0} max={1} step={0.01} onChange={setProgress} />
-        <View style={styles.playRow}>
-          <Pressable style={styles.playBtn} onPress={togglePlay}>
-            <AppIcon name={playing ? 'pause.fill' : 'play.fill'} size={15} color="#FFFFFF" />
-          </Pressable>
-          <Text style={styles.playText}>{currentLabel}</Text>
-          <Text style={styles.playHint}>Tap a dot on the chart to see what happened</Text>
-        </View>
-      </Card>
-
-      {/* Current moment */}
-      <Card style={styles.momentCard}>
-        <View style={styles.momentTop}>
-          <Text style={styles.momentLabel}>{currentLabel}</Text>
-          <View style={styles.leaderBadge}>
-            <AppIcon name="bolt.fill" size={11} color="#FFA058" />
-            <Text style={styles.leaderText}>
-              {leader === 'home' ? game.homeTeam : game.awayTeam} has momentum
-            </Text>
-          </View>
-        </View>
-        <View style={styles.momentStats}>
-          <MomentStat label="Home" value={homeMomentum} color="#5856D6" />
-          <MomentStat label="Away" value={awayMomentum} color="#FF5C8A" />
-          <MomentStat label="Score" value={`${scoreAt(game, currentTime)}`} color="#14121F" />
-        </View>
-        {lastEvent ? (
-          <Text style={styles.lastEvent}>
-            <Text style={styles.lastEventTime}>{lastEvent.label}: </Text>
-            {lastEvent.description}
-          </Text>
-        ) : (
-          <Text style={styles.lastEvent}>Nothing significant yet — momentum is building.</Text>
-        )}
-      </Card>
-
-      {/* Peak moments (collapsible) */}
-      <View>
-        <Pressable style={styles.collapseHeader} onPress={() => setPeaksOpen(prev => !prev)}>
-          <Text style={styles.sectionTitle}>Peak Moments</Text>
-          <AppIcon name={peaksOpen ? 'chevron.down' : 'chevron.right'} size={16} color="#6E7280" />
-        </Pressable>
-        {peaksOpen ? (
-          <View style={styles.listGap}>
-            {[...game.events].sort((a, b) => b.swing - a.swing).map(event => (
-              <Pressable key={event.label} onPress={() => jumpTo(event.time)}>
-                <Card style={styles.peakCard}>
-                  <View style={styles.peakLeft}>
-                    <View style={[styles.peakIcon, { backgroundColor: event.team === 'home' ? '#EFEEFB' : '#FDEBEC' }]}>
-                      <AppIcon name="bolt.fill" size={14} color={event.team === 'home' ? '#5856D6' : '#FF5C8A'} />
-                    </View>
-                    <View style={styles.peakBody}>
-                      <Text style={styles.peakTime}>{event.label}</Text>
-                      <Text style={styles.peakDesc}>{event.description}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.peakSwing}>
-                    <Text style={[styles.peakSwingValue, { color: event.team === 'home' ? '#5856D6' : '#FF5C8A' }]}>
-                      +{event.swing}
-                    </Text>
-                    <Text style={styles.peakSwingLabel}>swing</Text>
-                  </View>
-                </Card>
+          {/* Momentum chart */}
+          <Card style={styles.chartCard}>
+            <View style={styles.legendRow}>
+              <LegendDot color="#5856D6" label={game.homeTeam} />
+              <LegendDot color="#FF5C8A" label={game.awayTeam} />
+            </View>
+            <LineChart
+              series={series}
+              height={190}
+              gridLabels={['Q1', 'Q2', 'Q3', 'Q4']}
+              yLabels={['+50', '0', '-50']}
+              scrubber={progress}
+              markers={markers}
+              onMarkerPress={i => jumpTo(game.events[i].time)}
+            />
+            <Slider value={progress} min={0} max={1} step={0.01} onChange={setProgress} />
+            <View style={styles.playRow}>
+              <Pressable style={styles.playBtn} onPress={togglePlay}>
+                <AppIcon name={playing ? 'pause.fill' : 'play.fill'} size={15} color="#FFFFFF" />
               </Pressable>
-            ))}
-          </View>
-        ) : null}
-      </View>
+              <Text style={styles.playText}>{currentLabel}</Text>
+              <Text style={styles.playHint}>Tap a dot on the chart to see what happened</Text>
+            </View>
+          </Card>
 
-      {/* Summary stats */}
-      <View>
-        <Text style={styles.sectionTitle}>Momentum summary</Text>
-        <View style={styles.summaryRow}>
-          <SummaryBox value={`${game.momentumShifts}`} label="Momentum shifts" />
-          <SummaryBox value={game.longestStreak.split(' · ')[1] ?? game.longestStreak} label="Longest streak" />
-          <SummaryBox value={game.momentumLeader} label="Held momentum longest" />
-        </View>
-        <Text style={styles.verdict}>{game.verdict}</Text>
-      </View>
+          {/* Current moment */}
+          <Card style={styles.momentCard}>
+            <View style={styles.momentTop}>
+              <Text style={styles.momentLabel}>{currentLabel}</Text>
+              <View style={styles.leaderBadge}>
+                <AppIcon name="bolt.fill" size={11} color="#FFA058" />
+                <Text style={styles.leaderText}>
+                  {leader === 'home' ? game.homeTeam : game.awayTeam} has momentum
+                </Text>
+              </View>
+            </View>
+            <View style={styles.momentStats}>
+              <MomentStat label="Home" value={homeMomentum} color="#5856D6" />
+              <MomentStat label="Away" value={awayMomentum} color="#FF5C8A" />
+              <MomentStat label="Score" value={`${scoreAt(game, currentTime)}`} color="#14121F" />
+            </View>
+            {lastEvent ? (
+              <Text style={styles.lastEvent}>
+                <Text style={styles.lastEventTime}>{lastEvent.label}: </Text>
+                {lastEvent.description}
+              </Text>
+            ) : (
+              <Text style={styles.lastEvent}>Nothing significant yet — momentum is building.</Text>
+            )}
+          </Card>
+
+          {/* Peak moments (collapsible) */}
+          <View>
+            <Pressable style={styles.collapseHeader} onPress={() => setPeaksOpen(prev => !prev)}>
+              <Text style={styles.sectionTitle}>Peak Moments</Text>
+              <AppIcon name={peaksOpen ? 'chevron.down' : 'chevron.right'} size={16} color="#6E7280" />
+            </Pressable>
+            {peaksOpen ? (
+              <View style={styles.listGap}>
+                {[...game.events].sort((a, b) => b.swing - a.swing).map(event => (
+                  <Pressable key={event.label} onPress={() => jumpTo(event.time)}>
+                    <Card style={styles.peakCard}>
+                      <View style={styles.peakLeft}>
+                        <View style={[styles.peakIcon, { backgroundColor: event.team === 'home' ? '#EFEEFB' : '#FDEBEC' }]}>
+                          <AppIcon name="bolt.fill" size={14} color={event.team === 'home' ? '#5856D6' : '#FF5C8A'} />
+                        </View>
+                        <View style={styles.peakBody}>
+                          <Text style={styles.peakTime}>{event.label}</Text>
+                          <Text style={styles.peakDesc}>{event.description}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.peakSwing}>
+                        <Text style={[styles.peakSwingValue, { color: event.team === 'home' ? '#5856D6' : '#FF5C8A' }]}>
+                          +{event.swing}
+                        </Text>
+                        <Text style={styles.peakSwingLabel}>swing</Text>
+                      </View>
+                    </Card>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+
+          {/* Summary stats */}
+          <View>
+            <Text style={styles.sectionTitle}>Momentum summary</Text>
+            <View style={styles.summaryRow}>
+              <SummaryBox value={`${game.momentumShifts}`} label="Momentum shifts" />
+              <SummaryBox value={game.longestStreak.split(' · ')[1] ?? game.longestStreak} label="Longest streak" />
+              <SummaryBox value={game.momentumLeader} label="Held momentum longest" />
+            </View>
+            <Text style={styles.verdict}>{game.verdict}</Text>
+          </View>
+        </>
+      )}
     </Screen>
   );
 }

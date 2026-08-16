@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppIcon } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingView } from '@/components/ui/loading';
 import { useRecentSearches } from '@/hooks/use-recent-searches';
 import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
@@ -60,6 +61,10 @@ export default function SearchResultsScreen() {
 
   const total = results.players.length + results.teams.length + results.coaches.length + results.games.length;
 
+  // A backend query is in flight — show a spinner instead of a misleading
+  // "No results" empty state (the local demo fallback renders once it lands).
+  const showSearching = liveSearch.active && liveSearch.loading;
+
   const submit = () => {
     const value = query.trim();
     if (value) {
@@ -87,7 +92,9 @@ export default function SearchResultsScreen() {
         </Pressable>
       </View>
 
-      {total === 0 ? (
+      {showSearching ? (
+        <LoadingView label="Searching…" />
+      ) : total === 0 ? (
         <EmptyState
           icon="magnifyingglass"
           title={term ? `No results for "${query}"` : 'Start typing to search'}
