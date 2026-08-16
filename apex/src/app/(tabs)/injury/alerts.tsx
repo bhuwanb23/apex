@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
@@ -35,6 +35,12 @@ export default function LeagueAlertsScreen() {
   const [zone, setZone] = useState<ZoneFilter>('all');
   const [sort, setSort] = useState<SortKey>('risk');
   const [position, setPosition] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  // Draft copies — the popup only applies on "Apply" (the team-picker pattern).
+  const [draftZone, setDraftZone] = useState<ZoneFilter>('all');
+  const [draftSort, setDraftSort] = useState<SortKey>('risk');
+  const [draftPosition, setDraftPosition] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // Follow the stored sport when it changes — guarded render-time adjustment
@@ -55,6 +61,7 @@ export default function LeagueAlertsScreen() {
 
   const visible = sportPlayers
     .filter(p => (position ? p.position === position : true))
+    .filter(p => p.name.toLowerCase().includes(query.trim().toLowerCase()))
     .sort((a, b) => {
       if (sort === 'risk') return b.riskScore - a.riskScore;
       if (sort === 'team') return a.team.localeCompare(b.team);
@@ -72,6 +79,23 @@ export default function LeagueAlertsScreen() {
   const selectSport = (id: SportId) => {
     setSport(id);
     setPosition(null);
+    setQuery('');
+  };
+
+  /** Open the filter sheet seeded with the currently applied values. */
+  const openPicker = () => {
+    setDraftZone(zone);
+    setDraftSort(sort);
+    setDraftPosition(position);
+    setPickerOpen(true);
+  };
+
+  /** Apply the draft filter choices and close the sheet. */
+  const applyPicker = () => {
+    setZone(draftZone);
+    setSort(draftSort);
+    setPosition(draftPosition);
+    setPickerOpen(false);
   };
 
   const bannerText =
@@ -112,45 +136,40 @@ export default function LeagueAlertsScreen() {
         ))}
       </View>
 
-      {/* Zone filter */}
-      <View style={styles.zoneTabs}>
-        {(['all', 'red', 'yellow'] as ZoneFilter[]).map(z => (
-          <Chip
-            key={z}
-            label={z === 'all' ? 'All' : z[0].toUpperCase() + z.slice(1)}
-            small
-            selected={zone === z}
-            onPress={() => setZone(z)}
+      {/* Search + filter button */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchBar}>
+          <AppIcon name="magnifyingglass" size={16} color="#9AA0B5" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search players…"
+            placeholderTextColor="#9AA0B5"
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
-        ))}
+        </View>
+        <Pressable
+          style={styles.filterBtn}
+          onPress={openPicker}
+          accessibilityRole="button"
+          accessibilityLabel="Filter alerts">
+          <AppIcon name="slider.horizontal.3" size={18} color="#5856D6" />
+        </Pressable>
       </View>
 
       {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
       {generatedAt ? <DataFreshness timestamp={generatedAt} onRefresh={refresh} /> : null}
 
-      {/* Count banner + sort */}
+      {/* Count banner — active filter summary on the right */}
       <View style={styles.countBanner}>
         <Text style={styles.countText}>{refreshing ? 'Refreshing…' : showSkeleton ? 'Loading alerts…' : bannerText}</Text>
-        <Pressable
-          style={styles.sortBtn}
-          onPress={() => setSort(prev => (prev === 'risk' ? 'team' : prev === 'team' ? 'position' : 'risk'))}>
-          <AppIcon name="chart.bar.fill" size={13} color="#FFFFFF" />
-          <Text style={styles.sortText}>Sort: {SORT_LABEL[sort]}</Text>
+        <Pressable style={styles.sortBtn} onPress={openPicker} accessibilityRole="button" accessibilityLabel="Open filters">
+          <AppIcon name="slider.horizontal.3" size={13} color="#FFFFFF" />
+          <Text style={styles.sortText}>{activeFilterLabel(zone, position, sort)}</Text>
         </Pressable>
       </View>
-
-      {/* Position filter */}
-      {positions.length > 1 ? (
-        <View style={styles.positionRow}>
-          <Text style={styles.positionLabel}>Position</Text>
-          <View style={styles.positionChips}>
-            <Chip label="All" small selected={position === null} onPress={() => setPosition(null)} />
-            {positions.map(pos => (
-              <Chip key={pos} label={pos} small selected={position === pos} onPress={() => setPosition(position === pos ? null : pos)} />
-            ))}
-          </View>
-        </View>
-      ) : null}
 
       {alerts.error != null && !backendOffline ? (
         <ErrorState message={`Could not load ${sport} alerts`} onRetry={alerts.refetch} />
@@ -178,7 +197,81 @@ export default function LeagueAlertsScreen() {
           ))}
         </View>
       )}
+
+      {/* Filter sheet — zone / position / sort, Apply to confirm */}
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+        <View style={styles.pickerBackdrop}>
+          <View style={styles.pickerSheet}>
+            <View style={styles.pickerHandle} />
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Filter alerts</Text>
+              <Pressable onPress={() => setPickerOpen(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
+                <AppIcon name="xmark" size={16} color="#6E7280" />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.pickerList} showsVerticalScrollIndicator={false}>
+              {/* Zone — radio list (single select) */}
+              <Text style={styles.pickerSection}>Zone</Text>
+              {(['all', 'red', 'yellow'] as ZoneFilter[]).map(z => (
+                <PickerRow
+                  key={`zone-${z}`}
+                  label={z === 'all' ? 'All zones' : z === 'red' ? 'Red zone' : 'Yellow (elevated)'}
+                  selected={draftZone === z}
+                  onPress={() => setDraftZone(z)}
+                />
+              ))}
+
+              {/* Position — radio list (single select) */}
+              <Text style={styles.pickerSection}>Position</Text>
+              <PickerRow label="All positions" selected={draftPosition === null} onPress={() => setDraftPosition(null)} />
+              {positions.map(pos => (
+                <PickerRow
+                  key={`pos-${pos}`}
+                  label={pos}
+                  selected={draftPosition === pos}
+                  onPress={() => setDraftPosition(pos)}
+                />
+              ))}
+
+              {/* Sort — radio list (single select) */}
+              <Text style={styles.pickerSection}>Sort by</Text>
+              {(Object.keys(SORT_LABEL) as SortKey[]).map(k => (
+                <PickerRow
+                  key={`sort-${k}`}
+                  label={SORT_LABEL[k]}
+                  selected={draftSort === k}
+                  onPress={() => setDraftSort(k)}
+                />
+              ))}
+            </ScrollView>
+            <Pressable style={styles.applyBtn} onPress={applyPicker} accessibilityRole="button">
+              <Text style={styles.applyText}>Apply</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </Screen>
+  );
+}
+
+/** "Red · PG · Risk" — a compact summary of the active filters for the banner. */
+function activeFilterLabel(zone: ZoneFilter, position: string | null, sort: SortKey): string {
+  const parts: string[] = [];
+  parts.push(zone === 'all' ? 'All zones' : zone === 'red' ? 'Red' : 'Yellow');
+  parts.push(position ?? 'All positions');
+  parts.push(SORT_LABEL[sort]);
+  return parts.join(' · ');
+}
+
+/** One radio row in the filter sheet — purple dot + label when selected. */
+function PickerRow({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  return (
+    <Pressable style={styles.pickerRow} onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected }}>
+      <Text style={[styles.pickerRowText, selected && styles.pickerRowTextActive]}>{label}</Text>
+      <View style={[styles.radio, selected && styles.radioActive]}>
+        {selected ? <View style={styles.radioDot} /> : null}
+      </View>
+    </Pressable>
   );
 }
 
@@ -218,10 +311,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  zoneTabs: {
+  searchRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 44,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#14121F',
+  },
+  filterBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E5EC',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   countBanner: {
     flexDirection: 'row',
@@ -252,20 +370,95 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '700',
   },
-  positionRow: {
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20,18,31,0.45)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+    gap: 12,
+    maxHeight: '80%',
+  },
+  pickerHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D5D7E0',
+    alignSelf: 'center',
+  },
+  pickerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  positionLabel: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#6E7280',
+  pickerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#14121F',
   },
-  positionChips: {
+  pickerList: {
+    flexGrow: 0,
+  },
+  pickerSection: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#9AA0B5',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  pickerRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F1F5',
+  },
+  pickerRowText: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#14121F',
+  },
+  pickerRowTextActive: {
+    color: '#5856D6',
+  },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#C6C8D2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: {
+    borderColor: '#5856D6',
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#5856D6',
+  },
+  applyBtn: {
+    backgroundColor: '#5856D6',
+    borderRadius: 14,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   listGap: {
     gap: 10,
