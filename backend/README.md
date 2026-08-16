@@ -1,6 +1,6 @@
-# AQX Sports Intelligence — Backend
+# Apex Sports Intelligence — Backend
 
-Node.js backend for AQX Sports Intelligence.
+Node.js backend for Apex Sports Intelligence.
 
 ## Tech Stack
 

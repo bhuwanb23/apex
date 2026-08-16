@@ -1,7 +1,7 @@
 {
-  "name": "aqx-backend",
+  "name": "apex-backend",
   "version": "0.1.0",
-  "description": "AQX Sports Intelligence — Node.js backend (Express, Prisma + SQLite, Node-cache)",
+  "description": "Apex Sports Intelligence — Node.js backend (Express, Prisma + SQLite, Node-cache)",
   "type": "module",
   "main": "dist/index.js",
   "engines": {

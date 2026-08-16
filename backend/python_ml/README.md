@@ -1,6 +1,6 @@
-# AQX ML Microservice
+# Apex ML Microservice
 
-Python FastAPI service that runs all heavy statistical / ML work for AQX Sports Intelligence.
+Python FastAPI service that runs all heavy statistical / ML work for Apex Sports Intelligence.
 Node.js (port 8000) calls this service (port 8001) over HTTP and stores the results in SQLite.
 
 ## Why Python
