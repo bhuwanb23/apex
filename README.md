@@ -110,6 +110,54 @@ The app connects to `http://localhost:8000` by default (configurable in Settings
 
 > **Demo tip:** the app opens on the login screen — use the **"Use demo account"** button (email `demo@apex.app`, password `apex1234`), then the app lands straight on the dashboard. The onboarding flow is wired for the future "new account → onboarding" path and is not shown yet.
 
+### 3. One-click: Docker (everything in one command)
+
+The full stack — **ML service (:8001) + backend (:8000) + app (:8081)** — runs in
+Docker with a single command. The backend container seeds the demo database on
+first boot (sports → teams → coaches → NBA demo data → NFL coach decisions), so
+judges see rich data immediately, no API keys or syncs required.
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+- **App:** <http://localhost:8081>
+- **Backend API / Swagger:** <http://localhost:8000/api/docs>
+- **ML health:** <http://localhost:8001/health>
+
+Stop everything (data is kept on volumes):
+
+```bash
+docker compose down
+```
+
+Reset to a clean demo state (wipes DB + retrains models on next boot):
+
+```bash
+docker compose down -v
+```
+
+### 4. No Docker? One-click scripts + Makefile
+
+Windows — double-click to open three terminals (app, backend, ML) automatically:
+
+- **`start-dev.cmd`** — starts all three in separate terminal windows (no Docker)
+- **`start-docker.cmd`** / **`stop-docker.cmd`** — start/stop the Docker stack
+
+macOS / Linux / Git Bash — `make`:
+
+```bash
+make up          # docker compose up --build
+make down        # docker compose down
+make reset       # docker compose down -v
+make dev         # no Docker: opens 3 terminals (app, backend, ML)
+make app         # no Docker: run just the app
+make backend     # no Docker: run just the backend
+make ml          # no Docker: run just the ML service
+```
+
 ## API
 
 - **Swagger UI:** <http://localhost:8000/api/docs> (also `/api-docs`)

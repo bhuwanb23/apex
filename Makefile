@@ -19,6 +19,9 @@ up: ## Build & start the full stack with Docker (ML + backend + app web)
 down: ## Stop the Docker stack (keeps data volumes)
 	docker compose down
 
+reset: ## Stop Docker + wipe data volumes (clean demo on next up)
+	docker compose down -v
+
 logs: ## Follow logs of all Docker services
 	docker compose logs -f --tail=100
 

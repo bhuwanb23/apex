@@ -12,15 +12,19 @@
  *   4. Momentum analysis for all four sports: NBA "inconclusive", NHL
  *      "significant", NFL/MLB "not significant" (the demo's story).
  *   5. Momentum game timelines for ~12 recent NBA games (game replay screen).
- *   6. NFL coach decisions + timeout recommendations already exist — left alone.
+ *   6. NFL coach decisions + scorecards (coach leaderboard + drill-down). Timeout
+ *      recommendations come from the pre-computed ML table (trained at boot).
  *
  * Idempotent: safe to re-run (deletes its own NBA demo rows first).
  * Run with: npm run db:seed:demo
  */
 import { prisma } from '../src/db/client.js';
+import { refreshCoachScorecard } from '../src/services/decisions.service.js';
 
-const NBA_ID = 1;
-const NHL_ID = 7; // sports table: NHL is id 7 in this DB
+// Sport IDs are resolved from the DB by abbreviation at startup — they are NOT
+// guaranteed to be 1..4 (a fresh DB seeds 1-4, but a dev DB may have NHL at 7).
+let NBA_ID = 1;
+let NHL_ID = 1;
 
 /** Team abbreviation → [name, position][] (15 per team, stars + rotation). */
 const ROSTERS: Record<string, [string, string][]> = {
@@ -899,7 +903,182 @@ async function seedGameTimelines(games: { id: number; homeTeamId: number; awayTe
   console.log(`  wrote ${written} NBA momentum timelines (+${playsWritten} play-by-play scoring events)`);
 }
 
+/**
+ * NFL coach decisions — the leaderboard + coach drill-down demo data.
+ *
+ * Creates NFL regular-season games (home/away coaches from the 32 seeded head
+ * coaches), seeds a handful of realistic decisions per coach per game (all
+ * pre-evaluated so no ML dependency at seed time), then runs the same
+ * scorecard refresh the pipeline uses to aggregate DecisionEVScores + ranks.
+ * Idempotent: deletes its own demo games (externalId prefix `nfl-demo-`) first.
+ */
+async function seedNflDecisions(): Promise<void> {
+  console.log('— seeding NFL coach decisions + scorecards');
+  const nfl = await prisma.sports.findUnique({ where: { abbreviation: 'nfl' } });
+  if (!nfl) throw new Error('Sports master table missing nfl — run db:seed first');
+
+  // 1. Clean previous demo NFL games (decisions cascade-constrained: delete
+  //    decisions first, then play-by-play, then the games).
+  const demoGames = await prisma.games.findMany({
+    where: { externalId: { startsWith: 'nfl-demo-' } },
+    select: { id: true },
+  });
+  const demoGameIds = demoGames.map(g => g.id);
+  if (demoGameIds.length > 0) {
+    await prisma.coachDecisions.deleteMany({ where: { gameId: { in: demoGameIds } } });
+    await prisma.playByPlay.deleteMany({ where: { gameId: { in: demoGameIds } } });
+    await prisma.games.deleteMany({ where: { id: { in: demoGameIds } } });
+  }
+  // Only touch the season being recomputed — real scorecards from other
+  // seasons (e.g. 2025 on a dev DB) must be left intact.
+  await prisma.decisionEVScores.deleteMany({ where: { sportId: nfl.id, season: nfl.season } });
+
+  // 2. Build games: pair up the 32 teams into 16 matchups (week 1, regular).
+  const teams = await prisma.teams.findMany({
+    where: { sportId: nfl.id, isActive: true },
+    orderBy: { id: 'asc' },
+    select: { id: true, abbreviation: true },
+  });
+  const coaches = await prisma.coaches.findMany({
+    where: { sportId: nfl.id },
+    select: { id: true, teamId: true, name: true },
+  });
+  const coachByTeam = new Map(coaches.map(c => [c.teamId, c]));
+
+  const rng = mulberry32(20260816);
+  const gameDate = new Date();
+  gameDate.setDate(gameDate.getDate() - 30);
+  gameDate.setHours(13, 0, 0, 0);
+
+  const games: { id: number; homeCoachId: number | null; awayCoachId: number | null }[] = [];
+  for (let i = 0; i + 1 < teams.length; i += 2) {
+    const home = teams[i];
+    const away = teams[i + 1];
+    if (!home || !away) continue;
+    const homeScore = 17 + Math.floor(rng() * 21);
+    const awayScore = 10 + Math.floor(rng() * 24);
+    const created = await prisma.games.create({
+      data: {
+        sportId: nfl.id,
+        homeTeamId: home.id,
+        awayTeamId: away.id,
+        homeCoachId: coachByTeam.get(home.id)?.id ?? null,
+        awayCoachId: coachByTeam.get(away.id)?.id ?? null,
+        date: new Date(gameDate.getTime() + i * DAY_MS),
+        season: nfl.season,
+        gameType: 'regular',
+        week: 1,
+        homeScore,
+        awayScore,
+        winner: homeScore > awayScore ? 'home' : 'away',
+        status: 'final',
+        externalId: `nfl-demo-${i}`,
+        venue: `${home.abbreviation} Stadium`,
+      },
+    });
+    games.push({ id: created.id, homeCoachId: created.homeCoachId, awayCoachId: created.awayCoachId });
+  }
+
+  // 3. Decisions per game: 3-4 per coach covering the NFL decision types.
+  const decisionTypes: { type: string; actions: { name: string; base: number }[] }[] = [
+    {
+      type: '4th_down',
+      actions: [
+        { name: 'go', base: 0.52 },
+        { name: 'punt', base: 0.44 },
+        { name: 'field_goal', base: 0.48 },
+      ],
+    },
+    {
+      type: 'timeout',
+      actions: [
+        { name: 'call_timeout', base: 0.5 },
+        { name: 'save_timeout', base: 0.46 },
+      ],
+    },
+    {
+      type: '2pt_conversion',
+      actions: [
+        { name: 'go_for_2', base: 0.5 },
+        { name: 'kick_extra_point', base: 0.48 },
+      ],
+    },
+  ];
+
+  let decisionsWritten = 0;
+  for (let g = 0; g < games.length; g += 1) {
+    const game = games[g];
+    const coachesInGame = [game.homeCoachId, game.awayCoachId].filter((id): id is number => id != null);
+    for (const coachId of coachesInGame) {
+      // 3 decisions per coach: one of each type (jittered, mostly optimal).
+      for (let t = 0; t < decisionTypes.length; t += 1) {
+        const { type, actions } = decisionTypes[t];
+        const jitter = () => (rng() - 0.5) * 0.12;
+        const options = actions.map(a => {
+          const ev = Math.max(0.3, a.base + jitter());
+          return { action: a.name, ev, probSuccess: 0.5 + rng() * 0.4, wpIfSuccess: ev + 0.06, wpIfFailure: ev - 0.12 };
+        });
+        const best = [...options].sort((a, b) => b.ev - a.ev)[0];
+        // ~80% optimal, ~20% leave value on the table (realistic spread).
+        const picksOptimal = rng() < 0.8;
+        const chosen = picksOptimal ? best : options[Math.floor(rng() * options.length)];
+        if (!chosen || !best) continue;
+        const period = 1 + Math.floor(rng() * 4);
+        const gameTimeSeconds = Math.floor(((period - 1) * 900) + rng() * 700);
+        const secsIntoQuarter = gameTimeSeconds % 900;
+        const clockRemaining = 900 - secsIntoQuarter;
+        const clock = `${String(Math.floor(clockRemaining / 60)).padStart(2, '0')}:${String(clockRemaining % 60).padStart(2, '0')}`;
+        const scoreDiff = Math.floor(rng() * 21) - 10;
+        const outcomeSuccess = rng() < 0.55;
+
+        await prisma.coachDecisions.create({
+          data: {
+            gameId: game.id,
+            coachId,
+            sportId: nfl.id,
+            decisionType: type,
+            period,
+            clock,
+            gameTimeSeconds,
+            scoreDiff,
+            winProbabilityBefore: 0.3 + rng() * 0.4,
+            gameContext: {
+              down: type === '4th_down' ? 4 : null,
+              yardsToGo: type === '4th_down' ? 1 + Math.floor(rng() * 8) : null,
+              yardLine: type === '4th_down' ? 20 + Math.floor(rng() * 60) : null,
+              playType: type === '4th_down' ? (rng() < 0.5 ? 'run' : 'pass') : type,
+              description: `${type} decision by ${coachByTeam.get(coachId)?.name ?? 'coach'} in week 1.`,
+            },
+            chosenAction: chosen.action,
+            evChosen: chosen.ev,
+            evBest: best.ev,
+            evDifference: best.ev - chosen.ev,
+            isOptimal: chosen.action === best.action,
+            alternativeActions: options,
+            outcome: outcomeSuccess ? 'success' : 'failed',
+            outcomeSuccess,
+          },
+        });
+        decisionsWritten += 1;
+      }
+    }
+  }
+  console.log(`  created ${decisionsWritten} NFL decisions across ${games.length} games`);
+
+  // 4. Aggregate DecisionEVScores + ranks (same path the pipeline uses). All
+  //    seeded decisions are pre-evaluated, so this only re-aggregates (no ML).
+  const result = await refreshCoachScorecard('NFL', nfl.season);
+  console.log(`  scorecards: ${result.scorecardsWritten} written (${result.decisionsEvaluated} ML evaluations)`);
+}
+
 async function main(): Promise<void> {
+  // Resolve real sport IDs so this seed works on any DB (fresh or migrated).
+  const nbaRow = await prisma.sports.findUnique({ where: { abbreviation: 'nba' } });
+  const nhlRow = await prisma.sports.findUnique({ where: { abbreviation: 'nhl' } });
+  if (!nbaRow || !nhlRow) throw new Error('Sports master table missing nba/nhl — run db:seed first');
+  NBA_ID = nbaRow.id;
+  NHL_ID = nhlRow.id;
+
   await cleanFakeNbaData();
   const teamPlayers = await seedNbaPlayers();
   const { games, byTeam } = await seedNbaGames(teamPlayers);
@@ -907,6 +1086,7 @@ async function main(): Promise<void> {
   await seedRiskScores(teamPlayers, byTeam);
   await seedMomentumVerdicts();
   await seedGameTimelines(games);
+  await seedNflDecisions();
   console.log('\nDemo seed complete ✅');
 }
 
