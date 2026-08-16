@@ -7,7 +7,10 @@ node_modules/
 .expo/
 dist/
 web-build/
-expo-env.d.ts
+# expo-env.d.ts is committed: CI runs `tsc --noEmit` before any expo command
+# regenerates it, and without it the `declare module '*.css'` types from
+# expo/types are missing (TS2882). The file is a stable 2-line template that
+# expo start/export regenerate identically.
 
 # Native
 .kotlin/

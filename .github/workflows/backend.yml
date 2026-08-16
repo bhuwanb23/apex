@@ -21,6 +21,12 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # prisma.config.ts resolves DATABASE_URL via env() — required even for
+    # `prisma generate`/`prisma validate`, which never touch the database. CI
+    # has no .env (gitignored), so provide the same SQLite URL .env.example
+    # ships; the generated client is identical regardless of the value.
+    env:
+      DATABASE_URL: "file:./prisma/aqx.db"
     steps:
       - name: Checkout
         uses: actions/checkout@v4

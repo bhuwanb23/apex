@@ -18,6 +18,10 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # Same as backend.yml — prisma.config.ts resolves DATABASE_URL via env()
+    # even for generate/validate; CI has no .env.
+    env:
+      DATABASE_URL: "file:./prisma/aqx.db"
     outputs:
       asset: apex-backend-${{ steps.tag.outputs.tag }}.tar.gz
     steps:
