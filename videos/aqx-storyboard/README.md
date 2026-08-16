@@ -1,20 +1,18 @@
 # Apex Descriptive Storyboard Explainer
 
-Fully new concept video — **no app UI**. Kinetic type + abstract pillar diagrams only.
+Dark cinematic **product promo** for Apex Sports Intelligence (~76s), rebuilt from [`story_script.md`](story_script.md).
 
-## Deliverables
+## Arc
 
-- **MP4:** [`renders/video.mp4`](renders/video.mp4) (~44s, 16:9, VO + bed)
-- **Contact sheet:** [`snapshots/contact-sheet.jpg`](snapshots/contact-sheet.jpg)
-- **Brief / board / script:** `BRIEF.md`, `STORYBOARD.md`, `SCRIPT.md`
+Hook (68% stat) → three questions → Meet Apex phone → Injury / Decisions / Momentum hi-fi HTML UI → technology stats + Story Mode → Apex lockup.
 
-## Story arc
+## Deliverable
 
-Brand → sports noise → one clear brief (+ roles) → Injury / Decisions / Momentum as ideas → plain-English payoff + Apex lockup.
+- [`renders/video.mp4`](renders/video.mp4) — Docker render, 1920×1080
+- Frames in [`compositions/frames/`](compositions/frames/) — live HTML phones matching Apex app tokens (not low-fi PNG mocks)
 
 ## Notes
 
-- Workflow: `faceless-explainer`
-- Voice: Kokoro `am_michael` (offline)
-- Final render: `npx hyperframes render --docker` (native Windows Chrome hit `spawn EINVAL`)
-- Sibling app-demo promo remains in `../Apex-promo`
+- Offline Kokoro VO; BGM from project bed (HeyGen catalog unavailable unsigned-in)
+- Catalog sports stills unavailable offline → graphic metaphor flashes in the hook
+- Leave `videos/aqx-promo` untouched

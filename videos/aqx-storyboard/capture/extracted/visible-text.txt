@@ -1,15 +1,22 @@
-Apex Sports Intelligence
-Sports Intelligence. Personalized.
+Apex Sports Intelligence — 1 Minute Video Script
 
-Topic: How Apex turns the chaos of sports data into clear, personalized intelligence — without showing a product UI.
+Hook: 68% of NBA injuries are preceded by workload spikes that go undetected.
+VO: Sports teams make million dollar decisions every single day. On gut feeling.
 
-Every game dumps noise: box scores, play-by-play, gut feel, highlight reels. Trainers, coaches, analysts, and fans each need a different brief.
+Three questions:
+Who is about to get injured?
+Did the coach actually make the right call?
+Is momentum even real?
+VO: Every coach, every trainer, every front office asks these three questions. Nobody has been able to answer them. Until now.
 
-Apex is the idea of one personalized intelligence layer with three pillars:
-1. Injury Risk — know who is at risk before they get hurt (traffic-light thinking, workload, alerts as concepts).
-2. Decisions — grade coaching calls on expected value / pure logic, not only the final score.
-3. Momentum — ask whether a run is statistically real or just a story.
+Product: Meet Apex.
+Injury: personal baseline workload spikes; risk score 84 red zone.
+Decisions: EV not outcome; the right call on fourth and one is still right even if the play fails.
+Momentum: Cox model; hockey real; baseball myth.
 
-Story Mode is the plain-English payoff: the same insight spoken as a shareable brief.
+Technology: Real data. Real math. Free APIs. Z-score. Win probability. Plain English. Story Mode for trainers, coaches, fans.
 
-Closing: Apex Sports Intelligence. Clear insights. Personalized.
+Closer: Apex. Because the best decision was always the one backed by evidence.
+Tagline: Real sports intelligence — injury risk, decision quality, and momentum, proven with math.
+
+Key numbers: 847 games analyzed; 3 statistical models; 450+ NBA players tracked; 0.03 p-value; 68% workload spike detection rate; 4 sports. One platform.
