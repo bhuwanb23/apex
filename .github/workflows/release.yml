@@ -1,0 +1,159 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (e.g. 1.0.0) — creates tag v<version>
+        required: true
+        type: string
+
+jobs:
+  backend:
+    name: Package backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    outputs:
+      asset: apex-backend-${{ steps.tag.outputs.tag }}.tar.gz
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          TAG="${{ github.event_name == 'push' && github.ref_name || format('v{0}', inputs.version) }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Build
+        run: npm run build
+
+      - name: Package backend
+        run: |
+          mkdir -p release/apex-backend
+          cp -r dist prisma package.json package-lock.json .env.example README.md release/apex-backend/
+          tar -czf apex-backend-${{ steps.tag.outputs.tag }}.tar.gz -C release apex-backend
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-backend
+          path: backend/apex-backend-${{ steps.tag.outputs.tag }}.tar.gz
+
+  ml:
+    name: Package ML service + models
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/python_ml
+    outputs:
+      asset: apex-ml-${{ steps.tag.outputs.tag }}.tar.gz
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/python_ml/requirements.txt
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          TAG="${{ github.event_name == 'push' && github.ref_name || format('v{0}', inputs.version) }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Train the models from the committed training data (the same warmup the
+      # service runs on startup) so the release ships ready-to-serve models.
+      - name: Train models
+        run: python -c "from app.main import _warm_up_models; _warm_up_models(); print('models trained')"
+
+      - name: Package ML service + models
+        run: |
+          tar -czf apex-ml-${{ steps.tag.outputs.tag }}.tar.gz \
+            --exclude='.venv' \
+            --exclude='__pycache__' \
+            --exclude='.pytest_cache' \
+            --exclude='logs/*' \
+            -C backend/python_ml .
+
+      - name: Verify models included
+        run: tar -tzf apex-ml-${{ steps.tag.outputs.tag }}.tar.gz | grep -E 'models/' | head -5
+
+      - name: Upload ML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-ml
+          path: backend/python_ml/apex-ml-${{ steps.tag.outputs.tag }}.tar.gz
+
+  apk:
+    name: Build APK
+    uses: ./.github/workflows/apk.yml
+
+  release:
+    name: Publish GitHub Release
+    needs: [backend, ml, apk]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          TAG="${{ github.event_name == 'push' && github.ref_name || format('v{0}', inputs.version) }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -lh release-assets
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > release-notes.md <<'EOF'
+          Backend, ML service (with pre-trained models) and Android APK for ${{ steps.tag.outputs.tag }}.
+
+          - **apex-backend** — Node/Express + Prisma bundle. Run: `npm ci --omit=dev && npm run db:generate && npm start`
+          - **apex-ml** — Python FastAPI service with trained model artifacts. Run: `pip install -r requirements.txt && uvicorn app.main:app --port 8001`
+          - **APK** — installable Android release build (signed with the debug keystore).
+          EOF
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            release-assets/*.tar.gz \
+            release-assets/*.apk \
+            --title "Apex ${{ steps.tag.outputs.tag }}" \
+            --notes-file release-notes.md \
+            --generate-notes

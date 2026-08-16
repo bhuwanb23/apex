@@ -1,0 +1,45 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apex/**'
+      - '.github/workflows/app.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apex/**'
+      - '.github/workflows/app.yml'
+
+jobs:
+  check:
+    name: Lint, typecheck & bundle
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apex
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apex/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Compile the full web bundle — catches import errors, invalid assets and
+      # router wiring that typecheck alone cannot see.
+      - name: Web bundle
+        run: npx expo export --platform web

@@ -1,0 +1,67 @@
+name: Android APK
+
+on:
+  # Reusable — the Release workflow calls this to get the APK for a release.
+  workflow_call:
+    outputs:
+      apk:
+        description: Path to the built release APK
+        value: ${{ jobs.build.outputs.apk }}
+  # Manual trigger: Actions → Android APK → Run workflow.
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build release APK
+    runs-on: ubuntu-latest
+    outputs:
+      apk: apex/android/app/build/outputs/apk/release/app-release.apk
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apex/package-lock.json
+
+      - name: Install JS dependencies
+        working-directory: apex
+        run: npm ci
+
+      # Generates the native android/ project (managed workflow — android/ is
+      # not committed). --no-install skips npm install inside prebuild.
+      - name: Prebuild Android project
+        working-directory: apex
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # Point Gradle at the SDK explicitly (defensive — the generated project
+      # reads ANDROID_HOME, but local.properties is the canonical source).
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > apex/android/local.properties
+
+      - name: Build release APK
+        working-directory: apex/android
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+          # Expands the ANDROID_HOME set by setup-android for this step (the
+          # local.properties written above is the canonical source Gradle uses).
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-apk
+          path: apex/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

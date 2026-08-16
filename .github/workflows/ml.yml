@@ -1,0 +1,45 @@
+name: ML Service CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/python_ml/**'
+      - '.github/workflows/ml.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/python_ml/**'
+      - '.github/workflows/ml.yml'
+
+jobs:
+  test:
+    name: Test models & endpoints
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/python_ml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/python_ml/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -q
+
+      # Boot the model warmup (the same path FastAPI runs on startup). This
+      # verifies the ML stack imports and the models actually train from the
+      # committed training data — and produces the model artifacts locally.
+      - name: Model warmup smoke test
+        run: python -c "from app.main import _warm_up_models; _warm_up_models(); print('warmup OK')"
