@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ApexLogo } from '@/components/apex-logo';
+import { ApexOrb } from '@/components/apex-logo';
 import { AppIcon } from '@/components/ui/icon';
 import { Chip } from '@/components/ui/chip';
 import { SPORTS, type SportId } from '@/data/mock/sports';
@@ -26,7 +26,7 @@ export function AppHeader({ title, activeSport, onSelectSport, right }: AppHeade
     <View style={styles.wrap}>
       <View style={styles.topRow}>
         <View style={styles.brand}>
-          <ApexLogo size={34} />
+          <ApexOrb size={34} />
           <Text style={styles.title}>{title}</Text>
         </View>
         <View style={styles.actions}>
