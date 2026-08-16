@@ -1,30 +1,37 @@
 ---
-workflow: faceless-explainer
+workflow: product-launch-video
 flow: automation
 storyboard: no
-message: "Raw sports chaos becomes clear, personalized intelligence"
+message: "Million-dollar sports decisions should be backed by evidence, not gut feel"
 destination: youtube
 aspect: 1920x1080
 language: en
-audience: "trainers, coaches, analysts, and sports fans learning what Apex is"
+audience: "hackathon judges, trainers, coaches, analysts, and sports fans"
 length: 60s
-angle: narrative
+angle: product-demo
+VO_MODE: verbatim
+style_preset: blue-professional
 ---
 
 ## Intent
 
-Polished narrated concept explainer for **Apex Sports Intelligence**. Scene-by-scene storyboard pacing with kinetic type and abstract diagrams only — **no phones, no screenshots, no app UI**. Calm premium motion. Arc: game noise → need for a brief → three pillars as ideas → Story Mode payoff → brand lockup.
+Confident 60s product promo for **Apex Sports Intelligence** from `story_script.md`. Dark cinematic hook and questions, then high-fidelity HTML phone demos of Injury / Decisions / Momentum matching the real Expo app, technology credibility, and a clean Apex lockup. Tone: confident, clean, no fluff.
 
 ## Assets
 
-- Brand colors and orb/wordmark invented in-frame from Apex tokens (no captured media).
+- `story_script.md` — verbatim VO and director notes (source of truth)
+- Invented high-fidelity HTML phone UI from Apex design tokens (not low-fi promo PNG mocks)
+- Optional HeyGen/local catalog sports stills for hook; graphic metaphors if catalog empty
 
 ## Customizations
 
-- Faceless visuals: kinetic type, pillar diagrams, logo assemble.
-- VO + cinematic bed + light SFX.
+- Phone mockups required (~420–480px), sharp HTML screens (risk 84, coach EV, momentum bars)
+- Hold half a second before/after the fourth-and-one line
+- Music: silent/near-silent hook → tension from 0:10 → peak at product → resolve at closer
+- Captions on
 
 ## Notes
 
-- Colors: primary `#5856D6`, gradient `#FF5C8A` / `#5856D6` / `#FFA058`, canvas `#F0F1F5`, ink `#14121F`.
-- Leave `videos/Apex-promo` untouched.
+- Colors: outer black `#0A0A0C` / white type; app canvas `#F0F1F5`; purple `#5856D6`; risk `#E5484D`; success `#2FA36B`; orb gradient pink/purple/orange
+- Leave `videos/aqx-promo` untouched
+- Do not scrape a website — no-capture product path

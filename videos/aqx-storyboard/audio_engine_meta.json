@@ -14,46 +14,52 @@
     {
       "id": "01",
       "path": "assets/voice/01.wav",
-      "duration_s": 4.949,
+      "duration_s": 5.227,
       "words": []
     },
     {
       "id": "02",
       "path": "assets/voice/02.wav",
-      "duration_s": 5.888,
+      "duration_s": 8.021,
       "words": []
     },
     {
       "id": "03",
       "path": "assets/voice/03.wav",
-      "duration_s": 7.488,
+      "duration_s": 1.195,
       "words": []
     },
     {
       "id": "04",
       "path": "assets/voice/04.wav",
-      "duration_s": 6.123,
+      "duration_s": 11.371,
       "words": []
     },
     {
       "id": "05",
       "path": "assets/voice/05.wav",
-      "duration_s": 7.488,
+      "duration_s": 9.557,
       "words": []
     },
     {
       "id": "06",
       "path": "assets/voice/06.wav",
-      "duration_s": 5.739,
+      "duration_s": 9.579,
       "words": []
     },
     {
       "id": "07",
       "path": "assets/voice/07.wav",
-      "duration_s": 6.613,
+      "duration_s": 23.765,
+      "words": []
+    },
+    {
+      "id": "08",
+      "path": "assets/voice/08.wav",
+      "duration_s": 4.629,
       "words": []
     }
   ],
   "sfx": [],
-  "total_duration_s": 44.288
+  "total_duration_s": 73.344
 }

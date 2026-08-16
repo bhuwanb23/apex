@@ -4,38 +4,41 @@
   "lines": [
     {
       "id": "01",
-      "text": "This is Apex. Sports intelligence — made personal for how you work."
+      "text": "Sports teams make million dollar decisions every single day. On gut feeling."
     },
     {
       "id": "02",
-      "text": "Every game dumps noise — box scores, play-by-play, gut feel, and endless highlight takes."
+      "text": "Every coach, every trainer, every front office asks these three questions. Nobody has been able to answer them. Until now."
     },
     {
       "id": "03",
-      "text": "Apex turns that chaos into a brief you can act on — shaped for trainers, coaches, analysts, and fans."
+      "text": "Meet Apex."
     },
     {
       "id": "04",
-      "text": "First pillar: injury risk. Traffic-light thinking so you know who's at risk — before they get hurt."
+      "text": "Apex compares every player to themselves — not the league average. When a player's workload spikes beyond their personal baseline, we catch it before it becomes an injury."
     },
     {
       "id": "05",
-      "text": "Second: decisions. Grade every coaching call on pure logic and expected value — not just the final score."
+      "text": "Every coaching decision is graded on expected value — not outcome. The right call on fourth and one is still right, even if the play fails."
     },
     {
       "id": "06",
-      "text": "Third: momentum. Scrub the run and ask — is it statistically real, or just a story?"
+      "text": "And momentum? We tested it. With a Cox proportional hazard model across thousands of games. Hockey — real. Baseball — myth. Now you know."
     },
     {
       "id": "07",
-      "text": "Then plain-English insight you can share. Apex Sports Intelligence. Clear. Personalized."
+      "text": "Real data. Real math. Free APIs covering NBA, NFL, and MLB. Z-score deviation models. Win probability engines. Statistical significance — explained in plain English for everyone in the room. From athletic trainers to coaches to fans — everyone gets the same intelligence, in the language they understand."
+    },
+    {
+      "id": "08",
+      "text": "Apex. Because the best decision was always the one backed by evidence."
     }
   ],
   "bgm": {
     "mode": "retrieve",
-    "query": "cinematic ambient · confident · clean · premium explainer",
-    "blob": "Raw sports chaos becomes clear, personalized intelligence",
-    "arc": "Narrative — noise → brief → three pillars → story payoff → lockup"
-  },
-  "voice": "am_michael"
+    "query": "cinematic tension build · confident peak · clean resolve · silent open",
+    "blob": "Million-dollar sports decisions should be backed by evidence, not gut feel",
+    "arc": "Hook → Three questions → Product demo → Technology → Lockup"
+  }
 }
