@@ -1,18 +1,20 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import { File, Paths } from 'expo-file-system';
 
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { DistributionBar } from '@/components/ui/bar';
-import { LineChart } from '@/components/ui/chart';
+import { LineChart, type ChartPoint } from '@/components/ui/chart';
 import { AppIcon } from '@/components/ui/icon';
 import { GradientView } from '@/components/ui/gradient';
 import { type Player } from '@/data/mock/players';
 import { SPORT_BY_ID } from '@/data/mock/sports';
-import { useTeamRoster } from '@/data/live/injury';
+import { useTeamRoster, useTeamRiskHistory } from '@/data/live/injury';
 import { formatRiskScore } from '@/lib/format';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
@@ -20,11 +22,35 @@ import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/error-state';
 import { DataFreshness } from '@/components/ui/data-freshness';
+import { api } from '@/lib/api';
 
 type ZoneFilter = 'all' | 'red' | 'yellow' | 'green';
 type SortKey = 'risk' | 'name' | 'position';
 
 const SORT_LABEL: Record<SortKey, string> = { risk: 'Risk Score', name: 'Name', position: 'Position' };
+
+/** "MM/DD" from an ISO date — chart labels for real trend points. */
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/** Real team-average risk points (score → normalized 0..1, high at top). */
+function pointsFromTeamHistory(
+  history: { date: string; score: number }[]
+): { points: ChartPoint[]; labels: string[]; maxScore: number } {
+  const n = history.length;
+  const maxScore = Math.max(...history.map(h => h.score), 40) * 1.15;
+  const points: ChartPoint[] = history.map((h, i) => ({
+    x: n > 1 ? i / (n - 1) : 0.5,
+    y: Math.max(0.04, Math.min(0.96, 1 - h.score / maxScore)),
+  }));
+  const labels =
+    n > 3
+      ? [shortDate(history[0].date), shortDate(history[Math.floor(n / 2)].date), shortDate(history[n - 1].date)]
+      : history.map(h => shortDate(h.date));
+  return { points, labels, maxScore };
+}
 
 export default function TeamRiskScreen() {
   const router = useRouter();
@@ -33,16 +59,23 @@ export default function TeamRiskScreen() {
   const [filter, setFilter] = useState<ZoneFilter>('all');
   const [sort, setSort] = useState<SortKey>('risk');
   const [chartOpen, setChartOpen] = useState(true);
+  const [selectedPoint, setSelectedPoint] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const { activeSport } = useOnboarding();
   const { status } = useBackend();
 
-  const { players: roster, loading, error, lastUpdated, refetch: refetchRoster } = useTeamRoster(teamName, activeSport);
+  const { players: roster, teamId, loading, error, lastUpdated, refetch: refetchRoster } = useTeamRoster(teamName, activeSport);
+  const history = useTeamRiskHistory(teamId, activeSport);
   const sport = SPORT_BY_ID[roster[0]?.sport ?? activeSport];
 
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
   const showSkeleton = loading && !backendOffline;
-  const { refreshControl } = usePullRefresh(refetchRoster);
+  const { refreshControl } = usePullRefresh(() => {
+    refetchRoster();
+    history.refetch();
+  });
 
   const counts = {
     red: roster.filter(p => p.zone === 'red').length,
@@ -58,10 +91,62 @@ export default function TeamRiskScreen() {
       return a.position.localeCompare(b.position);
     });
 
-  const trend = [0.3, 0.35, 0.28, 0.42, 0.38, 0.5, 0.46, 0.58, 0.52, 0.6, 0.55, 0.64].map((y, i) => ({
-    x: i / 11,
-    y,
-  }));
+  // Real team-average trend from the backend; a deterministic fallback when
+  // offline or when the team has no history yet.
+  const realTrend = history.points.length > 1 ? pointsFromTeamHistory(history.points) : null;
+  const trendPoints: ChartPoint[] = realTrend
+    ? realTrend.points
+    : [0.3, 0.35, 0.28, 0.42, 0.38, 0.5, 0.46, 0.58, 0.52, 0.6, 0.55, 0.64].map((y, i) => ({
+        x: i / 11,
+        y,
+      }));
+  const trendLabels = realTrend ? realTrend.labels : ['30d', '20d', '10d', 'Now'];
+  const selectedHistory = selectedPoint != null ? history.points[selectedPoint] : null;
+
+  /**
+   * Export team report PDF — end to end: request the backend-generated PDF,
+   * then save/share it. Web downloads the file; native writes it to the app
+   * cache and opens the system share sheet.
+   */
+  const exportReport = async () => {
+    if (exporting || teamId == null) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const bytes = await api.teamReportPdf(teamId);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const filename = `${teamName.replace(/[^\w-]+/g, '-')}-risk-report.pdf`;
+
+      if (Platform.OS === 'web') {
+        // Browser download: object URL + anchor click (no native modules needed).
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      } else {
+        // Native: write to the cache dir, then open the share sheet with it.
+        const file = new File(Paths.cache, filename);
+        await file.write(new Uint8Array(bytes));
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(file.uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Export team risk report',
+            UTI: 'com.adobe.pdf',
+          });
+        } else {
+          setExportError('Sharing is not available on this device');
+        }
+      }
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Could not export the report');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <Screen refreshControl={refreshControl}>
@@ -156,16 +241,63 @@ export default function TeamRiskScreen() {
                 { color: '#2FA36B', value: counts.green, label: 'green' },
               ]}
             />
-            <Text style={styles.chartLabel}>Risk over last 30 days</Text>
-            <LineChart series={[{ name: 'Team risk', color: '#5856D6', points: trend }]} height={100} gridLabels={['30d', '20d', '10d', 'Now']} />
+            <View style={styles.trendHeader}>
+              <Text style={styles.chartLabel}>Team risk over last 30 days</Text>
+              {history.loading && !backendOffline ? <Text style={styles.trendStatus}>loading…</Text> : null}
+            </View>
+            {selectedHistory ? (
+              <View style={styles.tooltipChip}>
+                <AppIcon name="location.fill" size={12} color="#5856D6" />
+                <Text style={styles.tooltipText}>
+                  {shortDate(selectedHistory.date)} · {formatRiskScore(selectedHistory.score)} team risk ·{' '}
+                  {selectedHistory.playersScored} players scored
+                </Text>
+              </View>
+            ) : null}
+            <LineChart
+              series={[{ name: 'Team risk', color: '#5856D6', points: trendPoints }]}
+              height={140}
+              gridLabels={trendLabels}
+              yLabels={['High', '', '', 'Low']}
+              showDots
+              bands={[
+                { y0: 0, y1: 0.3, color: '#E5484D' },
+                { y0: 0.3, y1: 0.5, color: '#F5A623' },
+              ]}
+              selectedPoint={selectedPoint != null ? { series: 0, point: selectedPoint } : null}
+              onPointPress={(_si, pi) => setSelectedPoint(pi === selectedPoint ? null : pi)}
+            />
+            <Text style={styles.chartCaption}>
+              {realTrend
+                ? `Real backend scores — daily average across the roster. Tap a dot to inspect that day.`
+                : `Synthetic preview — real scores appear once risk history is available for this team. Tap a dot for details.`}
+            </Text>
           </View>
         ) : null}
       </Card>
 
-      <Pressable style={styles.exportBtn}>
-        <AppIcon name="doc.fill" size={15} color="#5856D6" />
-        <Text style={styles.exportText}>Export team report PDF</Text>
+      {/* Export PDF */}
+      <Pressable
+        style={[styles.exportBtn, exporting && styles.exportBtnBusy]}
+        onPress={exportReport}
+        disabled={exporting || teamId == null}
+        accessibilityRole="button"
+        accessibilityLabel="Export team report PDF">
+        {exporting ? (
+          <Text style={styles.exportText}>Generating PDF…</Text>
+        ) : (
+          <>
+            <AppIcon name="doc.fill" size={15} color="#5856D6" />
+            <Text style={styles.exportText}>Export team report PDF</Text>
+          </>
+        )}
       </Pressable>
+      {exportError ? (
+        <View style={styles.exportErrorRow}>
+          <AppIcon name="exclamationmark.triangle.fill" size={13} color="#E5484D" />
+          <Text style={styles.exportErrorText}>{exportError}</Text>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -387,6 +519,36 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#14121F',
   },
+  trendHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  trendStatus: {
+    fontSize: 11,
+    color: '#9AA0B5',
+    fontStyle: 'italic',
+  },
+  tooltipChip: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EFEEFB',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  tooltipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#5856D6',
+  },
+  chartCaption: {
+    fontSize: 11.5,
+    color: '#9AA0B5',
+    lineHeight: 16,
+  },
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -398,9 +560,24 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#5856D6',
   },
+  exportBtnBusy: {
+    opacity: 0.6,
+  },
   exportText: {
     color: '#5856D6',
     fontWeight: '700',
     fontSize: 14,
+  },
+  exportErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+  },
+  exportErrorText: {
+    fontSize: 12,
+    color: '#E5484D',
+    fontWeight: '600',
   },
 });

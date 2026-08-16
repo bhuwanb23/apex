@@ -263,6 +263,14 @@ export interface TeamRiskResponse {
   lastUpdated: string;
 }
 
+export interface TeamRiskHistoryResponse {
+  teamId: number;
+  teamName: string;
+  sport: string;
+  /** One point per snapshot day, oldest first. */
+  history: { date: string; avgRiskScore: number; playersScored: number; avgMinutesZ: number | null }[];
+}
+
 export interface RiskHistoryResponse {
   playerId: string;
   playerName: string;
@@ -498,6 +506,28 @@ export const api = {
     apiFetch<PlayerRiskResponse>(`/api/injury/player/${playerId}${qs({ recalculate })}`),
   teamRisk: (teamId: number, recalculate = false) =>
     apiFetch<TeamRiskResponse>(`/api/injury/team/${teamId}${qs({ recalculate: recalculate || undefined })}`),
+  teamRiskHistory: (teamId: number, days = 30) =>
+    apiFetch<TeamRiskHistoryResponse>(`/api/injury/team/${teamId}/history${qs({ days })}`),
+  /** Fetches the team report PDF as an ArrayBuffer (not JSON). */
+  teamReportPdf: async (teamId: number): Promise<ArrayBuffer> => {
+    await loadStoredBaseUrl();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/injury/team/${teamId}/report`, {
+        signal: controller.signal,
+        headers: { Accept: 'application/pdf' },
+      });
+      if (!res.ok) throw new ApiError(`Report request failed (${res.status})`, res.status);
+      return await res.arrayBuffer();
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      if (err instanceof Error && err.name === 'AbortError') throw new ApiError('Report request timed out');
+      throw new ApiError(err instanceof Error ? err.message : 'Network error');
+    } finally {
+      clearTimeout(timer);
+    }
+  },
   playerRiskHistory: (playerId: string | number, days = 60) =>
     apiFetch<RiskHistoryResponse>(`/api/injury/player/${playerId}/history${qs({ days })}`),
   injuryCounts: (sport: string) => apiFetch<InjuryCountsResponse>(`/api/injury/counts/${sport}`),

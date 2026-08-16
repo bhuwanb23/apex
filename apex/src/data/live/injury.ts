@@ -229,6 +229,8 @@ export function usePlayerRisk(playerId: string | undefined, sport: SportId) {
 
 export interface TeamRosterResult {
   players: Player[];
+  /** Resolved backend team id (used by the PDF export + trend endpoints). */
+  teamId: number | null;
   source: DataSource;
   lastUpdated: string | null;
   loading: boolean;
@@ -267,36 +269,64 @@ export function useTeamRoster(teamRef: string | undefined, sport: SportId) {
     () => (teamId !== undefined ? [] : PLAYERS.filter(p => p.team === teamRef)),
     [teamRef, teamId]
   );
-  const result = useApiData<{ players: Player[]; lastUpdated: string | null }>(
+  const result = useApiData<{ players: Player[]; teamId: number | null; lastUpdated: string | null }>(
     async opts => {
       if (!teamRef) return null;
       let roster: TeamRiskResponse | null = null;
+      let resolvedId: number | null = null;
       if (teamId !== undefined) {
         roster = await api.teamRisk(teamId, opts?.recalculate ?? false);
+        resolvedId = teamId;
       } else {
         const teams = await api.teams(sport);
         const team = resolveTeam(teams.teams, teamRef);
         if (!team) return null;
+        resolvedId = team.id;
         roster = await api.teamRisk(team.id, opts?.recalculate ?? false);
       }
       if (!roster || roster.players.length === 0) return null;
       return {
         players: roster.players.map(p => profileToPlayer(p, sport)),
+        teamId: resolvedId,
         lastUpdated: roster.lastUpdated,
       };
     },
-    { players: fallback, lastUpdated: null },
+    { players: fallback, teamId: null, lastUpdated: null },
     [teamRef, sport, teamId],
     teamRef ? `team:${teamRef}` : undefined
   );
   return {
     players: result.data.players,
+    teamId: result.data.teamId,
     source: result.source,
     lastUpdated: result.source === 'live' ? result.data.lastUpdated : null,
     loading: result.loading,
     error: result.error,
     refetch: result.refetch,
   } satisfies TeamRosterResult;
+}
+
+/** Real team-average risk trend from the backend (the chart's points). */
+export function useTeamRiskHistory(teamId: number | null, sport: SportId) {
+  const result = useApiData<{ points: { date: string; score: number; playersScored: number }[]; generatedAt: string | null }>(
+    async () => {
+      if (teamId == null) return null;
+      const res = await api.teamRiskHistory(teamId, 30);
+      if (res.history.length === 0) return null;
+      return {
+        points: res.history.map(h => ({ date: h.date, score: h.avgRiskScore, playersScored: h.playersScored })),
+        generatedAt: null,
+      };
+    },
+    { points: [], generatedAt: null },
+    [teamId, sport]
+  );
+  return {
+    points: result.data.points,
+    loading: result.loading,
+    error: result.error,
+    refetch: result.refetch,
+  };
 }
 
 /** Real team names for the sport (dashboard team picker) — mock names often
