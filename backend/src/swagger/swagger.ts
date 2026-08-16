@@ -6,10 +6,10 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'AQX Sports Intelligence API',
+      title: 'Apex Sports Intelligence API',
       version: pkg.version,
       description:
-        'REST API for AQX Sports Intelligence — data ingestion, sports analytics, and model-backed predictions served by the Node.js backend.',
+        'REST API for Apex Sports Intelligence — data ingestion, sports analytics, and model-backed predictions served by the Node.js backend.',
     },
     servers: [{ url: `http://localhost:${env.PORT}`, description: 'Local development' }],
     tags: [

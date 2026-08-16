@@ -512,7 +512,7 @@ try {
   // land in logs/combined.log instead (same fields, machine-readable).
   const bannerLine = linesMatching(
     'logs/combined.log',
-    '"msg":"AQX Sports Intelligence backend started"'
+    '"msg":"Apex Sports Intelligence backend started"'
   ).at(-1) as Record<string, unknown> | undefined;
   check(
     'T10. banner printed version/environment/port',

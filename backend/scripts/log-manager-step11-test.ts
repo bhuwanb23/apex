@@ -168,7 +168,7 @@ try {
   // -------------------------------------------------------------------------
   console.log('T4. startup banner:');
   logStartupBanner({
-    appName: 'AQX Sports Intelligence',
+    appName: 'Apex Sports Intelligence',
     version: '0.1.0',
     environment: 'development',
     port: 8000,

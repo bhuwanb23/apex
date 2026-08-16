@@ -8,7 +8,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().max(65535).default(8000),
-  APP_NAME: z.string().min(1).default('AQX Sports Intelligence'),
+  APP_NAME: z.string().min(1).default('Apex Sports Intelligence'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
   // Python ML microservice
