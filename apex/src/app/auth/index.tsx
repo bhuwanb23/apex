@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-import { AqxOrb } from '@/components/aqx-logo';
+import { ApexOrb } from '@/components/apex-logo';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -45,8 +45,8 @@ export default function AuthScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.hero}>
         <View style={styles.orbGlow} />
-        <AqxOrb size={88} />
-        <Text style={styles.title}>AQX Sports Intelligence</Text>
+        <ApexOrb size={88} />
+        <Text style={styles.title}>Apex Sports Intelligence</Text>
         <Text style={styles.subtitle}>Sign in to your dashboard</Text>
       </View>
 

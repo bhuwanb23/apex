@@ -8,11 +8,13 @@ import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton, SkeletonGames } from '@/components/ui/skeleton';
 import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Coach } from '@/data/mock/coaches';
 import { useRecentGames } from '@/data/live/games';
 import { useCoachLeaderboard } from '@/data/live/decisions';
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
 import { DataFreshness } from '@/components/ui/data-freshness';
 import { api, type SportInfo } from '@/lib/api';
 
@@ -63,6 +65,7 @@ function useBackendSeasons(sport: SportId): string[] {
 export default function CoachLeaderboardScreen() {
   const router = useRouter();
   const { activeSport } = useOnboarding();
+  const { status } = useBackend();
   // Sport comes from device storage (the plan's rule) — the leaderboard
   // follows the user's selected sport on load and when it changes. The chips
   // below remain a per-screen browse override until the sport changes again.
@@ -87,7 +90,7 @@ export default function CoachLeaderboardScreen() {
     setSeason(undefined);
   };
 
-  const { coaches, generatedAt, refetch: refetchLeaderboard } = useCoachLeaderboard(sport, {
+  const { coaches, generatedAt, loading, refetch: refetchLeaderboard } = useCoachLeaderboard(sport, {
     season,
     decisionType: DECISION_TYPE_KEYS[decisionType],
     gameType: GAME_TYPE_KEYS[gameType],
@@ -98,6 +101,11 @@ export default function CoachLeaderboardScreen() {
   const reviewGames = recentGames.data;
   const podium = coaches.slice(0, 3);
   const rest = coaches.slice(3);
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showBoardSkeleton = loading && !backendOffline;
+  const showGamesSkeleton = recentGames.loading && !backendOffline;
 
   return (
     <Screen>
@@ -126,7 +134,32 @@ export default function CoachLeaderboardScreen() {
         </View>
       </View>
 
-      {coaches.length === 0 ? (
+      {showBoardSkeleton ? (
+        <>
+          {/* Podium skeleton — same layout as the real podium */}
+          <View style={styles.podiumRow}>
+            <PodiumSkeleton height={96} />
+            <PodiumSkeleton height={132} />
+            <PodiumSkeleton height={96} />
+          </View>
+
+          {/* Full list skeleton */}
+          <Card style={styles.listCard} padded={false}>
+            {[0, 1, 2, 3, 4].map(i => (
+              <View key={i} style={[styles.row, i !== 4 && styles.rowBorder]}>
+                <Skeleton width={22} height={14} radius={4} />
+                <View style={styles.rowBody}>
+                  <Skeleton width="70%" height={13} radius={6} />
+                  <Skeleton width="45%" height={10} radius={5} />
+                </View>
+                <Skeleton width={38} height={11} radius={5} />
+                <Skeleton width={44} height={15} radius={5} />
+                <Skeleton width={14} height={14} radius={7} />
+              </View>
+            ))}
+          </Card>
+        </>
+      ) : coaches.length === 0 ? (
         <EmptyState
           icon="trophy.fill"
           title={`No coach data for ${sport} · ${season ?? 'current season'}`}
@@ -172,26 +205,30 @@ export default function CoachLeaderboardScreen() {
       {/* Game reviews — live recent games for the sport */}
       <View>
         <Text style={styles.gameSectionTitle}>Game decision reviews</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gameRow}>
-          {reviewGames.map(game => (
-            <Pressable key={game.id} onPress={() => router.push({ pathname: '/decisions/game', params: { gameId: game.id } })}>
-              <Card style={styles.gameCard}>
-                <Text style={styles.gameDate}>{game.date}</Text>
-                <Text style={styles.gameTeams} numberOfLines={1}>
-                  {game.homeTeam} {game.homeScore} – {game.awayScore} {game.awayTeam}
-                </Text>
-                <View style={styles.gameMetaRow}>
-                  <Text style={styles.gameMetaText}>
-                    {game.homeEvRate > 0 || game.awayEvRate > 0
-                      ? `${game.homeEvRate}% vs ${game.awayEvRate}% EV rate`
-                      : `${game.sport} · review decisions`}
+        {showGamesSkeleton ? (
+          <SkeletonGames />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gameRow}>
+            {reviewGames.map(game => (
+              <Pressable key={game.id} onPress={() => router.push({ pathname: '/decisions/game', params: { gameId: game.id } })}>
+                <Card style={styles.gameCard}>
+                  <Text style={styles.gameDate}>{game.date}</Text>
+                  <Text style={styles.gameTeams} numberOfLines={1}>
+                    {game.homeTeam} {game.homeScore} – {game.awayScore} {game.awayTeam}
                   </Text>
-                  <AppIcon name="chevron.right" size={13} color="#9AA0B5" />
-                </View>
-              </Card>
-            </Pressable>
-          ))}
-        </ScrollView>
+                  <View style={styles.gameMetaRow}>
+                    <Text style={styles.gameMetaText}>
+                      {game.homeEvRate > 0 || game.awayEvRate > 0
+                        ? `${game.homeEvRate}% vs ${game.awayEvRate}% EV rate`
+                        : `${game.sport} · review decisions`}
+                    </Text>
+                    <AppIcon name="chevron.right" size={13} color="#9AA0B5" />
+                  </View>
+                </Card>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </View>
     </Screen>
   );
@@ -224,6 +261,22 @@ function PodiumSpot({ coach, rank, onPress }: { coach: Coach; rank: 1 | 2 | 3; o
         <Text style={styles.podiumRate}>{coach.evRate}%</Text>
       </View>
     </Pressable>
+  );
+}
+
+/** Podium-shaped skeleton — avatar + name/team lines + a tall bar. */
+function PodiumSkeleton({ height }: { height: number }) {
+  return (
+    <View style={styles.podiumSpot}>
+      <View style={styles.podiumAvatarWrap}>
+        <Skeleton width={54} height={54} radius={27} />
+      </View>
+      <Skeleton width={54} height={12} radius={6} />
+      <Skeleton width={40} height={10} radius={5} />
+      <View style={[styles.podiumSkeletonBar, { height }]}>
+        <Skeleton width={34} height={13} radius={6} />
+      </View>
+    </View>
   );
 }
 
@@ -307,6 +360,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
+  },
+  podiumSkeletonBar: {
+    width: 84,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+    backgroundColor: '#E4E5EC',
   },
   listCard: {
     paddingVertical: 4,

@@ -2,15 +2,15 @@ import { DefaultTheme, Redirect, Stack, ThemeProvider, useSegments } from 'expo-
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
-import { AqxSplashOverlay } from '@/components/aqx-splash';
+import { ApexSplashOverlay } from '@/components/apex-splash';
 import { BackendProvider } from '@/context/backend';
 import { AuthProvider, useAuth } from '@/context/auth';
 import { OnboardingProvider, useOnboarding } from '@/context/onboarding';
 
 SplashScreen.preventAutoHideAsync();
 
-/** Navigation theme locked to the light AQX design (matches the reference). */
-const AqxTheme = {
+/** Navigation theme locked to the light Apex design (matches the reference). */
+const ApexTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
@@ -41,7 +41,7 @@ function RootNavigator() {
   const segments = useSegments();
   const top = segments[0];
 
-  // Storage not yet read — keep the splash up (AqxSplashOverlay is on top).
+  // Storage not yet read — keep the splash up (ApexSplashOverlay is on top).
   if (!authHydrated || !onboardingHydrated) return null;
 
   // URL-aware gate. On web the URL drives routing — setting Stack.Screen name
@@ -77,12 +77,12 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider value={AqxTheme}>
+    <ThemeProvider value={ApexTheme}>
       <BackendProvider>
         <AuthProvider>
           <OnboardingProvider>
             <StatusBar style="dark" />
-            <AqxSplashOverlay />
+            <ApexSplashOverlay />
             <RootNavigator />
           </OnboardingProvider>
         </AuthProvider>

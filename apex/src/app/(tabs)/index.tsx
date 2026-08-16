@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AqxLogo } from '@/components/aqx-logo';
+import { ApexLogo } from '@/components/apex-logo';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
 import { StatTile } from '@/components/ui/stat';
@@ -72,7 +72,7 @@ export default function HomeScreen() {
     <Screen>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <AqxLogo size={38} />
+        <ApexLogo size={38} />
         <View style={styles.topActions}>
           <Pressable onPress={cycleActiveSport} style={styles.sportBadgeWrap} accessibilityLabel={`Active sport: ${sportInfo.short}. Tap to change`}>
             <GradientView colors={sportInfo.gradient} style={styles.sportBadge}>

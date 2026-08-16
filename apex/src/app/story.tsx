@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
-import { AqxOrb } from '@/components/aqx-logo';
+import { ApexOrb } from '@/components/apex-logo';
 import { AppIcon } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
 import { MOMENTUM_VERDICTS } from '@/data/mock/sports';
@@ -157,8 +157,8 @@ export default function StoryModal() {
         <View style={styles.handle} />
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <AqxOrb size={30} />
-            <Text style={styles.headerTitle}>AQX Story Mode</Text>
+            <ApexOrb size={30} />
+            <Text style={styles.headerTitle}>Apex Story Mode</Text>
           </View>
           <Pressable onPress={() => router.back()} hitSlop={10} style={styles.closeBtn}>
             <AppIcon name="xmark" size={16} color="#14121F" />

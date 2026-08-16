@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
-import { AqxOrb } from '@/components/aqx-logo';
+import { ApexOrb } from '@/components/apex-logo';
 import { AppIcon, type IconName } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -40,7 +40,7 @@ export default function WelcomeScreen() {
       <View style={styles.hero}>
         <Animated.View entering={FadeIn.duration(700)} style={styles.orbWrap}>
           <View style={styles.orbGlow} />
-          <AqxOrb size={96} />
+          <ApexOrb size={96} />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(180).duration(550)} style={styles.titleWrap}>
@@ -54,7 +54,7 @@ export default function WelcomeScreen() {
 
         <Animated.View entering={FadeInDown.delay(320).duration(550)}>
           <Text style={styles.tagline}>
-            AQX turns injury risk, coaching decisions, and momentum into clear personal insights.
+            Apex turns injury risk, coaching decisions, and momentum into clear personal insights.
           </Text>
           <Text style={styles.taglineSub}>Built for trainers, coaches, analysts, and fans.</Text>
         </Animated.View>

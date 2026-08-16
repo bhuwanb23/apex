@@ -180,8 +180,8 @@ export default function SettingsScreen() {
     {
       id: 'what',
       icon: 'sparkles',
-      title: 'What is AQX',
-      body: 'AQX Sports Intelligence analyzes injury risk, grades coaching decisions, and measures momentum across NBA, NFL, MLB, and NHL — turning raw play-by-play data into plain-English insight.',
+      title: 'What is Apex',
+      body: 'Apex Sports Intelligence analyzes injury risk, grades coaching decisions, and measures momentum across NBA, NFL, MLB, and NHL — turning raw play-by-play data into plain-English insight.',
     },
     {
       id: 'sources',
@@ -207,7 +207,7 @@ export default function SettingsScreen() {
           <AppIcon name="person.crop.circle.fill" size={40} color="#5856D6" />
         </View>
         <View style={styles.profileBody}>
-          <Text style={styles.profileName}>{user?.name ?? 'AQX User'}</Text>
+          <Text style={styles.profileName}>{user?.name ?? 'Apex User'}</Text>
           <Text style={styles.profileRole}>{user?.email ?? roleLabel}</Text>
         </View>
         <Pressable style={styles.changeBtn} onPress={() => router.push('/settings/role-preferences')}>

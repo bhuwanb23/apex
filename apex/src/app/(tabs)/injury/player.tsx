@@ -118,7 +118,7 @@ export default function PlayerRiskScreen() {
 
   const share = () => {
     Share.share({
-      message: `${player.name} (${player.team}) — AQX risk score ${player.riskScore}/100. ${player.explanation}`,
+      message: `${player.name} (${player.team}) — Apex risk score ${player.riskScore}/100. ${player.explanation}`,
     }).catch(() => {});
   };
 

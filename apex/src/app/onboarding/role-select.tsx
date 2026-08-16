@@ -62,7 +62,7 @@ export default function RoleSelectScreen() {
       <StepIndicator step={2} total={2} />
 
       <View style={styles.header}>
-        <Text style={styles.title}>How will you use AQX?</Text>
+        <Text style={styles.title}>How will you use Apex?</Text>
         <Text style={styles.subtitle}>This personalizes your dashboard</Text>
       </View>
 

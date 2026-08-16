@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import { ZoneBadge, type Zone } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton, SkeletonCard, SkeletonRow } from '@/components/ui/skeleton';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
 import { useLeaguePlayers, useTeamRoster, useTeams } from '@/data/live/injury';
@@ -20,6 +22,7 @@ import { DataFreshness } from '@/components/ui/data-freshness';
 export default function InjuryDashboardScreen() {
   const router = useRouter();
   const { activeSport } = useOnboarding();
+  const { status } = useBackend();
   const [sport, setSport] = useState<SportId>(activeSport);
   const [view, setView] = useState<'league' | 'team'>('league');
 
@@ -63,6 +66,11 @@ export default function InjuryDashboardScreen() {
 
   const lastUpdated = view === 'league' ? league.lastUpdated : team.lastUpdated;
 
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showLeagueSkeleton = league.loading && !backendOffline;
+  const showTeamSkeleton = team.loading && !backendOffline;
+
   const selectSport = (id: SportId) => {
     setSport(id);
     setSelectedTeam(null);
@@ -98,61 +106,91 @@ export default function InjuryDashboardScreen() {
       </View>
 
       {view === 'league' ? (
-        <>
-          <Card style={styles.summaryCard}>
-            <View style={styles.summaryTop}>
-              <Text style={styles.summaryTitle}>Risk distribution</Text>
-              <Text style={styles.summaryCount}>
-                {redCount + yellowCount + greenCount} players tracked
-              </Text>
+        showLeagueSkeleton ? (
+          <>
+            {/* Summary card skeleton */}
+            <SkeletonCard lines={4} />
+            <Text style={styles.sectionLabel}>Top red zone players</Text>
+            <View style={styles.listGap}>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
             </View>
-            <DistributionBar
-              segments={[
-                { color: '#E5484D', value: redCount, label: 'red' },
-                { color: '#F5A623', value: yellowCount, label: 'yellow' },
-                { color: '#2FA36B', value: greenCount, label: 'green' },
-              ]}
-            />
-            <View style={styles.legendRow}>
-              <LegendItem color="#E5484D" label={`${redCount} red`} />
-              <LegendItem color="#F5A623" label={`${yellowCount} yellow`} />
-              <LegendItem color="#2FA36B" label={`${greenCount} green`} />
+          </>
+        ) : (
+          <>
+            <Card style={styles.summaryCard}>
+              <View style={styles.summaryTop}>
+                <Text style={styles.summaryTitle}>Risk distribution</Text>
+                <Text style={styles.summaryCount}>
+                  {redCount + yellowCount + greenCount} players tracked
+                </Text>
+              </View>
+              <DistributionBar
+                segments={[
+                  { color: '#E5484D', value: redCount, label: 'red' },
+                  { color: '#F5A623', value: yellowCount, label: 'yellow' },
+                  { color: '#2FA36B', value: greenCount, label: 'green' },
+                ]}
+              />
+              <View style={styles.legendRow}>
+                <LegendItem color="#E5484D" label={`${redCount} red`} />
+                <LegendItem color="#F5A623" label={`${yellowCount} yellow`} />
+                <LegendItem color="#2FA36B" label={`${greenCount} green`} />
+              </View>
+            </Card>
+
+            {sportPlayers.length === 0 ? (
+              <EmptyState
+                icon="heart.text.square.fill"
+                title={`No player data for ${sport} yet`}
+                subtitle="Risk scores appear here once game logs are available for this league."
+                accent="#5856D6"
+              />
+            ) : (
+              <>
+                <Text style={styles.sectionLabel}>Top red zone players</Text>
+                <View style={styles.listGap}>
+                  {topRed.map(player => (
+                    <Pressable
+                      key={player.id}
+                      onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
+                      <LeagueRow player={player} />
+                    </Pressable>
+                  ))}
+                </View>
+                {topRed.length === 0 ? (
+                  <EmptyState
+                    icon="checkmark"
+                    title="No players in the red zone"
+                    subtitle="Everyone in this league is within their normal workload range."
+                  />
+                ) : null}
+                <PillButton
+                  label={`View all ${redCount} red zone players`}
+                  variant="outline"
+                  onPress={() => router.push('/injury/alerts')}
+                />
+              </>
+            )}
+          </>
+        )
+      ) : showTeamSkeleton ? (
+        <>
+          <Card style={styles.rosterCard}>
+            <Skeleton width="55%" height={18} radius={6} />
+            {/* Team summary bar skeleton */}
+            <View style={styles.summaryBar}>
+              <Skeleton width={34} height={24} radius={6} />
+              <Skeleton width={34} height={24} radius={6} />
+              <Skeleton width={34} height={24} radius={6} />
+            </View>
+            <View style={styles.rosterList}>
+              {[0, 1, 2, 3, 4].map(i => (
+                <Skeleton key={i} height={44} radius={10} />
+              ))}
             </View>
           </Card>
-
-          {sportPlayers.length === 0 ? (
-            <EmptyState
-              icon="heart.text.square.fill"
-              title={`No player data for ${sport} yet`}
-              subtitle="Risk scores appear here once game logs are available for this league."
-              accent="#5856D6"
-            />
-          ) : (
-            <>
-              <Text style={styles.sectionLabel}>Top red zone players</Text>
-              <View style={styles.listGap}>
-                {topRed.map(player => (
-                  <Pressable
-                    key={player.id}
-                    onPress={() => router.push({ pathname: '/injury/player', params: { playerId: player.id } })}>
-                    <LeagueRow player={player} />
-                  </Pressable>
-                ))}
-              </View>
-              {topRed.length === 0 ? (
-                <EmptyState
-                  icon="checkmark"
-                  title="No players in the red zone"
-                  subtitle="Everyone in this league is within their normal workload range."
-                />
-              ) : null}
-              <PillButton
-                label={`View all ${redCount} red zone players`}
-                variant="outline"
-                onPress={() => router.push('/injury/alerts')}
-              />
-            </>
-          )}
         </>
       ) : (
         <>
