@@ -346,8 +346,12 @@ async function seedNbaGames(teamPlayers: Map<string, number[]>): Promise<{ games
   const games: { id: number; homeTeamId: number; awayTeamId: number; date: Date }[] = [];
   const byTeam = new Map<number, { id: number; date: Date }[]>();
 
-  // 15 game days × 10 games/day = 150 games; each team plays ~10 times.
-  const DAYS = 15;
+  // 30 game days × 10 games/day = 300 games; each team plays ~20 times.
+  // A 30-day span guarantees the injury model's 21-day baseline window (which
+  // sits 7-28 days before the most recent game) has >= 5 games per player, so
+  // a recompute after the 6h freshness TTL still produces a real score instead
+  // of insufficient_data (the seeded rows only serve fresh for 6h).
+  const DAYS = 30;
   const PER_DAY = 10;
   let seq = 0;
   for (let d = DAYS - 1; d >= 0; d -= 1) {
@@ -402,13 +406,32 @@ async function seedGameLogs(
     select: { id: true, abbreviation: true },
   });
   const abbrById = new Map(teams.map(t => [t.id, t.abbreviation]));
+
+  // Map player name → id so red/yellow stars get a genuine workload spike in
+  // the recent window. Without this, a recompute after the 6h freshness TTL
+  // would score everyone green (uniform minutes → z ≈ 0).
+  const players = await prisma.players.findMany({
+    where: { sportId: NBA_ID },
+    select: { id: true, name: true },
+  });
+  const idByName = new Map(players.map(p => [p.name, p.id]));
+  const RED_IDS = new Set(RED_ZONE_STARS.map(n => idByName.get(n)).filter((x): x is number => x != null));
+  const YELLOW_IDS = new Set(YELLOW_ZONE.map(n => idByName.get(n)).filter((x): x is number => x != null));
+
   const logs: {
     playerId: number; gameId: number; teamId: number; date: Date; minutesPlayed: number;
+    distanceCovered: number; highIntensityEvents: number;
     backToBack: boolean; daysRestBefore: number; gamesLast7Days: number; gamesLast14Days: number;
     gamesLast21Days: number; points: number; assists: number; rebounds: number;
   }[] = [];
 
+  // Most recent game date anchors the model's windows: baseline = 7-28 days
+  // before it, recent = last 7 days.
+  const maxDate = Math.max(...games.map(g => g.date.getTime()));
+
   for (const game of games) {
+    const daysAgo = (maxDate - game.date.getTime()) / DAY_MS;
+    const isRecentWindow = daysAgo <= 7; // model's 7-day recent window
     for (const teamId of [game.homeTeamId, game.awayTeamId]) {
       const abbr = abbrById.get(teamId);
       const playerIds = abbr ? teamPlayers.get(abbr) ?? [] : [];
@@ -416,13 +439,42 @@ async function seedGameLogs(
       const active = playerIds.slice(0, 12);
       for (let i = 0; i < active.length; i += 1) {
         const starter = i < 5;
-        const minutes = starter ? 30 + Math.floor(rng() * 8) : 12 + Math.floor(rng() * 14);
+        const playerId = active[i];
+        // Workload profile: stars play a normal baseline, then spike all three
+        // metrics in the recent window so the model's z-score recompute (after
+        // the 6h freshness TTL expires) reproduces the seeded zones:
+        //   red:    all three metrics spike hard in the recent window
+        //           (minutes +~12, distance +~30%, intensity +~75%) → z >> 2,
+        //           score ≈ 85-95 → red (>66)
+        //   yellow: minutes-only bump (+~4) → z ≈ 2, score ≈ 35-45 → yellow
+        //           (distance/intensity stay flat so it can't overshoot red)
+        //   green:  uniform workload → z ≈ 0 → green
+        // Composite score math (model caps): minutes ≤40, distance ≤25,
+        // intensity ≤20 pts, so red (>66) needs all three to spike.
+        let minutes: number;
+        let distance: number;
+        let intensity: number;
+        if (RED_IDS.has(playerId)) {
+          minutes = isRecentWindow ? 38 + Math.floor(rng() * 6) : 26 + Math.floor(rng() * 5);
+          distance = isRecentWindow ? 3100 + Math.floor(rng() * 500) : 2400 + Math.floor(rng() * 300);
+          intensity = isRecentWindow ? 48 + Math.floor(rng() * 12) : 26 + Math.floor(rng() * 8);
+        } else if (YELLOW_IDS.has(playerId)) {
+          minutes = isRecentWindow ? 32 + Math.floor(rng() * 4) : 28 + Math.floor(rng() * 4);
+          distance = 2500 + Math.floor(rng() * 300);
+          intensity = 26 + Math.floor(rng() * 8);
+        } else {
+          minutes = starter ? 30 + Math.floor(rng() * 8) : 12 + Math.floor(rng() * 14);
+          distance = starter ? 2400 + Math.floor(rng() * 400) : 1300 + Math.floor(rng() * 500);
+          intensity = starter ? 24 + Math.floor(rng() * 8) : 12 + Math.floor(rng() * 8);
+        }
         logs.push({
-          playerId: active[i],
+          playerId,
           gameId: game.id,
           teamId,
           date: game.date,
           minutesPlayed: minutes,
+          distanceCovered: distance,
+          highIntensityEvents: intensity,
           backToBack: false,
           daysRestBefore: 1 + Math.floor(rng() * 3),
           gamesLast7Days: 3 + Math.floor(rng() * 3),
