@@ -53,11 +53,11 @@ jobs:
 
       - name: Build release APK
         working-directory: apex/android
+        # The setup-android action sets ANDROID_HOME in the runner env; using
+        # ${{ env.ANDROID_HOME }} here would resolve to EMPTY (action-set vars
+        # are not in the env context), which can shadow the good value. The
+        # local.properties written above is the canonical source Gradle uses.
         run: ./gradlew assembleRelease --no-daemon
-        env:
-          # Expands the ANDROID_HOME set by setup-android for this step (the
-          # local.properties written above is the canonical source Gradle uses).
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -1,6 +1,6 @@
 <div align="center">
 
-# AQX Sports Intelligence
+# APEX - AQX Sports Intelligence
 
 **Injury risk · Coaching decisions · Momentum — powered by real sports data and statistical models**
 
