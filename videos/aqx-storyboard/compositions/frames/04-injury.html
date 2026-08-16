@@ -4,8 +4,43 @@
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
       .clip { position: absolute; }
       #bg { inset: 0; background: #0A0A0C; }
+      #glowL {
+        width: 820px; height: 820px; left: -220px; top: 120px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(229,72,77,0.38) 0%, transparent 68%);
+      }
+      #glowR {
+        width: 700px; height: 700px; right: -180px; left: auto; top: -80px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(88,86,214,0.28) 0%, transparent 70%);
+      }
+      #glowB {
+        width: 640px; height: 640px; left: 1100px; bottom: -160px; top: auto; border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,92,138,0.22) 0%, transparent 70%);
+      }
+      #grid {
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(229,72,77,0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(229,72,77,0.06) 1px, transparent 1px);
+        background-size: 72px 72px;
+        mask-image: radial-gradient(ellipse at 58% 48%, #000 18%, transparent 75%);
+      }
+      .panel {
+        width: 320px; padding: 20px 22px; border-radius: 20px;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; backdrop-filter: blur(10px);
+      }
+      .panel .k { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #E5484D; }
+      .panel .v { margin-top: 8px; font-size: 28px; font-weight: 900; }
+      .panel .d { margin-top: 6px; font-size: 14px; color: #9AA0B5; line-height: 1.4; }
+      #p1 { left: 70px; top: 520px; }
+      #p2 { right: 70px; left: auto; top: 220px; }
+      #p3 { right: 90px; left: auto; top: 420px; }
+      #wave {
+        left: 0; right: 0; bottom: 0; height: 220px;
+        background: linear-gradient(180deg, transparent, rgba(229,72,77,0.12));
+      }
       #phone {
-        left: 50%; top: 70px; width: 440px; height: 900px; margin-left: -220px;
+        left: 50%; top: 70px; width: 440px; height: 900px; margin-left: -180px;
         border-radius: 48px; border: 12px solid #111; overflow: hidden; background: #F0F1F5;
         box-shadow: 0 50px 140px rgba(229,72,77,0.22);
       }
@@ -28,11 +63,8 @@
       .ring-wrap { position: relative; width: 148px; height: 148px; }
       .ring-wrap svg { width: 148px; height: 148px; transform: rotate(-90deg); }
       .ring-wrap .track { fill: none; stroke: #FDEBEC; stroke-width: 12; }
-      .ring-wrap .arc { fill: none; stroke: #E5484D; stroke-width: 12; stroke-linecap: round;
-        stroke-dasharray: 402; stroke-dashoffset: 402; }
-      .score-center {
-        position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
-      }
+      .ring-wrap .arc { fill: none; stroke: #E5484D; stroke-width: 12; stroke-linecap: round; stroke-dasharray: 402; stroke-dashoffset: 402; }
+      .score-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
       .score-num { font-size: 42px; font-weight: 900; color: #E5484D; line-height: 1; }
       .score-cap { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #6E7280; }
       .badge {
@@ -46,26 +78,42 @@
       .card h4 { font-size: 13px; font-weight: 700; color: #14121F; margin: 0 0 6px; }
       .card p { font-size: 13px; line-height: 1.45; color: #6E7280; margin: 0; }
       .row { display: flex; gap: 10px; }
-      .stat {
-        flex: 1; background: #fff; border: 1px solid #E4E5EC; border-radius: 14px; padding: 12px;
-        text-align: center;
-      }
+      .stat { flex: 1; background: #fff; border: 1px solid #E4E5EC; border-radius: 14px; padding: 12px; text-align: center; }
       .stat b { display: block; font-size: 18px; color: #14121F; font-weight: 800; }
       .stat span { font-size: 11px; color: #6E7280; }
-      #callout {
-        left: 80px; top: 180px; width: 360px; color: #fff;
-      }
-      #callout .kicker { font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5856D6; }
+      #callout { left: 70px; top: 160px; width: 380px; color: #fff; }
+      #callout .kicker { font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #FF8A8E; }
       #callout .big { margin-top: 12px; font-size: 36px; font-weight: 800; line-height: 1.2; }
     </style>
 
     <div id="bg" class="clip" data-start="0" data-duration="11.371" data-track-index="0"></div>
-    <div id="callout" class="clip" data-start="0" data-duration="11.371" data-track-index="1">
+    <div id="glowL" class="clip" data-start="0" data-duration="11.371" data-track-index="1"></div>
+    <div id="glowR" class="clip" data-start="0" data-duration="11.371" data-track-index="2"></div>
+    <div id="glowB" class="clip" data-start="0" data-duration="11.371" data-track-index="3"></div>
+    <div id="grid" class="clip" data-start="0" data-duration="11.371" data-track-index="4"></div>
+    <div id="wave" class="clip" data-start="0" data-duration="11.371" data-track-index="5"></div>
+
+    <div id="callout" class="clip" data-start="0" data-duration="11.371" data-track-index="6">
       <div class="kicker">Injury Risk</div>
       <div class="big">Compare each player to themselves — not the league.</div>
     </div>
+    <div id="p1" class="clip panel" data-start="0" data-duration="11.371" data-track-index="7">
+      <div class="k">Baseline</div>
+      <div class="v">Personal</div>
+      <div class="d">Not league average — each athlete’s own workload history.</div>
+    </div>
+    <div id="p2" class="clip panel" data-start="0" data-duration="11.371" data-track-index="8">
+      <div class="k">Signal</div>
+      <div class="v">+28%</div>
+      <div class="d">Minutes spike vs own baseline</div>
+    </div>
+    <div id="p3" class="clip panel" data-start="0" data-duration="11.371" data-track-index="9">
+      <div class="k">Action</div>
+      <div class="v">Catch early</div>
+      <div class="d">Flag risk before it becomes an injury.</div>
+    </div>
 
-    <div id="phone" class="clip" data-start="0" data-duration="11.371" data-track-index="2">
+    <div id="phone" class="clip" data-start="0" data-duration="11.371" data-track-index="10">
       <div class="notch"></div>
       <div class="screen">
         <div class="hdr">
@@ -110,8 +158,16 @@
       gsap.set("#arc", { strokeDasharray: circ, strokeDashoffset: circ });
       gsap.set("#badge", { opacity: 0, y: 8 });
       gsap.set("#explain", { opacity: 0, y: 12 });
+      gsap.set(["#p1","#p2","#p3"], { opacity: 0, y: 20 });
+      tl.fromTo("#glowL", { x: -40, opacity: 0.5 }, { x: 30, opacity: 1, duration: 11, ease: "sine.inOut" }, 0);
+      tl.fromTo("#glowR", { x: 20, opacity: 0.4 }, { x: -40, opacity: 1, duration: 11, ease: "sine.inOut" }, 0);
+      tl.fromTo("#glowB", { scale: 0.9, opacity: 0.3 }, { scale: 1.15, opacity: 0.9, duration: 11, ease: "sine.inOut" }, 0);
+      tl.fromTo("#wave", { opacity: 0.3 }, { opacity: 1, duration: 4 }, 0);
       tl.fromTo("#phone", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: "power3.out" }, 0.05);
       tl.fromTo("#callout", { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.7 }, 0.2);
+      tl.to("#p2", { opacity: 1, y: 0, duration: 0.5 }, 1.4);
+      tl.to("#p3", { opacity: 1, y: 0, duration: 0.5 }, 2.0);
+      tl.to("#p1", { opacity: 1, y: 0, duration: 0.5 }, 2.6);
       tl.to("#arc", { strokeDashoffset: target, duration: 1.6, ease: "power2.out" }, 0.7);
       tl.to({ n: 0 }, { n: 84, duration: 1.6, ease: "power2.out", onUpdate: function() {
         document.getElementById("scoreNum").textContent = String(Math.round(this.targets()[0].n));

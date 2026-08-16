@@ -4,6 +4,37 @@
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
       .clip { position: absolute; }
       #bg { inset: 0; background: #0A0A0C; }
+      #glowL {
+        width: 800px; height: 800px; left: -220px; top: 80px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(47,163,107,0.38) 0%, transparent 68%);
+      }
+      #glowR {
+        width: 680px; height: 680px; right: -140px; left: auto; top: -60px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(88,86,214,0.28) 0%, transparent 70%);
+      }
+      #glowB {
+        width: 560px; height: 560px; left: 1200px; bottom: -120px; top: auto; border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,160,88,0.2) 0%, transparent 70%);
+      }
+      #grid {
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(47,163,107,0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(47,163,107,0.07) 1px, transparent 1px);
+        background-size: 70px 70px;
+        mask-image: radial-gradient(ellipse at 55% 45%, #000 18%, transparent 74%);
+      }
+      .tagcard {
+        width: 280px; padding: 18px 20px; border-radius: 18px;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff;
+      }
+      .tagcard .k { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9AA0B5; }
+      .tagcard .v { margin-top: 8px; font-size: 26px; font-weight: 900; }
+      .tagcard .d { margin-top: 6px; font-size: 13px; color: #9AA0B5; line-height: 1.4; }
+      #t1 { left: 70px; top: 200px; } #t1 .v { color: #4CC38A; }
+      #t2 { left: 70px; top: 400px; } #t2 .v { color: #B0B5C6; }
+      #t3 { right: 70px; left: auto; top: 220px; } #t3 .v { color: #8B89E8; }
+      #t4 { right: 80px; left: auto; top: 420px; } #t4 .v { color: #FFA058; }
       #phone {
         left: 50%; top: 70px; width: 440px; height: 900px; margin-left: -220px;
         border-radius: 48px; border: 12px solid #111; overflow: hidden; background: #F0F1F5;
@@ -46,7 +77,33 @@
     </style>
 
     <div id="bg" class="clip" data-start="0" data-duration="9.579" data-track-index="0"></div>
-    <div id="phone" class="clip" data-start="0" data-duration="9.579" data-track-index="1">
+    <div id="glowL" class="clip" data-start="0" data-duration="9.579" data-track-index="1"></div>
+    <div id="glowR" class="clip" data-start="0" data-duration="9.579" data-track-index="2"></div>
+    <div id="glowB" class="clip" data-start="0" data-duration="9.579" data-track-index="3"></div>
+    <div id="grid" class="clip" data-start="0" data-duration="9.579" data-track-index="4"></div>
+
+    <div id="t1" class="clip tagcard" data-start="0" data-duration="9.579" data-track-index="5">
+      <div class="k">Hockey</div>
+      <div class="v">Real</div>
+      <div class="d">Scoring runs raise hazard — statistically.</div>
+    </div>
+    <div id="t2" class="clip tagcard" data-start="0" data-duration="9.579" data-track-index="6">
+      <div class="k">Baseball</div>
+      <div class="v">Myth</div>
+      <div class="d">Runs don’t change who scores next.</div>
+    </div>
+    <div id="t3" class="clip tagcard" data-start="0" data-duration="9.579" data-track-index="7">
+      <div class="k">Model</div>
+      <div class="v">Cox PH</div>
+      <div class="d">Thousands of games tested.</div>
+    </div>
+    <div id="t4" class="clip tagcard" data-start="0" data-duration="9.579" data-track-index="8">
+      <div class="k">p-value</div>
+      <div class="v">0.03</div>
+      <div class="d">Hockey effect is significant.</div>
+    </div>
+
+    <div id="phone" class="clip" data-start="0" data-duration="9.579" data-track-index="9">
       <div class="notch"></div>
       <div class="screen">
         <div class="title">Momentum</div>
@@ -80,7 +137,15 @@
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       gsap.set(["#b1","#b2","#b3","#b4"], { width: "0%" });
+      gsap.set(["#t1","#t2","#t3","#t4"], { opacity: 0, y: 18 });
+      tl.fromTo("#glowL", { x: -30, opacity: 0.45 }, { x: 40, opacity: 1, duration: 9.5, ease: "sine.inOut" }, 0);
+      tl.fromTo("#glowR", { x: 20, opacity: 0.4 }, { x: -30, opacity: 1, duration: 9.5, ease: "sine.inOut" }, 0);
+      tl.fromTo("#glowB", { scale: 0.95, opacity: 0.25 }, { scale: 1.12, opacity: 0.85, duration: 9.5, ease: "sine.inOut" }, 0);
       tl.fromTo("#phone", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.85, ease: "power3.out" }, 0.05);
+      tl.to("#t1", { opacity: 1, y: 0, duration: 0.45 }, 0.8);
+      tl.to("#t3", { opacity: 1, y: 0, duration: 0.45 }, 1.1);
+      tl.to("#t2", { opacity: 1, y: 0, duration: 0.45 }, 1.5);
+      tl.to("#t4", { opacity: 1, y: 0, duration: 0.45 }, 1.9);
       tl.fromTo("#verdict", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.55 }, 0.7);
       tl.to("#b1", { width: "92%", duration: 1.0, ease: "power2.out" }, 1.6);
       tl.to("#b2", { width: "48%", duration: 0.9, ease: "power2.out" }, 1.9);
