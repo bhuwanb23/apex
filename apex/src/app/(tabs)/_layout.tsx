@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Platform, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,7 +19,25 @@ function tabIcon(name: IconName) {
   };
 }
 
+/**
+ * Tapping a tab must land on that tab's home screen, never on a pushed detail
+ * screen. Each module tab hosts a Stack (e.g. injury → player/team/alerts), so
+ * navigating deep (Home → Injury alerts) then tapping the tab would otherwise
+ * re-show the stale pushed screen instead of the tab root.
+ */
+type TabPressListener = (event: { preventDefault: () => void }) => void;
+function popToTabRoot(router: ReturnType<typeof useRouter>, href: `/injury` | `/decisions` | `/momentum`): TabPressListener {
+  return event => {
+    // Prevent the default "focus existing stack" behavior and navigate to the
+    // tab's landing route instead — expo-router pops back to it if it's already
+    // in the stack, otherwise opens it fresh.
+    event.preventDefault();
+    router.navigate(href);
+  };
+}
+
 export default function TabLayout() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { defaultModule } = useOnboarding();
   const bottomInset = Platform.OS === 'android' ? Math.max(insets.bottom, 12) : insets.bottom + 8;
@@ -56,14 +74,17 @@ export default function TabLayout() {
       <Tabs.Screen
         name="injury"
         options={{ title: 'Injury', tabBarIcon: tabIcon('heart.text.square.fill') }}
+        listeners={{ tabPress: popToTabRoot(router, '/injury') }}
       />
       <Tabs.Screen
         name="decisions"
         options={{ title: 'Decisions', tabBarIcon: tabIcon('checkmark.seal.fill') }}
+        listeners={{ tabPress: popToTabRoot(router, '/decisions') }}
       />
       <Tabs.Screen
         name="momentum"
         options={{ title: 'Momentum', tabBarIcon: tabIcon('bolt.fill') }}
+        listeners={{ tabPress: popToTabRoot(router, '/momentum') }}
       />
     </Tabs>
   );
