@@ -28,6 +28,8 @@ import type {
   RiskAlert,
   RiskHistoryEntry,
   RiskZone,
+  TeamRiskHistoryPoint,
+  TeamRiskHistoryResponse,
   TeamRiskSummary,
 } from '../types/injury.types.js';
 import type { SportAbbreviation } from '../types/shared.types.js';
@@ -651,5 +653,68 @@ export async function getPlayerRiskHistory(
     playerId: player.externalId,
     playerName: player.name,
     history: await loadHistory(playerId, days),
+  };
+}
+
+/**
+ * GET /api/injury/team/:teamId/history — team-average risk over time.
+ *
+ * The team trend chart: average every roster player's latest risk score per
+ * snapshot day. Players are only counted on days they actually have a score
+ * (each row's playersScored is the denominator of that day's mean), so early
+ * days with sparse data still draw a meaningful point instead of zero.
+ */
+export async function getTeamRiskHistory(
+  teamId: number,
+  days: number
+): Promise<TeamRiskHistoryResponse> {
+  const team = await prisma.teams.findUnique({
+    where: { id: teamId },
+    include: { sport: { select: { name: true } } },
+  });
+  if (!team) throw ApiError.notFound(`Team ${teamId} not found`);
+
+  const playerIds = await prisma.players.findMany({
+    where: { teamId, isActive: true },
+    select: { id: true },
+  });
+  const ids = playerIds.map(p => p.id);
+  if (ids.length === 0) {
+    return { teamId, teamName: team.name, sport: team.sport.name as SportAbbreviation, history: [] };
+  }
+
+  const rows = await prisma.injuryRiskScores.findMany({
+    where: { playerId: { in: ids }, computedAt: { gte: new Date(Date.now() - days * DAY_MS) } },
+    select: { computedAt: true, riskScore: true, minutesZScore: true },
+  });
+
+  // Group by day (local-free: slice the ISO date), then average scores per day.
+  const byDay = new Map<string, { sum: number; zSum: number; zCount: number; count: number }>();
+  for (const r of rows) {
+    const day = r.computedAt.toISOString().slice(0, 10);
+    const acc = byDay.get(day) ?? { sum: 0, zSum: 0, zCount: 0, count: 0 };
+    acc.sum += r.riskScore;
+    acc.count += 1;
+    if (r.minutesZScore != null) {
+      acc.zSum += r.minutesZScore;
+      acc.zCount += 1;
+    }
+    byDay.set(day, acc);
+  }
+
+  const history: TeamRiskHistoryPoint[] = [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, acc]) => ({
+      date,
+      avgRiskScore: Number((acc.sum / acc.count).toFixed(1)),
+      playersScored: acc.count,
+      avgMinutesZ: acc.zCount > 0 ? Number((acc.zSum / acc.zCount).toFixed(2)) : null,
+    }));
+
+  return {
+    teamId,
+    teamName: team.name,
+    sport: team.sport.name as SportAbbreviation,
+    history,
   };
 }

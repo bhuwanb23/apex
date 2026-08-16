@@ -109,6 +109,27 @@ export interface TeamRiskSummary {
   lastUpdated: string; // ISO timestamp
 }
 
+/** One day of team-average risk — the trend chart's points. */
+export interface TeamRiskHistoryPoint {
+  /** YYYY-MM-DD of the snapshot day. */
+  date: string;
+  /** Mean risk score (0-100) across the roster's latest scores that day. */
+  avgRiskScore: number;
+  /** How many roster players had a score that day (denominator of the mean). */
+  playersScored: number;
+  /** Mean z-score for the day (minutes) — secondary trend signal. */
+  avgMinutesZ: number | null;
+}
+
+/** GET /api/injury/team/:teamId/history — team-average risk over time. */
+export interface TeamRiskHistoryResponse {
+  teamId: number;
+  teamName: string;
+  sport: SportAbbreviation;
+  /** Oldest first, one point per snapshot day. */
+  history: TeamRiskHistoryPoint[];
+}
+
 /** One league-wide alert (red-zone player). */
 export interface RiskAlert {
   playerId: string;

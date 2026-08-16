@@ -4,7 +4,9 @@ import {
   getLeagueAlerts,
   getPlayerRisk,
   getPlayerRiskHistory,
+  getTeamReport,
   getTeamRisk,
+  getTeamRiskHistory,
 } from '../controllers/injury.controller.js';
 import {
   alertsCacheMiddleware,
@@ -255,6 +257,86 @@ injuryRouter.get(
   createValidator(playerIdParamsSchema, 'params'),
   createValidator(historyQuerySchema, 'query'),
   getPlayerRiskHistory
+);
+
+/**
+ * @openapi
+ * /api/injury/team/{teamId}/history:
+ *   get:
+ *     summary: Team-average risk trend
+ *     description: Average risk score across the roster per snapshot day for the team trend chart.
+ *     tags: [Injury]
+ *     parameters:
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *     responses:
+ *       200:
+ *         description: Team risk history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 success: true
+ *                 data:
+ *                   teamId: 149
+ *                   teamName: Los Angeles Lakers
+ *                   sport: NBA
+ *                   history:
+ *                     - date: '2026-07-16'
+ *                       avgRiskScore: 31.4
+ *                       playersScored: 15
+ *                       avgMinutesZ: 0.42
+ *                     - date: '2026-07-22'
+ *                       avgRiskScore: 33.8
+ *                       playersScored: 15
+ *                       avgMinutesZ: 0.51
+ *       404:
+ *         description: Team not found
+ */
+injuryRouter.get(
+  '/team/:teamId/history',
+  createValidator(teamIdParamsSchema, 'params'),
+  createValidator(historyQuerySchema, 'query'),
+  getTeamRiskHistory
+);
+
+/**
+ * @openapi
+ * /api/injury/team/{teamId}/report:
+ *   get:
+ *     summary: Team risk report (PDF)
+ *     description: Generates and returns a PDF report of the whole roster with zone summary and risk scores.
+ *     tags: [Injury]
+ *     parameters:
+ *       - in: path
+ *         name: teamId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: PDF file
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Team not found
+ */
+injuryRouter.get(
+  '/team/:teamId/report',
+  createValidator(teamIdParamsSchema, 'params'),
+  getTeamReport
 );
 
 /**
