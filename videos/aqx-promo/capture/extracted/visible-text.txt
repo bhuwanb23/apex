@@ -1,11 +1,11 @@
-﻿AQX Sports Intelligence
+Apex Sports Intelligence
 Sports Intelligence. Personalized.
 
-AQX turns injury risk, coaching decisions, and momentum into clear personal insights.
+Apex turns injury risk, coaching decisions, and momentum into clear personal insights.
 Built for trainers, coaches, analysts, and fans.
 
 Know who's at risk before they get hurt
 Grade every coaching decision on pure logic
 Find out if momentum is real or just a story
 
-AQX Sports Intelligence analyzes injury risk, grades coaching decisions, and measures momentum across NBA, NFL, MLB, and NHL — turning raw play-by-play data into plain-English insight.
+Apex Sports Intelligence analyzes injury risk, grades coaching decisions, and measures momentum across NBA, NFL, MLB, and NHL — turning raw play-by-play data into plain-English insight.
