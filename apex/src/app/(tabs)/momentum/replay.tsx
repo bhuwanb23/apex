@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -20,10 +20,14 @@ import { usePullRefresh } from '@/hooks/use-pull-refresh';
 const MAX_MOMENTUM = 70; // clamp chart domain to ±70 for readability
 
 export default function GameReplayScreen() {
+  const router = useRouter();
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
   const { activeSport } = useOnboarding();
   const { status } = useBackend();
-  const [selectedId, setSelectedId] = useState(gameId ?? GAMES[0].id);
+  // The URL query param is the source of truth for the selected game (so the
+  // URL stays shareable/bookmarkable and survives a refresh); the mock first
+  // game only shows before the picker loads or when the param is missing.
+  const selectedId = gameId ?? GAMES[0].id;
   const [progress, setProgress] = useState(1); // 0..1 through the game
   const [playing, setPlaying] = useState(false);
   const [gameQuery, setGameQuery] = useState('');
@@ -47,12 +51,12 @@ export default function GameReplayScreen() {
 
   // Arrived without a gameId (e.g. the Momentum tab quick link): once the real
   // recent games load, hop onto the first one so a live timeline shows instead
-  // of the mock fallback. Only auto-picks once per visit — the guarded
-  // render-time adjustment is the project's pattern for syncing state to
-  // changing data without an effect (see decisions/index.tsx).
+  // of the mock fallback — and write it into the URL. Only auto-picks once per
+  // visit — the guarded render-time adjustment is the project's pattern for
+  // syncing state to changing data without an effect (see decisions/index.tsx).
   const [autoPicked, setAutoPicked] = useState(false);
   if (!gameId && !autoPicked && pickerGames.length > 0) {
-    setSelectedId(pickerGames[0].id);
+    router.setParams({ gameId: pickerGames[0].id });
     setAutoPicked(true);
   }
 
@@ -171,7 +175,9 @@ export default function GameReplayScreen() {
               date={g.date}
               selected={selectedId === g.id}
               onPress={() => {
-                setSelectedId(g.id);
+                // Reflect the picked game in the URL so it's shareable and
+                // survives a refresh; the hook re-fetches from the param.
+                router.setParams({ gameId: g.id });
                 setProgress(1);
               }}
             />
