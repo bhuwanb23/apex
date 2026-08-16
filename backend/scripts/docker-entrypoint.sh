@@ -10,7 +10,7 @@
 set -e
 
 echo "[entrypoint] Pushing Prisma schema…"
-npx prisma db push --skip-generate
+npx prisma db push
 
 if [ ! -f /app/data/.seeded ]; then
   echo "[entrypoint] First boot — seeding demo data…"

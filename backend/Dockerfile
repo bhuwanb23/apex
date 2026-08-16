@@ -39,7 +39,11 @@ ENV ALLOWED_ORIGINS="http://localhost:8081,http://localhost:3000"
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/scripts ./scripts
+# Seed scripts run via tsx and import from ../src — keep the TS sources
+COPY --from=build /app/src ./src
+COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY --from=build /app/package.json ./package.json
 
 EXPOSE 8000
