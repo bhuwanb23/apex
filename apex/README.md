@@ -1,56 +1,69 @@
-# Welcome to your Expo app 👋
+# AQX Sports Intelligence — App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native (Expo) frontend for [AQX Sports Intelligence](../README.md) — the display layer for the Injury Risk, Coaching Decisions and Momentum modules. Runs on iOS, Android and the web from one codebase.
 
-## Get started
+## What's here
 
-1. Install dependencies
+- **Three tabs** — Injury (default for trainers), Decisions (default for coaches), Momentum — each with detail screens (player/team risk, coach/decision drill-down, game replay, timeout optimizer).
+- **Search** across players, teams, coaches and games, with deep links into the right detail screen.
+- **Story mode** — generates a plain-English narrative from the live backend data, shareable via the native share sheet.
+- **Role-aware UI** — Trainer / Coach / Analyst / Fan changes what's displayed (e.g. Fan hides all statistics), never what's requested.
+- **Sport-aware** — NBA / NFL / MLB / NHL selection filters every backend request.
+- **Resilient** — loading skeletons/spinners everywhere, proper empty states, per-section error states with retry, pull-to-refresh on every list, and an offline banner that shows cached/demo data with automatic retry.
+- **Editable API URL** — switch between localhost and a deployed backend from the Settings screen, no rebuild needed.
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+cd apex
+npm install
+npx expo start          # press "w" for web, or scan the QR code for a device
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The backend must be running (see the [backend README](../backend/README.md)):
 
-### Other setup steps
+- Web/simulator → http://localhost:8000 (default)
+- Physical device → the app auto-detects the dev machine's LAN IP; you can also set it manually in **Settings → API URL**, or override with `EXPO_PUBLIC_API_URL`.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Login
 
-## Learn more
+Mock auth for the demo — use the **"Use demo account"** button on the login screen (email `demo@apex.app`, password `apex1234`). Real auth (JWT/session) is planned; for now this gates the flow so onboarding shows exactly once.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Structure
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+src/
+├── app/                     # file-based routing (expo-router)
+│   ├── auth/                #   mock sign-in + demo account
+│   ├── onboarding/          #   sport + role selection (shows once)
+│   ├── settings/            #   role/sport, API URL, data freshness
+│   ├── search/              #   search input + results
+│   ├── story.tsx            #   story mode modal
+│   └── (tabs)/
+│       ├── index.tsx        #   Home (all three modules)
+│       ├── injury/          #   dashboard, alerts, player, team
+│       ├── decisions/       #   leaderboard, coach, decision, game
+│       └── momentum/        #   overview, comparison, replay, timeout
+├── components/ui/           # shared UI — screen, cards, skeleton, loading,
+│                            #   empty-state, error-state, pills, icons
+├── context/                 # auth, onboarding (sport/role), backend connectivity
+├── data/live/               # typed API client + per-screen hooks + fallback data
+├── hooks/                   # useApiData, usePullRefresh, etc.
+├── lib/                     # api.ts (backend URL resolution), storage
+└── constants/               # theme, sports, roles
+```
 
-## Join the community
+## Scripts
 
-Join our community of developers creating universal apps.
+| Script            | Purpose                              |
+| ----------------- | ------------------------------------ |
+| `npm start`       | `expo start`                         |
+| `npm run web`     | Start in web mode                    |
+| `npm run ios`     | Start + open iOS simulator           |
+| `npm run android` | Start + open Android emulator        |
+| `npm run lint`    | Expo/ESLint lint                     |
+| `node scripts/render-diagrams.mjs` | Re-render the root README's SVG diagrams to PNG |
+| `node scripts/e2e-level7.mjs`  | E2E flow in headless Chrome (onboarding → tabs → search → story → role change) |
+| `node scripts/perf-load.mjs`   | Cold/warm app-load timing measurement |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+See the [root README](../README.md) for architecture diagrams, the full demo guide, and testing docs.
