@@ -12,6 +12,7 @@ import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
 import { SkeletonRow, SkeletonCard, SkeletonGames } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { SPORT_BY_ID } from '@/data/mock/sports';
@@ -37,6 +38,13 @@ export default function HomeScreen() {
   const showDecisionSkeleton = decision.loading && !backendOffline;
   const showMomentumSkeleton = momentum.loading && !backendOffline;
   const showGamesSkeleton = games.loading && !backendOffline;
+  // A request failed while the backend itself is reachable — show a per-section
+  // error card with retry (offline failures are covered by the connectivity
+  // banner + cached data, so they don't duplicate as errors).
+  const showInjuryError = injury.error != null && !backendOffline;
+  const showDecisionError = decision.error != null && !backendOffline;
+  const showMomentumError = momentum.error != null && !backendOffline;
+  const showGamesError = games.error != null && !backendOffline;
 
   const redZone = injury.players;
   const { decision: bestDecision, coach: bestCoach } = decision;
@@ -127,7 +135,9 @@ export default function HomeScreen() {
           onAction={() => router.push('/injury/alerts')}
         />
         <View style={styles.sectionGap}>
-          {showInjurySkeleton ? (
+          {showInjuryError ? (
+            <ErrorState compact message="Could not load injury watch" onRetry={injury.retry} />
+          ) : showInjurySkeleton ? (
             <>
               <SkeletonRow />
               <SkeletonRow />
@@ -162,7 +172,9 @@ export default function HomeScreen() {
       {/* Best decision spotlight */}
       <View>
         <SectionHeader title="Best Decision This Week" emoji="🧠" actionLabel="Leaderboard" onAction={() => router.push('/decisions')} />
-        {showDecisionSkeleton ? (
+        {showDecisionError ? (
+          <ErrorState compact message="Could not load the decision spotlight" onRetry={decision.retry} />
+        ) : showDecisionSkeleton ? (
           <SkeletonCard lines={3} />
         ) : (
           <Card style={styles.spotlight}>
@@ -184,7 +196,9 @@ export default function HomeScreen() {
       {/* Momentum check */}
       <View>
         <SectionHeader title="Momentum Check" emoji="⚡" actionLabel="Explore" onAction={() => router.push({ pathname: '/momentum', params: { sport } })} />
-        {showMomentumSkeleton ? (
+        {showMomentumError ? (
+          <ErrorState compact message="Could not load momentum analysis" onRetry={momentum.retry} />
+        ) : showMomentumSkeleton ? (
           <SkeletonCard lines={2} />
         ) : (
           <Card style={styles.momentumCard}>
@@ -213,7 +227,9 @@ export default function HomeScreen() {
       {/* Last night's games */}
       <View>
         <SectionHeader title="Last Night's Games" emoji="🏀" actionLabel="Replays" onAction={() => router.push('/momentum')} />
-        {showGamesSkeleton ? (
+        {showGamesError ? (
+          <ErrorState compact message="Could not load recent games" onRetry={games.retry} />
+        ) : showGamesSkeleton ? (
           <SkeletonGames />
         ) : recentGames.length === 0 ? (
           <EmptyState

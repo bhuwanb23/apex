@@ -15,6 +15,7 @@ import { useLeagueAlerts } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { SkeletonRow } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
 import { DataFreshness } from '@/components/ui/data-freshness';
 
 type ZoneFilter = 'all' | 'red' | 'yellow';
@@ -150,7 +151,9 @@ export default function LeagueAlertsScreen() {
         </View>
       ) : null}
 
-      {showSkeleton ? (
+      {alerts.error != null && !backendOffline ? (
+        <ErrorState message={`Could not load ${sport} alerts`} onRetry={alerts.refetch} />
+      ) : showSkeleton ? (
         <View style={styles.listGap}>
           <SkeletonRow />
           <SkeletonRow />

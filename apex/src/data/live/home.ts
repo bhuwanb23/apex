@@ -199,12 +199,21 @@ export function useHomeGames(sport: SportId) {
 // Convenience: all four in one (for skeletons + demo tags)
 // ---------------------------------------------------------------------------
 
+export interface HomeSection {
+  source: DataSource;
+  loading: boolean;
+  /** Last request failure — drives the per-section error state. */
+  error: string | null;
+  /** Re-run just this section's fetcher. */
+  retry: () => void;
+}
+
 export interface HomeData {
   sport: SportId;
-  injury: { players: Player[]; source: DataSource; loading: boolean };
-  decision: { decision: Decision; coach: Coach; source: DataSource; loading: boolean };
-  momentum: { verdict: (typeof MOMENTUM_VERDICTS)[number]; source: DataSource; loading: boolean };
-  games: { games: Game[]; source: DataSource; loading: boolean };
+  injury: HomeSection & { players: Player[] };
+  decision: HomeSection & { decision: Decision; coach: Coach };
+  momentum: HomeSection & { verdict: (typeof MOMENTUM_VERDICTS)[number] };
+  games: HomeSection & { games: Game[] };
   /** Re-run all four section fetchers (pull-to-refresh). */
   refetch: () => void;
 }
@@ -225,10 +234,10 @@ export function useHomeData(): HomeData {
 
   return {
     sport: activeSport,
-    injury: { players: injury.data, source: injury.source, loading: injury.loading },
-    decision: { decision: decision.data.decision, coach: decision.data.coach, source: decision.source, loading: decision.loading },
-    momentum: { verdict: momentum.data, source: momentum.source, loading: momentum.loading },
-    games: { games: games.data, source: games.source, loading: games.loading },
+    injury: { players: injury.data, source: injury.source, loading: injury.loading, error: injury.error, retry: injury.refetch },
+    decision: { decision: decision.data.decision, coach: decision.data.coach, source: decision.source, loading: decision.loading, error: decision.error, retry: decision.refetch },
+    momentum: { verdict: momentum.data, source: momentum.source, loading: momentum.loading, error: momentum.error, retry: momentum.refetch },
+    games: { games: games.data, source: games.source, loading: games.loading, error: games.error, retry: games.refetch },
     refetch,
   };
 }

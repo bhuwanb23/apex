@@ -14,6 +14,7 @@ import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
 
 const PERIOD_BASE: Record<string, number> = { Q1: 0, Q2: 0.25, Q3: 0.5, Q4: 0.75, OT: 1 };
 
@@ -108,7 +109,7 @@ export default function GameDecisionsScreen() {
   const { status } = useBackend();
   // The game carries its sport; the screen follows the stored sport filter
   // (previously hardcoded 'NFL' — an NBA game review always fell back to demo).
-  const { game, decisions: gameDecisions, loading, refetch: refetchGame } = useGameDecisions(gameId, activeSport);
+  const { game, decisions: gameDecisions, loading, error, refetch: refetchGame } = useGameDecisions(gameId, activeSport);
   const decisions = gameDecisions.slice().sort((a, b) => decisionX(a) - decisionX(b));
 
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
@@ -125,7 +126,9 @@ export default function GameDecisionsScreen() {
     <Screen refreshControl={refreshControl}>
       <StackHeader title="Game Decisions" subtitle={`${game.date} · Regular season`} />
 
-      {showSkeleton ? (
+      {error != null && !backendOffline ? (
+        <ErrorState message="Could not load this game's decisions" onRetry={refetchGame} />
+      ) : showSkeleton ? (
         <>
           {/* Game header skeleton */}
           <Card style={styles.gameCard}>

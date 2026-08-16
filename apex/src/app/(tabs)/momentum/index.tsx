@@ -13,6 +13,7 @@ import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
 import { DataFreshness } from '@/components/ui/data-freshness';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { useMomentumAnalysis } from '@/data/live/momentum';
@@ -30,7 +31,7 @@ export default function MomentumOverviewScreen() {
   const { status } = useBackend();
   const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? activeSport);
   const [statsOpen, setStatsOpen] = useState(role === 'analyst');
-  const { data: verdictData, loading, refetch: refetchMomentum } = useMomentumAnalysis(sport);
+  const { data: verdictData, loading, error, refetch: refetchMomentum } = useMomentumAnalysis(sport);
   const verdict = verdictData as unknown as (typeof import('@/data/mock/sports').MOMENTUM_VERDICTS)[number];
   const isReal = verdict.verdict === 'real';
   const isAnalystDepth = role === 'analyst' || storyLanguage === 'technical';
@@ -58,7 +59,9 @@ export default function MomentumOverviewScreen() {
         ))}
       </View>
 
-      {showSkeleton ? (
+      {error != null && !backendOffline ? (
+        <ErrorState message={`Could not load momentum analysis for ${sport}`} onRetry={refetchMomentum} />
+      ) : showSkeleton ? (
         <>
           {/* Verdict banner skeleton */}
           <View style={[styles.verdictBanner, styles.verdictSkeleton]}>

@@ -9,6 +9,7 @@ import { LineChart, type ChartPoint, type ChartMarker } from '@/components/ui/ch
 import { Slider } from '@/components/ui/slider';
 import { AppIcon } from '@/components/ui/icon';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
 import { GAMES, type Game } from '@/data/mock/games';
 import { useRecentGames } from '@/data/live/games';
 import { useGameMomentum } from '@/data/live/momentum';
@@ -33,7 +34,7 @@ export default function GameReplayScreen() {
   // stacked a second interval — the scrubber never stopped).
   const playTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data: gameData, loading, refetch: refetchGameMomentum } = useGameMomentum(selectedId, activeSport);
+  const { data: gameData, loading, error, refetch: refetchGameMomentum } = useGameMomentum(selectedId, activeSport);
   const game = gameData ?? GAMES.find(g => g.id === selectedId) ?? GAMES[0];
   const lastTime = game.timeline[game.timeline.length - 1].time;
   // Real recent games for the sport fill the picker (fix #13 — the old mock
@@ -167,7 +168,9 @@ export default function GameReplayScreen() {
         </ScrollView>
       )}
 
-      {showSkeleton ? (
+      {error != null && !backendOffline ? (
+        <ErrorState message="Could not load this game's momentum timeline" onRetry={refetchGameMomentum} />
+      ) : showSkeleton ? (
         <>
           {/* Game header skeleton */}
           <Card style={styles.headerCard}>

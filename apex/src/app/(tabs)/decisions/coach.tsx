@@ -11,6 +11,7 @@ import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
@@ -31,7 +32,7 @@ export default function CoachDetailScreen() {
   const { coachId } = useLocalSearchParams<{ coachId: string }>();
   const { activeSport, role } = useOnboarding();
   const { status } = useBackend();
-  const { coach, decisions: coachDecisions, loading, refetch: refetchCoach } = useCoachDetail(coachId, activeSport);
+  const { coach, decisions: coachDecisions, loading, error, refetch: refetchCoach } = useCoachDetail(coachId, activeSport);
   // Display-only (the plan's role rules): fans get the plain view without the
   // statistics sections; the backend request never changes.
   const isFan = role === 'fan';
@@ -72,7 +73,9 @@ export default function CoachDetailScreen() {
     <Screen refreshControl={refreshControl}>
       <StackHeader title={coach.name} subtitle={`${coach.team} · Rank #${coach.rank}`} />
 
-      {showSkeleton ? (
+      {error != null && !backendOffline ? (
+        <ErrorState message="Could not load this coach's decisions" onRetry={refetchCoach} />
+      ) : showSkeleton ? (
         <>
           {/* Header card skeleton */}
           <Card style={styles.headerCard}>

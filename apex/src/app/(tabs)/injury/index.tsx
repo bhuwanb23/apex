@@ -13,6 +13,7 @@ import { ZoneBadge, type Zone } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/components/ui/skeleton';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
@@ -109,7 +110,9 @@ export default function InjuryDashboardScreen() {
       </View>
 
       {view === 'league' ? (
-        showLeagueSkeleton ? (
+        league.error != null && !backendOffline ? (
+          <ErrorState message="Could not load injury data" onRetry={league.refetch} />
+        ) : showLeagueSkeleton ? (
           <>
             {/* Summary card skeleton */}
             <SkeletonCard lines={4} />
@@ -178,6 +181,8 @@ export default function InjuryDashboardScreen() {
             )}
           </>
         )
+      ) : team.error != null && !backendOffline ? (
+        <ErrorState message="Could not load the team roster" onRetry={team.refetch} />
       ) : showTeamSkeleton ? (
         <>
           <Card style={styles.rosterCard}>

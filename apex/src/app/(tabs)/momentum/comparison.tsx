@@ -10,6 +10,7 @@ import { VerdictBadge } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { GradientView } from '@/components/ui/gradient';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useMomentumComparison } from '@/data/live/momentum';
 import { useBackend } from '@/context/backend';
@@ -24,7 +25,7 @@ export default function SportComparisonScreen() {
   const [season, setSeason] = useState<string | undefined>(undefined);
   const { status } = useBackend();
 
-  const { data: rankedData, loading, refetch: refetchComparison } = useMomentumComparison(season);
+  const { data: rankedData, loading, error, refetch: refetchComparison } = useMomentumComparison(season);
 
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
@@ -51,7 +52,9 @@ export default function SportComparisonScreen() {
         ))}
       </View>
 
-      {showSkeleton ? (
+      {error != null && !backendOffline ? (
+        <ErrorState message="Could not load the sport comparison" onRetry={refetchComparison} />
+      ) : showSkeleton ? (
         <>
           {/* Chart skeleton */}
           <Card style={styles.chartCard}>

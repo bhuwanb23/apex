@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { Skeleton, SkeletonGames } from '@/components/ui/skeleton';
 import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Coach } from '@/data/mock/coaches';
@@ -91,7 +92,7 @@ export default function CoachLeaderboardScreen() {
     setSeason(undefined);
   };
 
-  const { coaches, generatedAt, loading, refetch: refetchLeaderboard } = useCoachLeaderboard(sport, {
+  const { coaches, generatedAt, loading, error, refetch: refetchLeaderboard } = useCoachLeaderboard(sport, {
     season,
     decisionType: DECISION_TYPE_KEYS[decisionType],
     gameType: GAME_TYPE_KEYS[gameType],
@@ -140,7 +141,9 @@ export default function CoachLeaderboardScreen() {
         </View>
       </View>
 
-      {showBoardSkeleton ? (
+      {error != null && !backendOffline ? (
+        <ErrorState message={`Could not load the ${sport} coach leaderboard`} onRetry={refetchLeaderboard} />
+      ) : showBoardSkeleton ? (
         <>
           {/* Podium skeleton — same layout as the real podium */}
           <View style={styles.podiumRow}>

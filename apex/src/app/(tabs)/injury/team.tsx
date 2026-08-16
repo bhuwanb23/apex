@@ -17,6 +17,7 @@ import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
 import { DataFreshness } from '@/components/ui/data-freshness';
 
 type ZoneFilter = 'all' | 'red' | 'yellow' | 'green';
@@ -34,7 +35,7 @@ export default function TeamRiskScreen() {
   const { activeSport } = useOnboarding();
   const { status } = useBackend();
 
-  const { players: roster, loading, lastUpdated, refetch: refetchRoster } = useTeamRoster(teamName, activeSport);
+  const { players: roster, loading, error, lastUpdated, refetch: refetchRoster } = useTeamRoster(teamName, activeSport);
   const sport = SPORT_BY_ID[roster[0]?.sport ?? activeSport];
 
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
@@ -109,7 +110,9 @@ export default function TeamRiskScreen() {
 
       {/* Roster */}
       <Card style={styles.rosterCard} padded={false}>
-        {showSkeleton ? (
+        {error != null && !backendOffline ? (
+          <ErrorState compact message={`Could not load the ${teamName} roster`} onRetry={refetchRoster} />
+        ) : showSkeleton ? (
           <View style={styles.rosterSkeleton}>
             {[0, 1, 2, 3, 4].map(i => (
               <View key={i} style={[styles.rosterRow, i !== 4 && styles.rosterRowBorder]}>

@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PillButton } from '@/components/ui/button';
 import { DataFreshness } from '@/components/ui/data-freshness';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
 import { usePlayerRisk } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
@@ -74,7 +75,7 @@ export default function PlayerRiskScreen() {
   // Display-only (the plan's role rules): fans get plain English without the
   // statistics sections; the backend request never changes.
   const isFan = role === 'fan';
-  const { data: player, loading, refetch: refetchPlayer } = usePlayerRisk(playerId, activeSport);
+  const { data: player, loading, error, refetch: refetchPlayer } = usePlayerRisk(playerId, activeSport);
 
   // Backend confirmed offline → skip skeletons, show fallback data immediately.
   const backendOffline = status === 'offline';
@@ -137,7 +138,9 @@ export default function PlayerRiskScreen() {
     <Screen refreshControl={refreshControl}>
       <StackHeader title={player.name} subtitle={`${player.team} · ${player.position}`} />
 
-      {showSkeleton ? (
+      {error != null && !backendOffline ? (
+        <ErrorState message="Could not load player data" onRetry={refetchPlayer} />
+      ) : showSkeleton ? (
         <>
           {/* Header card skeleton */}
           <Card style={styles.headerCard}>

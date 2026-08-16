@@ -96,6 +96,7 @@ export interface LeaguePlayers {
   source: DataSource;
   lastUpdated: string | null;
   loading: boolean;
+  error: string | null;
   refetch: () => void;
 }
 
@@ -153,6 +154,7 @@ export function useLeaguePlayers(sport: SportId) {
     source: result.source,
     lastUpdated: result.source === 'live' ? result.data.generatedAt : null,
     loading: result.loading,
+    error: result.error,
     refetch: result.refetch,
   } satisfies LeaguePlayers;
 }
@@ -230,6 +232,7 @@ export interface TeamRosterResult {
   source: DataSource;
   lastUpdated: string | null;
   loading: boolean;
+  error: string | null;
   refetch: () => void;
 }
 
@@ -291,6 +294,7 @@ export function useTeamRoster(teamRef: string | undefined, sport: SportId) {
     source: result.source,
     lastUpdated: result.source === 'live' ? result.data.lastUpdated : null,
     loading: result.loading,
+    error: result.error,
     refetch: result.refetch,
   } satisfies TeamRosterResult;
 }
