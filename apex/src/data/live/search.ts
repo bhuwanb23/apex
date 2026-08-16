@@ -29,6 +29,8 @@ export interface BackendSearchState {
   source: 'live' | 'demo';
   /** Debounce gate — only query when the term has 2+ chars. */
   active: boolean;
+  /** True while a backend query for the current term is in flight. */
+  loading: boolean;
 }
 
 const DEBOUNCE_MS = 250;
@@ -36,6 +38,7 @@ const DEBOUNCE_MS = 250;
 export function useBackendSearch(term: string, scope: string): BackendSearchState {
   const { activeSport } = useOnboarding();
   const [source, setSource] = useState<'live' | 'demo'>('demo');
+  const [loading, setLoading] = useState(false);
   /** The exact term the current live results were fetched for — stale results
    *  (debounce window, failed refetch) must never render for a newer term. */
   const [servedTerm, setServedTerm] = useState('');
@@ -53,8 +56,10 @@ export function useBackendSearch(term: string, scope: string): BackendSearchStat
       if (q.length < 2) {
         setServedTerm('');
         setSource('demo');
+        setLoading(false);
         return;
       }
+      setLoading(true);
       let next: 'live' | 'demo' = 'demo';
       try {
         const [players, teams, coaches, games] = await Promise.all([
@@ -137,6 +142,7 @@ export function useBackendSearch(term: string, scope: string): BackendSearchStat
       }
       setServedTerm(q);
       setSource(next);
+      setLoading(false);
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [term, scope, activeSport, live]);
@@ -148,6 +154,7 @@ export function useBackendSearch(term: string, scope: string): BackendSearchStat
     results: fresh ? live : { players: [], teams: [], coaches: [], games: [] },
     source: fresh ? 'live' : 'demo',
     active: term.trim().length >= 2,
+    loading,
   };
 }
 
