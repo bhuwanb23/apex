@@ -11,6 +11,7 @@ import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
 import { SkeletonRow, SkeletonCard, SkeletonGames } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { SPORT_BY_ID } from '@/data/mock/sports';
@@ -212,6 +213,12 @@ export default function HomeScreen() {
         <SectionHeader title="Last Night's Games" emoji="🏀" actionLabel="Replays" onAction={() => router.push('/momentum')} />
         {showGamesSkeleton ? (
           <SkeletonGames />
+        ) : recentGames.length === 0 ? (
+          <EmptyState
+            icon="calendar"
+            title="No games played recently"
+            subtitle="No games in the last 48 hours — recent results appear here after the next slate."
+          />
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gamesRow}>
             {recentGames.map(game => (

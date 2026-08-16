@@ -207,6 +207,11 @@ export default function CoachLeaderboardScreen() {
         <Text style={styles.gameSectionTitle}>Game decision reviews</Text>
         {showGamesSkeleton ? (
           <SkeletonGames />
+        ) : reviewGames.length === 0 ? (
+          <View style={styles.noGamesRow}>
+            <AppIcon name="gamecontroller.fill" size={15} color="#9AA0B5" />
+            <Text style={styles.noGamesText}>No recent {sport} games to review yet</Text>
+          </View>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gameRow}>
             {reviewGames.map(game => (
@@ -438,6 +443,21 @@ const styles = StyleSheet.create({
   gameRow: {
     gap: 12,
     paddingRight: 8,
+  },
+  noGamesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  noGamesText: {
+    fontSize: 13,
+    color: '#6E7280',
+    fontWeight: '600',
   },
   gameCard: {
     width: 210,

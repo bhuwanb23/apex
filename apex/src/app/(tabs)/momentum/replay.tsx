@@ -139,20 +139,27 @@ export default function GameReplayScreen() {
           onChangeText={setGameQuery}
         />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gameRow}>
-        {filteredGames.map(g => (
-          <ChipLabel
-            key={g.id}
-            label={`${g.homeTeam} vs ${g.awayTeam}`}
-            date={g.date}
-            selected={selectedId === g.id}
-            onPress={() => {
-              setSelectedId(g.id);
-              setProgress(1);
-            }}
-          />
-        ))}
-      </ScrollView>
+      {filteredGames.length === 0 ? (
+        <View style={styles.noGamesRow}>
+          <AppIcon name="gamecontroller.fill" size={15} color="#9AA0B5" />
+          <Text style={styles.noGamesText}>No games found — try another team or sport</Text>
+        </View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gameRow}>
+          {filteredGames.map(g => (
+            <ChipLabel
+              key={g.id}
+              label={`${g.homeTeam} vs ${g.awayTeam}`}
+              date={g.date}
+              selected={selectedId === g.id}
+              onPress={() => {
+                setSelectedId(g.id);
+                setProgress(1);
+              }}
+            />
+          ))}
+        </ScrollView>
+      )}
 
       {showSkeleton ? (
         <>
@@ -384,6 +391,21 @@ const styles = StyleSheet.create({
   gameRow: {
     gap: 8,
     paddingRight: 8,
+  },
+  noGamesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  noGamesText: {
+    fontSize: 13,
+    color: '#6E7280',
+    fontWeight: '600',
   },
   gameChip: {
     backgroundColor: '#FFFFFF',

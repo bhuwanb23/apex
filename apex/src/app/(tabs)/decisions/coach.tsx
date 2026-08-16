@@ -10,6 +10,7 @@ import { QualityBadge, TypeChip } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { type OutcomeCell } from '@/data/mock/coaches';
@@ -210,9 +211,12 @@ export default function CoachDetailScreen() {
                 </Pressable>
               ))}
               {decisions.length === 0 ? (
-                <Card style={styles.noDecisions}>
-                  <Text style={styles.noDecisionsText}>No decisions match this filter</Text>
-                </Card>
+                <EmptyState
+                  icon="doc.fill"
+                  title="No decisions found for this filter"
+                  subtitle="Try a different decision type, outcome filter, or opponent."
+                  accent="#5856D6"
+                />
               ) : null}
             </View>
           </View>
@@ -430,13 +434,5 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '600',
     color: '#9AA0B5',
-  },
-  noDecisions: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  noDecisionsText: {
-    fontSize: 13,
-    color: '#6E7280',
   },
 });
