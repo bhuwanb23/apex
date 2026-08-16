@@ -95,6 +95,7 @@ export interface LeaguePlayers {
   counts: { red: number; yellow: number; green: number };
   source: DataSource;
   lastUpdated: string | null;
+  loading: boolean;
   refetch: () => void;
 }
 
@@ -151,6 +152,7 @@ export function useLeaguePlayers(sport: SportId) {
     counts: result.data.counts,
     source: result.source,
     lastUpdated: result.source === 'live' ? result.data.generatedAt : null,
+    loading: result.loading,
     refetch: result.refetch,
   } satisfies LeaguePlayers;
 }
@@ -227,6 +229,7 @@ export interface TeamRosterResult {
   players: Player[];
   source: DataSource;
   lastUpdated: string | null;
+  loading: boolean;
   refetch: () => void;
 }
 
@@ -287,6 +290,7 @@ export function useTeamRoster(teamRef: string | undefined, sport: SportId) {
     players: result.data.players,
     source: result.source,
     lastUpdated: result.source === 'live' ? result.data.lastUpdated : null,
+    loading: result.loading,
     refetch: result.refetch,
   } satisfies TeamRosterResult;
 }

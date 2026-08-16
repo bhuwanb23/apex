@@ -74,6 +74,7 @@ function decisionToScreen(d: CoachDecision): Decision {
 export interface LeaderboardData {
   coaches: Coach[];
   source: DataSource;
+  loading: boolean;
   /** When the backend last generated the ranking — drives freshness display. */
   generatedAt: string | null;
 }
@@ -107,6 +108,7 @@ export function useCoachLeaderboard(
   return {
     coaches: result.data,
     source: result.source,
+    loading: result.loading,
     refetch: result.refetch,
     generatedAt: result.source === 'live' ? generatedAt : null,
   };
@@ -120,6 +122,7 @@ export interface CoachDetailData {
   coach: Coach;
   decisions: Decision[];
   source: DataSource;
+  loading: boolean;
 }
 
 export function useCoachDetail(coachId: string | undefined, sport: SportId) {
@@ -163,7 +166,7 @@ export function useCoachDetail(coachId: string | undefined, sport: SportId) {
     coachId ? `coachDetail:${coachId}` : undefined
   );
 
-  return { ...result.data, source: result.source, refetch: result.refetch };
+  return { ...result.data, source: result.source, loading: result.loading, refetch: result.refetch };
 }
 
 // ---------------------------------------------------------------------------
@@ -213,5 +216,5 @@ export function useGameDecisions(gameId: string | undefined, sport: SportId) {
     gameId ? `gameDecisions:${gameId}` : undefined
   );
 
-  return { ...result.data, source: result.source, refetch: result.refetch };
+  return { ...result.data, source: result.source, loading: result.loading, refetch: result.refetch };
 }
