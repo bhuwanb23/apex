@@ -1,0 +1,96 @@
+<template>
+  <div id="root" data-composition-id="01-hook" data-start="0" data-duration="5.227" data-width="1920" data-height="1080">
+    <style>
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #fff; }
+      .clip { position: absolute; }
+      #bg { inset: 0; background: #0A0A0C; }
+      #stat {
+        left: 120px; right: 120px; top: 280px; text-align: center;
+      }
+      #pct { font-size: 180px; font-weight: 900; letter-spacing: -6px; line-height: 0.9; }
+      #pct span { color: #E5484D; }
+      #line {
+        margin-top: 28px; font-size: 36px; font-weight: 600; line-height: 1.35;
+        color: rgba(255,255,255,0.88); max-width: 1100px; margin-left: auto; margin-right: auto;
+      }
+      .flash {
+        inset: 0; display: flex; align-items: center; justify-content: center;
+        background: #0A0A0C;
+      }
+      .panel {
+        width: 720px; height: 420px; border-radius: 28px; position: relative; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: linear-gradient(145deg, #16161f 0%, #0d0d12 100%);
+        box-shadow: 0 40px 100px rgba(0,0,0,0.45);
+      }
+      .sil {
+        position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+        width: 220px; height: 280px; border-radius: 110px 110px 40px 40px;
+        background: linear-gradient(180deg, #2a2a38, #121218);
+        opacity: 0.9;
+      }
+      .sil::before {
+        content: ""; position: absolute; top: -36px; left: 50%; transform: translateX(-50%);
+        width: 88px; height: 88px; border-radius: 50%;
+        background: linear-gradient(180deg, #3a3a4a, #1a1a22);
+      }
+      .label {
+        position: absolute; left: 40px; bottom: 36px; font-size: 28px; font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .accent { position: absolute; inset: auto 0 0 0; height: 6px; }
+      #f1 .accent { background: #5856D6; }
+      #f2 .accent { background: #E5484D; }
+      #f3 .accent { background: #FFA058; }
+      .burst {
+        position: absolute; width: 480px; height: 480px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(88,86,214,0.35), transparent 70%);
+        left: 50%; top: 40%; transform: translate(-50%, -50%);
+      }
+    </style>
+
+    <div id="bg" class="clip" data-start="0" data-duration="5.227" data-track-index="0"></div>
+
+    <div id="stat" class="clip" data-start="0" data-duration="3.2" data-track-index="1">
+      <div id="pct"><span>68%</span></div>
+      <div id="line">of NBA injuries are preceded by workload spikes that go undetected.</div>
+    </div>
+
+    <div id="flash1" class="clip flash" data-start="3.2" data-duration="0.7" data-track-index="2">
+      <div class="burst"></div>
+      <div class="panel" id="f1">
+        <div class="sil"></div>
+        <div class="label">Coach. Sideline. Pressure.</div>
+        <div class="accent"></div>
+      </div>
+    </div>
+
+    <div id="flash2" class="clip flash" data-start="3.9" data-duration="0.7" data-track-index="3">
+      <div class="panel" id="f2">
+        <div class="sil" style="left:42%"></div>
+        <div class="label" style="color:#E5484D">Player. Workload spike.</div>
+        <div class="accent"></div>
+      </div>
+    </div>
+
+    <div id="flash3" class="clip flash" data-start="4.6" data-duration="0.627" data-track-index="4">
+      <div class="panel" id="f3">
+        <div class="sil" style="left:58%"></div>
+        <div class="label" style="color:#FFA058">“They’ve got all the momentum.”</div>
+        <div class="accent"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#pct", { opacity: 0, y: 30, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: "power3.out" }, 0.05);
+      tl.fromTo("#line", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, 0.45);
+      tl.fromTo("#flash1 .panel", { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.35, ease: "power2.out" }, 3.2);
+      tl.fromTo("#flash2 .panel", { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, 3.9);
+      tl.fromTo("#flash3 .panel", { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, 4.6);
+      window.__timelines["01-hook"] = tl;
+    </script>
+  </div>
+</template>

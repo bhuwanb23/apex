@@ -1,48 +1,123 @@
 <template>
-  <div id="root" data-composition-id="04-injury" data-start="0" data-duration="6.623" data-width="1920" data-height="1080">
+  <div id="root" data-composition-id="04-injury" data-start="0" data-duration="11.371" data-width="1920" data-height="1080">
     <style>
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
       .clip { position: absolute; }
-      #f04-bg { inset: 0; background: linear-gradient(160deg, #F0F1F5, #FDEBEC 140%); }
-      #f04-card {
-        left: 50%; top: 18%; width: 720px; height: 520px; margin-left: -360px;
-        background: #fff; border-radius: 28px; border: 1px solid #E4E5EC;
-        box-shadow: 0 24px 60px rgba(229,72,77,0.12);
+      #bg { inset: 0; background: #0A0A0C; }
+      #phone {
+        left: 50%; top: 70px; width: 440px; height: 900px; margin-left: -220px;
+        border-radius: 48px; border: 12px solid #111; overflow: hidden; background: #F0F1F5;
+        box-shadow: 0 50px 140px rgba(229,72,77,0.22);
       }
-      #f04-label {
-        left: 50%; top: 28%; width: 720px; margin-left: -360px; text-align: center;
-        font-size: 20px; font-weight: 800; letter-spacing: 0.22em; color: #E5484D; text-transform: uppercase;
+      .notch {
+        position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+        width: 128px; height: 30px; background: #111; border-radius: 20px; z-index: 5;
       }
-      #f04-title {
-        left: 50%; top: 36%; width: 720px; margin-left: -360px; text-align: center;
-        font-size: 56px; font-weight: 900; color: #14121F;
+      .screen { height: 100%; padding: 58px 18px 24px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; }
+      .hdr { display: flex; flex-direction: column; gap: 2px; }
+      .back { font-size: 12px; font-weight: 600; color: #4643C4; }
+      .title { font-size: 22px; font-weight: 800; color: #14121F; }
+      .sub { font-size: 13px; color: #555868; }
+      .hero {
+        background: #fff; border: 1px solid #E4E5EC; border-radius: 20px; padding: 20px 16px;
+        display: flex; flex-direction: column; align-items: center; gap: 12px;
+        box-shadow: 0 8px 24px rgba(154,160,181,0.14);
       }
-      #f04-dots { left: 50%; top: 52%; width: 240px; margin-left: -120px; display: flex; justify-content: space-between; }
-      .f04-dot { width: 48px; height: 48px; border-radius: 50%; }
-      #f04-line {
-        left: 50%; top: 66%; width: 720px; margin-left: -360px; text-align: center;
-        font-size: 28px; font-weight: 700; color: #14121F;
+      .name { font-size: 18px; font-weight: 800; color: #14121F; }
+      .meta { font-size: 12px; color: #6E7280; }
+      .ring-wrap { position: relative; width: 148px; height: 148px; }
+      .ring-wrap svg { width: 148px; height: 148px; transform: rotate(-90deg); }
+      .ring-wrap .track { fill: none; stroke: #FDEBEC; stroke-width: 12; }
+      .ring-wrap .arc { fill: none; stroke: #E5484D; stroke-width: 12; stroke-linecap: round;
+        stroke-dasharray: 402; stroke-dashoffset: 402; }
+      .score-center {
+        position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
       }
+      .score-num { font-size: 42px; font-weight: 900; color: #E5484D; line-height: 1; }
+      .score-cap { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #6E7280; }
+      .badge {
+        display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+        background: #FDEBEC; color: #C23D41; font-size: 12px; font-weight: 700;
+      }
+      .card {
+        background: #fff; border: 1px solid #E4E5EC; border-radius: 16px; padding: 14px;
+        box-shadow: 0 6px 18px rgba(154,160,181,0.12);
+      }
+      .card h4 { font-size: 13px; font-weight: 700; color: #14121F; margin: 0 0 6px; }
+      .card p { font-size: 13px; line-height: 1.45; color: #6E7280; margin: 0; }
+      .row { display: flex; gap: 10px; }
+      .stat {
+        flex: 1; background: #fff; border: 1px solid #E4E5EC; border-radius: 14px; padding: 12px;
+        text-align: center;
+      }
+      .stat b { display: block; font-size: 18px; color: #14121F; font-weight: 800; }
+      .stat span { font-size: 11px; color: #6E7280; }
+      #callout {
+        left: 80px; top: 180px; width: 360px; color: #fff;
+      }
+      #callout .kicker { font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5856D6; }
+      #callout .big { margin-top: 12px; font-size: 36px; font-weight: 800; line-height: 1.2; }
     </style>
-    <div id="f04-bg" class="clip" data-start="0" data-duration="6.623" data-track-index="0"></div>
-    <div id="f04-card" class="clip" data-start="0" data-duration="6.623" data-track-index="1"></div>
-    <div id="f04-label" class="clip" data-start="0" data-duration="6.623" data-track-index="2">Pillar 01</div>
-    <div id="f04-title" class="clip" data-start="0" data-duration="6.623" data-track-index="3">Injury Risk</div>
-    <div id="f04-dots" class="clip" data-start="0" data-duration="6.623" data-track-index="4">
-      <div class="f04-dot" style="background:#E5484D"></div>
-      <div class="f04-dot" style="background:#F5A623"></div>
-      <div class="f04-dot" style="background:#2FA36B"></div>
+
+    <div id="bg" class="clip" data-start="0" data-duration="11.371" data-track-index="0"></div>
+    <div id="callout" class="clip" data-start="0" data-duration="11.371" data-track-index="1">
+      <div class="kicker">Injury Risk</div>
+      <div class="big">Compare each player to themselves — not the league.</div>
     </div>
-    <div id="f04-line" class="clip" data-start="0" data-duration="6.623" data-track-index="5">Before they get hurt</div>
+
+    <div id="phone" class="clip" data-start="0" data-duration="11.371" data-track-index="2">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="hdr">
+          <div class="back">← Injury Risk</div>
+          <div class="title">Player Risk</div>
+          <div class="sub">NBA · Last 14 days</div>
+        </div>
+        <div class="hero">
+          <div class="name">Marcus Chen</div>
+          <div class="meta">SG · Minutes surge vs baseline</div>
+          <div class="ring-wrap">
+            <svg viewBox="0 0 148 148">
+              <circle class="track" cx="74" cy="74" r="64"></circle>
+              <circle id="arc" class="arc" cx="74" cy="74" r="64"></circle>
+            </svg>
+            <div class="score-center">
+              <div>
+                <div class="score-num" id="scoreNum">0</div>
+                <div class="score-cap">RISK</div>
+              </div>
+            </div>
+          </div>
+          <div class="badge" id="badge">● Red zone</div>
+        </div>
+        <div class="card" id="explain">
+          <h4>Plain English</h4>
+          <p>Workload spiked 28% above Marcus’s personal baseline. High injury risk until minutes normalize.</p>
+        </div>
+        <div class="row">
+          <div class="stat"><b>+28%</b><span>vs baseline</span></div>
+          <div class="stat"><b>3</b><span>spike days</span></div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script>
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
-      tl.fromTo("#f04-card", { opacity: 0, y: 40, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.85, ease: "power3.out" }, 0.05);
-      tl.fromTo("#f04-label", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0.5);
-      tl.fromTo("#f04-title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.55 }, 0.7);
-      tl.fromTo("#f04-dots .f04-dot", { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, duration: 0.4, stagger: 0.15, ease: "back.out(1.6)" }, 1.6);
-      tl.fromTo("#f04-line", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55 }, 2.4);
+      const circ = 2 * Math.PI * 64;
+      const target = circ * (1 - 0.84);
+      gsap.set("#arc", { strokeDasharray: circ, strokeDashoffset: circ });
+      gsap.set("#badge", { opacity: 0, y: 8 });
+      gsap.set("#explain", { opacity: 0, y: 12 });
+      tl.fromTo("#phone", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: "power3.out" }, 0.05);
+      tl.fromTo("#callout", { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.7 }, 0.2);
+      tl.to("#arc", { strokeDashoffset: target, duration: 1.6, ease: "power2.out" }, 0.7);
+      tl.to({ n: 0 }, { n: 84, duration: 1.6, ease: "power2.out", onUpdate: function() {
+        document.getElementById("scoreNum").textContent = String(Math.round(this.targets()[0].n));
+      }}, 0.7);
+      tl.to("#badge", { opacity: 1, y: 0, duration: 0.45 }, 2.2);
+      tl.to("#explain", { opacity: 1, y: 0, duration: 0.55 }, 3.0);
       window.__timelines["04-injury"] = tl;
     </script>
   </div>

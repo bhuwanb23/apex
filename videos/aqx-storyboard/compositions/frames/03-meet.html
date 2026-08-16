@@ -1,0 +1,70 @@
+<template>
+  <div id="root" data-composition-id="03-meet" data-start="0" data-duration="3.5" data-width="1920" data-height="1080">
+    <style>
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
+      .clip { position: absolute; }
+      #bg { inset: 0; background: radial-gradient(ellipse at 50% 30%, #1a1830 0%, #0A0A0C 65%); }
+      #phone {
+        left: 50%; top: 90px; width: 420px; height: 860px; margin-left: -210px;
+        border-radius: 48px; border: 12px solid #111; overflow: hidden; background: #F0F1F5;
+        box-shadow: 0 50px 140px rgba(88,86,214,0.28);
+      }
+      .notch {
+        position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+        width: 128px; height: 30px; background: #111; border-radius: 20px; z-index: 5;
+      }
+      .screen { height: 100%; padding: 64px 22px 28px; display: flex; flex-direction: column; gap: 16px; }
+      .orb {
+        width: 96px; height: 96px; border-radius: 50%; margin: 24px auto 8px;
+        background: linear-gradient(135deg, #FF5C8A, #5856D6, #FFA058);
+        display: grid; place-items: center;
+        box-shadow: 0 16px 40px rgba(88,86,214,0.35);
+      }
+      .orb span {
+        width: 46%; height: 46%; border-radius: 50%; background: rgba(255,255,255,0.22);
+        display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 30px;
+      }
+      .wm { text-align: center; font-size: 34px; font-weight: 900; color: #14121F; }
+      .wm i { color: #5856D6; font-style: normal; }
+      .tag { text-align: center; color: #6E7280; font-size: 14px; line-height: 1.45; padding: 0 12px; }
+      .card {
+        background: #fff; border: 1px solid #E4E5EC; border-radius: 16px; padding: 14px;
+        display: flex; gap: 12px; align-items: center;
+        box-shadow: 0 6px 18px rgba(154,160,181,0.12);
+      }
+      .ico {
+        width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+        color: #fff; font-weight: 800; font-size: 14px; flex-shrink: 0;
+      }
+      .prop { font-size: 14px; font-weight: 650; color: #14121F; line-height: 1.35; }
+      .sub { font-size: 12px; color: #6E7280; margin-top: 2px; }
+      #meet {
+        left: 0; right: 0; bottom: 56px; text-align: center;
+        font-size: 48px; font-weight: 800; color: #fff; letter-spacing: -0.02em;
+      }
+    </style>
+
+    <div id="bg" class="clip" data-start="0" data-duration="3.5" data-track-index="0"></div>
+    <div id="phone" class="clip" data-start="0" data-duration="3.5" data-track-index="1">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="orb"><span>A</span></div>
+        <div class="wm">Apex<i>.</i></div>
+        <div class="tag">Sports intelligence — personalized for how you work.</div>
+        <div class="card"><div class="ico" style="background:#E5484D">IR</div><div><div class="prop">Injury Risk</div><div class="sub">Personal baseline alerts</div></div></div>
+        <div class="card"><div class="ico" style="background:#5856D6">EV</div><div><div class="prop">Decision Quality</div><div class="sub">Grade calls on expected value</div></div></div>
+        <div class="card"><div class="ico" style="background:#2FA36B">M</div><div><div class="prop">Momentum</div><div class="sub">Cox models across sports</div></div></div>
+      </div>
+    </div>
+    <div id="meet" class="clip" data-start="0" data-duration="3.5" data-track-index="2">Meet Apex.</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#phone", { y: 120, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, duration: 1.15, ease: "power3.out" }, 0.05);
+      tl.fromTo("#meet", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" }, 0.85);
+      window.__timelines["03-meet"] = tl;
+    </script>
+  </div>
+</template>

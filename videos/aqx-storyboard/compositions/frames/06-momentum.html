@@ -1,49 +1,91 @@
 <template>
-  <div id="root" data-composition-id="06-momentum" data-start="0" data-duration="6.239" data-width="1920" data-height="1080">
+  <div id="root" data-composition-id="06-momentum" data-start="0" data-duration="9.579" data-width="1920" data-height="1080">
     <style>
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
       .clip { position: absolute; }
-      #f06-bg { inset: 0; background: linear-gradient(160deg, #F0F1F5, #FFF4DF 140%); }
-      #f06-label {
-        left: 0; right: 0; top: 24%; text-align: center;
-        font-size: 20px; font-weight: 800; letter-spacing: 0.22em; color: #FFA058; text-transform: uppercase;
+      #bg { inset: 0; background: #0A0A0C; }
+      #phone {
+        left: 50%; top: 70px; width: 440px; height: 900px; margin-left: -220px;
+        border-radius: 48px; border: 12px solid #111; overflow: hidden; background: #F0F1F5;
+        box-shadow: 0 50px 140px rgba(47,163,107,0.22);
       }
-      #f06-title {
-        left: 0; right: 0; top: 32%; text-align: center;
-        font-size: 64px; font-weight: 900; color: #14121F;
+      .notch {
+        position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+        width: 128px; height: 30px; background: #111; border-radius: 20px; z-index: 5;
       }
-      #f06-pair {
-        left: 50%; top: 50%; width: 640px; margin-left: -320px; display: flex; gap: 24px; justify-content: center;
+      .screen { height: 100%; padding: 58px 18px 24px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; }
+      .title { font-size: 22px; font-weight: 800; color: #14121F; }
+      .sub { font-size: 13px; color: #6E7280; }
+      .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+      .chip {
+        padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+        background: #fff; border: 1px solid #E4E5EC; color: #555868;
       }
-      .f06-pill {
-        width: 260px; height: 88px; border-radius: 20px; display: grid; place-items: center;
-        font-size: 32px; font-weight: 900; border: 2px solid #E4E5EC; background: #fff; color: #6E7280;
+      .chip.on { background: #EFEEFB; border-color: #5856D6; color: #4643C4; }
+      .verdict {
+        border-radius: 18px; padding: 18px 16px; color: #fff;
+        background: linear-gradient(135deg, #2FA36B, #4CC38A);
+        box-shadow: 0 12px 30px rgba(47,163,107,0.28);
       }
-      #f06-real { background: #5856D6; color: #fff; border-color: #5856D6; }
-      #f06-q {
-        left: 0; right: 0; top: 72%; text-align: center;
-        font-size: 26px; font-weight: 600; color: #6E7280;
+      .verdict .sport { font-size: 12px; font-weight: 700; opacity: 0.9; letter-spacing: 0.08em; text-transform: uppercase; }
+      .verdict .txt { font-size: 26px; font-weight: 900; margin-top: 4px; }
+      .verdict .meta { font-size: 12px; margin-top: 6px; opacity: 0.92; }
+      .card {
+        background: #fff; border: 1px solid #E4E5EC; border-radius: 16px; padding: 14px;
+        box-shadow: 0 6px 18px rgba(154,160,181,0.12);
       }
+      .card h4 { margin: 0 0 12px; font-size: 14px; font-weight: 800; color: #14121F; }
+      .bar-row { display: grid; grid-template-columns: 72px 1fr 48px; gap: 8px; align-items: center; margin-bottom: 10px; }
+      .bar-row span { font-size: 12px; font-weight: 700; color: #14121F; }
+      .bar-row em { font-style: normal; font-size: 12px; color: #555868; text-align: right; }
+      .track { height: 12px; background: #EDECFB; border-radius: 999px; overflow: hidden; }
+      .fill { height: 100%; width: 0%; border-radius: 999px; background: #5856D6; }
+      .fill.green { background: #2FA36B; }
+      .fill.muted { background: #B0B5C6; }
+      .plain { font-size: 13px; line-height: 1.45; color: #555868; margin: 0; }
     </style>
-    <div id="f06-bg" class="clip" data-start="0" data-duration="6.239" data-track-index="0"></div>
-    <div id="f06-label" class="clip" data-start="0" data-duration="6.239" data-track-index="1">Pillar 03</div>
-    <div id="f06-title" class="clip" data-start="0" data-duration="6.239" data-track-index="2">Momentum</div>
-    <div id="f06-pair" class="clip" data-start="0" data-duration="6.239" data-track-index="3">
-      <div id="f06-myth" class="f06-pill">MYTH</div>
-      <div id="f06-real" class="f06-pill">REAL</div>
+
+    <div id="bg" class="clip" data-start="0" data-duration="9.579" data-track-index="0"></div>
+    <div id="phone" class="clip" data-start="0" data-duration="9.579" data-track-index="1">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="title">Momentum</div>
+        <div class="sub">Is momentum real?</div>
+        <div class="chips">
+          <div class="chip">NBA</div>
+          <div class="chip">NFL</div>
+          <div class="chip on">NHL</div>
+          <div class="chip">MLB</div>
+        </div>
+        <div class="verdict" id="verdict">
+          <div class="sport">Hockey</div>
+          <div class="txt">Momentum is Real</div>
+          <div class="meta">p = 0.03 · 34% effect size</div>
+        </div>
+        <div class="card">
+          <h4>Sport comparison</h4>
+          <div class="bar-row"><span>NHL</span><div class="track"><div class="fill green" id="b1"></div></div><em>strong</em></div>
+          <div class="bar-row"><span>NBA</span><div class="track"><div class="fill" id="b2"></div></div><em>mild</em></div>
+          <div class="bar-row"><span>NFL</span><div class="track"><div class="fill" id="b3"></div></div><em>weak</em></div>
+          <div class="bar-row"><span>MLB</span><div class="track"><div class="fill muted" id="b4"></div></div><em>myth</em></div>
+        </div>
+        <div class="card">
+          <p class="plain">After a scoring run in hockey, that team is measurably more likely to score again. Baseball? The numbers say it’s a story fans tell.</p>
+        </div>
+      </div>
     </div>
-    <div id="f06-q" class="clip" data-start="0" data-duration="6.239" data-track-index="4">Is the run real — or just a story?</div>
+
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script>
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
-      tl.fromTo("#f06-label", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0.1);
-      tl.fromTo("#f06-title", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 }, 0.3);
-      tl.fromTo("#f06-myth", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5 }, 1.4);
-      tl.fromTo("#f06-real", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.65, ease: "back.out(1.7)" }, 2.0);
-      tl.to("#f06-myth", { opacity: 0.35, scale: 0.92, duration: 0.5 }, 2.6);
-      tl.fromTo("#f06-q", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 3.2);
-      tl.to("#f06-real", { scale: 1.06, duration: 0.8, ease: "sine.out" }, 4.5);
+      gsap.set(["#b1","#b2","#b3","#b4"], { width: "0%" });
+      tl.fromTo("#phone", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.85, ease: "power3.out" }, 0.05);
+      tl.fromTo("#verdict", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.55 }, 0.7);
+      tl.to("#b1", { width: "92%", duration: 1.0, ease: "power2.out" }, 1.6);
+      tl.to("#b2", { width: "48%", duration: 0.9, ease: "power2.out" }, 1.9);
+      tl.to("#b3", { width: "28%", duration: 0.85, ease: "power2.out" }, 2.15);
+      tl.to("#b4", { width: "8%", duration: 0.8, ease: "power2.out" }, 2.4);
       window.__timelines["06-momentum"] = tl;
     </script>
   </div>
