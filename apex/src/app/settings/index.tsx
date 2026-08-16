@@ -6,7 +6,6 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { StackHeader } from '@/components/stack-header';
 import { AppIcon, type IconName } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
-import { Chip } from '@/components/ui/chip';
 import { ROLES, useOnboarding } from '@/context/onboarding';
 import { useAuth } from '@/context/auth';
 import { useBackend } from '@/context/backend';
@@ -51,7 +50,7 @@ const STATUS_LABEL: Record<HealthStatus, string> = { ok: 'All services running',
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { role, setDefaultModule, defaultModule, storyLanguage, setStoryLanguage, sports, activeSport, resetOnboarding } = useOnboarding();
+  const { role, activeSport } = useOnboarding();
   const { user, logout } = useAuth();
   const { health, status, refresh } = useBackend();
   const [cleared, setCleared] = useState(false);
@@ -170,12 +169,6 @@ export default function SettingsScreen() {
     router.dismissAll?.();
   };
 
-  /** Re-show the setup flow (preferences are kept — user re-picks sport/role). */
-  const reRunSetup = () => {
-    resetOnboarding();
-    router.dismissAll?.();
-  };
-
   const ABOUT: { id: string; icon: IconName; title: string; body: string }[] = [
     {
       id: 'what',
@@ -212,40 +205,7 @@ export default function SettingsScreen() {
           <Text style={styles.profileName}>{user?.name ?? 'Apex User'}</Text>
           <Text style={styles.profileRole}>{user?.email ?? roleLabel}</Text>
         </View>
-        <Pressable style={styles.changeBtn} onPress={() => router.push('/settings/role-preferences')}>
-          <Text style={styles.changeText}>Change role</Text>
-        </Pressable>
       </Card>
-
-      {/* Preferences */}
-      <Section title="Preferences">
-        <SettingRow
-          icon="calendar"
-          label="Sport preferences"
-          value={`${sports.length} ${sports.length === 1 ? 'sport' : 'sports'} active`}
-          onPress={() => router.push('/settings/sport-preferences')}
-        />
-        <SettingBlock label="Default module">
-          <View style={styles.segment}>
-            {(['home', 'injury', 'decisions', 'momentum'] as const).map(m => (
-              <Pressable
-                key={m}
-                style={[styles.segmentBtn, defaultModule === m && styles.segmentActive]}
-                onPress={() => setDefaultModule(m)}>
-                <Text style={[styles.segmentText, defaultModule === m && styles.segmentTextActive]}>
-                  {m[0].toUpperCase() + m.slice(1)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </SettingBlock>
-        <SettingBlock label="Story mode language">
-          <View style={styles.chipRow}>
-            <Chip label="Simple" small selected={storyLanguage === 'simple'} onPress={() => setStoryLanguage('simple')} />
-            <Chip label="Technical" small selected={storyLanguage === 'technical'} onPress={() => setStoryLanguage('technical')} />
-          </View>
-        </SettingBlock>
-      </Section>
 
       {/* Data */}
       <Section title="Data">
@@ -290,7 +250,6 @@ export default function SettingsScreen() {
           value={<HealthBadge status={healthBadge} />}
           onPress={() => setHealthOpen(true)}
         />
-        <SettingRow icon="calendar" label="Re-run setup" value="Onboarding again" onPress={reRunSetup} />
         <SettingRow icon="person.crop.circle.fill" label="Signed in" value={user?.email ?? '—'} />
         <Pressable onPress={signOut}>
           <SettingRow icon="xmark" label="Log out" value="End session" danger />
@@ -472,19 +431,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6E7280',
   },
-  changeBtn: {
-    backgroundColor: '#EFEEFB',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  changeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#5856D6',
-  },
   section: {
     gap: 10,
   },
@@ -532,36 +478,6 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'flex-start',
     gap: 10,
-  },
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: '#F0F1F5',
-    borderRadius: 12,
-    padding: 3,
-    gap: 2,
-    alignSelf: 'stretch',
-  },
-  segmentBtn: {
-    flex: 1,
-    height: 32,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentActive: {
-    backgroundColor: '#FFFFFF',
-  },
-  segmentText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#6E7280',
-  },
-  segmentTextActive: {
-    color: '#14121F',
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: 8,
   },
   urlInput: {
     alignSelf: 'stretch',

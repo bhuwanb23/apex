@@ -30,7 +30,9 @@ export default function AuthScreen() {
     const result = await login(email, password);
     setBusy(false);
     if (!result.ok) setError(result.error ?? 'Sign in failed');
-    // On success the root layout swaps to onboarding/tabs automatically.
+    // On success the root layout swaps to the app tabs automatically (the
+    // onboarding flow is not shown yet — it will run on new-account creation
+    // once real auth lands).
   };
 
   const fillDemo = () => {

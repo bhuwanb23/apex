@@ -24,40 +24,36 @@ const ApexTheme = {
 };
 
 /**
- * Auth + onboarding gating (the plan's "auth before onboarding" flow):
+ * Auth gating. The onboarding flow is currently unreachable: real auth (and
+ * "new account → onboarding") isn't implemented yet, so after the mock login
+ * the user lands straight on the app tabs with the default preferences.
  *
- *   not signed in  → auth stack (mock login)
- *   signed in, not onboarded → onboarding stack (shown once, on first launch)
- *   signed in, onboarded     → the app tabs
+ *   not signed in → auth stack (mock login)
+ *   signed in     → the app tabs
  *
  * Both providers hydrate from device storage before we decide which stack to
- * mount — previously the gate read `hasOnboarded` before hydration finished,
- * so a fresh install could render the wrong stack. Waiting on hydration makes
- * the first-run onboarding deterministic ("shows once to a fresh user").
+ * mount, so a fresh install renders the right stack deterministically.
  */
 function RootNavigator() {
   const { isAuthenticated, hydrated: authHydrated } = useAuth();
-  const { hasOnboarded, hydrated: onboardingHydrated } = useOnboarding();
+  const { hydrated: onboardingHydrated } = useOnboarding();
   const segments = useSegments();
   const top = segments[0];
 
   // Storage not yet read — keep the splash up (ApexSplashOverlay is on top).
   if (!authHydrated || !onboardingHydrated) return null;
 
-  // URL-aware gate. On web the URL drives routing — setting Stack.Screen name
-  // alone never changed it, so a fresh install landed straight on the Home
-  // tabs. Redirecting to the right stack (and only when we're not already
-  // there) fixes the "shows once on first launch" flow on every platform.
+  // URL-aware gate. On web the URL drives routing — redirect to the auth stack
+  // when signed out, back to the app when signed in.
   if (!isAuthenticated && top !== 'auth') return <Redirect href="/auth" />;
-  if (isAuthenticated && !hasOnboarded && top !== 'onboarding') return <Redirect href="/onboarding" />;
-  if (isAuthenticated && hasOnboarded && (top === 'auth' || top === 'onboarding')) return <Redirect href="/" />;
+  if (isAuthenticated && top === 'auth') return <Redirect href="/" />;
 
   // The search/settings/story modals are only reachable from inside the app,
-  // so they're registered alongside the tabs — never for login/onboarding.
-  const inApp = isAuthenticated && hasOnboarded;
+  // so they're registered alongside the tabs — never for login.
+  const inApp = isAuthenticated;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F0F1F5' } }}>
-      <Stack.Screen name={inApp ? '(tabs)' : isAuthenticated ? 'onboarding' : 'auth'} />
+      <Stack.Screen name={inApp ? '(tabs)' : 'auth'} />
       {inApp
         ? [
             // Flat array (NOT a Fragment): expo-router's mapProtectedScreen runs
