@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { StackHeader } from '@/components/stack-header';
 import { AppIcon, type IconName } from '@/components/ui/icon';
@@ -199,8 +199,10 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <StackHeader title="Settings" right={<CloseButton onPress={() => router.back()} />} />
-
+      <View style={styles.headerWrap}>
+        <StackHeader title="Settings" right={<CloseButton onPress={() => router.back()} />} />
+      </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       {/* Profile — signed-in account from mock auth + role */}
       <Card style={styles.profileCard}>
         <View style={styles.profileAvatar}>
@@ -312,6 +314,7 @@ export default function SettingsScreen() {
           </Pressable>
         ))}
       </Section>
+      </ScrollView>
 
       {/* Health detail modal */}
       <Modal visible={healthOpen} transparent animationType="fade" onRequestClose={() => setHealthOpen(false)}>
@@ -415,10 +418,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F1F5',
+  },
+  headerWrap: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    gap: 20,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
     paddingBottom: 60,
+    gap: 20,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   closeBtn: {
     width: 34,
