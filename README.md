@@ -108,7 +108,7 @@ npx expo start          # press "w" for web, or scan the QR for a device
 
 The app connects to `http://localhost:8000` by default (configurable in Settings). On a phone, use your laptop's LAN IP — the URL is editable in-app, no rebuild needed.
 
-> **Demo tip:** the app opens on the login screen — use the **"Use demo account"** button (email `demo@apex.app`, password `apex1234`), then pick a sport and role. The onboarding shows once.
+> **Demo tip:** the app opens on the login screen — use the **"Use demo account"** button (email `demo@apex.app`, password `apex1234`), then the app lands straight on the dashboard. The onboarding flow is wired for the future "new account → onboarding" path and is not shown yet.
 
 ## API
 
@@ -173,6 +173,26 @@ Perf results and the step-by-step test plan for backend, data fetching, ML model
 | [`docs/demo-judge-qa.md`](docs/demo-judge-qa.md) | Judge Q&A cheat sheet |
 | [`backend/README.md`](backend/README.md) | Backend setup, scripts, layout |
 | [`apex/README.md`](apex/README.md) | App setup and structure |
+
+## CI / CD
+
+GitHub Actions pipelines run automatically on push and pull requests. The app, backend and ML service each have their own workflow; a release workflow packages everything (including the trained models and the Android APK) into a **GitHub Release**.
+
+| Workflow | Runs on | What it does |
+|---|---|---|
+| [`backend.yml`](.github/workflows/backend.yml) | push/PR touching `backend/**` | npm ci, ESLint, typecheck, build, `prisma validate` |
+| [`ml.yml`](.github/workflows/ml.yml) | push/PR touching `backend/python_ml/**` | pip install, pytest, model warmup smoke test |
+| [`app.yml`](.github/workflows/app.yml) | push/PR touching `apex/**` | npm ci, expo lint, typecheck, web bundle export |
+| [`apk.yml`](.github/workflows/apk.yml) | manual dispatch, or called by Release | `expo prebuild` + Gradle `assembleRelease` → installable APK |
+| [`release.yml`](.github/workflows/release.yml) | tag `v*` or manual dispatch | builds backend + ML (with trained models) + APK, publishes a GitHub Release |
+
+**Trigger an APK build:** Actions → **Android APK** → *Run workflow*.
+
+**Create a release:** push a tag (`git tag v1.0.0 && git push origin v1.0.0`) — or Actions → **Release** → *Run workflow* with a version. The release attaches:
+
+- `apex-backend-<tag>.tar.gz` — compiled `dist/` + Prisma schema + package files (run with `npm ci --omit=dev && npm run db:generate && npm start`)
+- `apex-ml-<tag>.tar.gz` — the FastAPI service **with pre-trained models** (run with `pip install -r requirements.txt && uvicorn app.main:app --port 8001`)
+- `app-release.apk` — installable Android build (signed with the debug keystore)
 
 ## Repository layout
 
