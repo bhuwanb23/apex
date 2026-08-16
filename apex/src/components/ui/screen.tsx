@@ -57,7 +57,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   tabInset: {
-    paddingBottom: 110,
+    // The flat tab bar sits in normal flow below the scroll content, so only
+    // a little breathing room is needed (the old 110 was for the floating pill).
+    paddingBottom: 24,
   },
   centered: {
     justifyContent: 'center',

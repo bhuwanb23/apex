@@ -1,11 +1,31 @@
 import { SymbolView } from 'expo-symbols';
-import type { ColorValue } from 'react-native';
+import extraLight from 'expo-symbols/androidWeights/extraLight';
+import light from 'expo-symbols/androidWeights/light';
+import medium from 'expo-symbols/androidWeights/medium';
+import regular from 'expo-symbols/androidWeights/regular';
+import semiBold from 'expo-symbols/androidWeights/semiBold';
+import thin from 'expo-symbols/androidWeights/thin';
+import bold from 'expo-symbols/androidWeights/bold';
+import { Platform, type ColorValue } from 'react-native';
 
+/**
+ * The tab bar renders an outline glyph when a tab is inactive and a filled
+ * glyph when active (Instagram-style). iOS has real SF Symbol pairs; the
+ * Material Symbols font only ships outline-style glyphs for most names, so on
+ * Android/web the "filled" names resolve to the same glyph but render with a
+ * heavier weight for a clear active state.
+ */
 export type IconName =
+  | 'house'
   | 'house.fill'
+  | 'heart'
+  | 'heart.fill'
+  | 'checkmark.circle'
+  | 'checkmark.circle.fill'
+  | 'bolt'
+  | 'bolt.fill'
   | 'heart.text.square.fill'
   | 'checkmark.seal.fill'
-  | 'bolt.fill'
   | 'magnifyingglass'
   | 'bell.fill'
   | 'gearshape.fill'
@@ -52,10 +72,16 @@ export type IconName =
 
 /** SF Symbol per icon key (iOS). Keys whose names are not valid SF Symbols map to a close valid one. */
 const SF_NAMES: Record<IconName, string> = {
+  house: 'house',
   'house.fill': 'house.fill',
+  heart: 'heart',
+  'heart.fill': 'heart.fill',
+  'checkmark.circle': 'checkmark.circle',
+  'checkmark.circle.fill': 'checkmark.circle.fill',
+  bolt: 'bolt',
+  'bolt.fill': 'bolt.fill',
   'heart.text.square.fill': 'heart.text.square.fill',
   'checkmark.seal.fill': 'checkmark.seal.fill',
-  'bolt.fill': 'bolt.fill',
   magnifyingglass: 'magnifyingglass',
   'bell.fill': 'bell.fill',
   'gearshape.fill': 'gearshape.fill',
@@ -103,10 +129,16 @@ const SF_NAMES: Record<IconName, string> = {
 
 /** Material Symbol name per icon (android + web fallback). */
 const MATERIAL_NAMES: Record<IconName, string> = {
+  house: 'home',
   'house.fill': 'home',
+  heart: 'favorite_border',
+  'heart.fill': 'favorite',
+  'checkmark.circle': 'check_circle_outline',
+  'checkmark.circle.fill': 'check_circle',
+  bolt: 'bolt',
+  'bolt.fill': 'bolt',
   'heart.text.square.fill': 'monitor_heart',
   'checkmark.seal.fill': 'verified',
-  'bolt.fill': 'bolt',
   magnifyingglass: 'search',
   'bell.fill': 'notifications',
   'gearshape.fill': 'settings',
@@ -152,15 +184,37 @@ const MATERIAL_NAMES: Record<IconName, string> = {
   'slider.horizontal.3': 'tune',
 };
 
+export type IconWeight = 'ultraLight' | 'thin' | 'light' | 'regular' | 'medium' | 'semibold' | 'bold' | 'heavy' | 'black';
+
 interface AppIconProps {
   name: IconName;
   size?: number;
   color?: ColorValue;
-  weight?: 'ultraLight' | 'thin' | 'light' | 'regular' | 'medium' | 'semibold' | 'bold' | 'heavy' | 'black';
+  weight?: IconWeight;
 }
+
+/** Material Symbol font descriptor per weight (android + web fallback). */
+const ANDROID_WEIGHT: Record<IconWeight, { name: string; font: number }> = {
+  ultraLight: extraLight,
+  thin,
+  light,
+  regular,
+  medium,
+  semibold: semiBold,
+  bold,
+  heavy: bold,
+  black: bold,
+};
 
 /** Cross-platform icon: SF Symbol on iOS, Material Symbol elsewhere. */
 export function AppIcon({ name, size = 22, color = '#14121F', weight = 'medium' }: AppIconProps) {
+  // expo-symbols applies the weight to the SF Symbol on iOS, but on Android and
+  // web it only uses the object form ({ ios, android }) to pick the font file.
+  // Passing the plain string would silently fall back to the 400Regular font.
+  const weightProp =
+    Platform.OS === 'ios'
+      ? weight
+      : { ios: weight, android: ANDROID_WEIGHT[weight] };
   return (
     <SymbolView
       // expo-symbols types only know a subset of SF Symbols; our names are
@@ -174,7 +228,7 @@ export function AppIcon({ name, size = 22, color = '#14121F', weight = 'medium' 
       }
       size={size}
       tintColor={color}
-      weight={weight}
+      weight={weightProp as never}
     />
   );
 }
