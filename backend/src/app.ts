@@ -23,7 +23,9 @@ export function createApp(): express.Express {
   app.use(express.json({ limit: '1mb' }));
   // HTTP request logging (Phase 8 Step 7 — requestId, timing, slow warnings)
   app.use(requestLogger);
-  // Rate limiting on API routes (15 min / 100 requests by default)
+  // Rate limiting on API routes. Health and the Swagger docs are exempt —
+  // the app pings /api/health on a timer (offline detection) and judges open
+  // /api/docs during the demo, so neither can ever be blocked.
   app.use(
     '/api',
     rateLimit({
@@ -31,6 +33,15 @@ export function createApp(): express.Express {
       limit: env.RATE_LIMIT_MAX,
       standardHeaders: 'draft-7',
       legacyHeaders: false,
+      skip: req => {
+        // req.path is relative to the '/api' mount: /health, /docs, …
+        return (
+          req.path === '/health' ||
+          req.path === '/health/errors' ||
+          req.path === '/docs' ||
+          req.path.startsWith('/docs/')
+        );
+      },
     })
   );
 

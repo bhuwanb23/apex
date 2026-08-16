@@ -26,7 +26,9 @@ const envSchema = z.object({
 
   // Rate limiting
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
-  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  // Demo-sized default: 600 requests / 15 min per IP keeps the app + judges
+  // from being blocked while still protecting against runaway abuse.
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(600),
 
   // Background jobs (Phase 6) — master switch + cron overrides
   JOBS_ENABLED: z

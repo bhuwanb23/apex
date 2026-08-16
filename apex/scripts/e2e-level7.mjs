@@ -22,8 +22,8 @@ const APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:8081';
 
 const CHROME_CANDIDATES = [
   // Playwright-managed Chromium (already downloaded in ms-playwright)
-  'C:\\Users\\Bhuwan\\AppData\\Local\\ms-playwright\\chromium-1228\\chrome-win\\chrome.exe',
-  'C:\\Users\\Bhuwan\\AppData\\Local\\ms-playwright\\chromium-1208\\chrome-win\\chrome.exe',
+  'C:\\Users\\Bhuwan\\AppData\\Local\\ms-playwright\\chromium-1228\\chrome-win64\\chrome.exe',
+  'C:\\Users\\Bhuwan\\AppData\\Local\\ms-playwright\\chromium-1208\\chrome-win64\\chrome.exe',
   // System Chrome
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
