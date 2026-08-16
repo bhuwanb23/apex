@@ -323,7 +323,7 @@ export default function CoachLeaderboardScreen() {
       </Modal>
 
       {/* Game reviews — live recent games for the sport */}
-      <View>
+      <View style={styles.gameSection}>
         <Text style={styles.gameSectionTitle}>Game decision reviews</Text>
         {showGamesSkeleton ? (
           <SkeletonGames />
@@ -721,6 +721,9 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#9AA0B5',
     lineHeight: 16,
+  },
+  gameSection: {
+    gap: 12,
   },
   gameSectionTitle: {
     fontSize: 16,

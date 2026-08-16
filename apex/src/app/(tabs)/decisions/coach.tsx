@@ -159,7 +159,7 @@ export default function CoachDetailScreen() {
                 ))}
               </View>
 
-              <View>
+              <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Process vs Outcome</Text>
                 <Card style={styles.matrixCard}>
                   <View style={styles.matrixRow}>
@@ -179,7 +179,7 @@ export default function CoachDetailScreen() {
           ) : null}
 
           {/* Decisions */}
-          <View>
+          <View style={styles.section}>
             <View style={styles.decisionHeader}>
               <Text style={styles.sectionTitle}>Decisions</Text>
               <Text style={styles.decisionCount}>{coachDecisions.length} total</Text>
@@ -221,11 +221,12 @@ export default function CoachDetailScreen() {
               </Pressable>
             </View>
 
-            <View style={styles.listGap}>
-              {decisions.map(decision => (
+            <View>
+              {decisions.map((decision, i) => (
                 <DecisionCard
                   key={decision.id}
                   decision={decision}
+                  isLast={i === decisions.length - 1}
                   onPress={() =>
                     router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id, decision: JSON.stringify(decision) } })
                   }
@@ -351,42 +352,59 @@ function CoachSkeleton({ isFan }: { isFan: boolean }) {
   );
 }
 
-/** Professional decision card: tinted by quality, EV comparison bars, outcome. */
-function DecisionCard({ decision, onPress }: { decision: Decision; onPress: () => void }) {
+/**
+ * Play-by-play style decision entry: a timeline rail (quality-colored node +
+ * connector line) beside a scoreboard ticket — dark clock chip, situation,
+ * chosen-vs-best EV bars, verdict chip and outcome.
+ */
+function DecisionCard({ decision, isLast, onPress }: { decision: Decision; isLast: boolean; onPress: () => void }) {
   const optimal = decision.isOptimal;
   const accent = optimal ? '#2FA36B' : '#E5484D';
-  const soft = optimal ? '#F2FBF6' : '#FEF5F6';
+  const soft = optimal ? '#E3F6EC' : '#FDEBEC';
   const evGap = decision.evBest - decision.evChosen;
   const gapPct = evPct(evGap);
   const scale = Math.max(decision.evBest, decision.evChosen, 0.01);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.cardPressed}>
-      <View style={[styles.decisionCard, { backgroundColor: soft, borderLeftColor: accent }]}>
-        <View style={styles.decisionTop}>
-          <Text style={styles.decisionDate}>
-            {decision.date} · vs {decision.opponent}
-          </Text>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.timelineItem, pressed && styles.cardPressed]}>
+      {/* Timeline rail — node colored by decision quality, line to next entry */}
+      <View style={styles.rail}>
+        <View style={[styles.railDot, { backgroundColor: accent, borderColor: soft }]} />
+        {!isLast ? <View style={styles.railLine} /> : null}
+      </View>
+
+      {/* Scoreboard ticket */}
+      <View style={styles.ticketCard}>
+        <View style={styles.ticketTop}>
+          <View style={styles.clockChip}>
+            <Text style={styles.clockText}>
+              {decision.period} · {decision.clock}
+            </Text>
+          </View>
+          <TypeChip label={decision.type.replace('_', ' ')} color={accent} />
+          <View style={styles.ticketSpacer} />
           <QualityBadge optimal={optimal} />
         </View>
-        <View style={styles.decisionTypeRow}>
-          <TypeChip label={decision.type.replace('_', ' ')} />
-          <AppIcon name="clock.fill" size={11} color="#9AA0B5" />
-          <Text style={styles.decisionClock}>
-            {decision.period} {decision.clock}
-          </Text>
-        </View>
-        <Text style={styles.decisionSituation}>{decision.situation}</Text>
+
+        <Text style={styles.ticketMeta}>
+          {decision.date} · vs {decision.opponent}
+        </Text>
+        <Text style={styles.ticketSituation}>{decision.situation}</Text>
 
         {/* EV comparison — chosen vs best */}
         <View style={styles.evBox}>
-          <EvRow label="Chosen" action={decision.chosenAction} ev={decision.evChosen} width={decision.evChosen / scale} color={optimal ? '#2FA36B' : '#E5484D'} />
+          <EvRow label="Chose" action={decision.chosenAction} ev={decision.evChosen} width={decision.evChosen / scale} color={accent} />
           <EvRow label="Best" action={bestAction(decision)} ev={decision.evBest} width={1} color="#5856D6" />
-          <View style={styles.gapRow}>
-            <Text style={[styles.gapText, { color: optimal ? '#2FA36B' : '#E5484D' }]}>
+        </View>
+
+        {/* Verdict chip */}
+        <View style={styles.verdictRow}>
+          <View style={[styles.verdictChip, { backgroundColor: soft }]}>
+            <AppIcon name={optimal ? 'checkmark' : 'xmark'} size={11} color={accent} />
+            <Text style={[styles.verdictText, { color: accent }]}>
               {optimal
-                ? 'Optimal call — matched the model’s best option'
-                : `Left ${gapPct}% EV on the table vs the best option`}
+                ? `Optimal · ${evPct(decision.evChosen)}% EV`
+                : `Suboptimal · left ${gapPct}% EV`}
             </Text>
           </View>
         </View>
@@ -735,55 +753,85 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  section: {
+    gap: 12,
+  },
   listGap: {
     gap: 10,
   },
   cardPressed: {
     opacity: 0.85,
   },
-  decisionCard: {
-    gap: 8,
+  // --- Play-by-play timeline ---
+  timelineItem: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  rail: {
+    width: 14,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+  railDot: {
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    marginTop: 8,
+    borderWidth: 2.5,
+  },
+  railLine: {
+    flex: 1,
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: '#E2E3EA',
+    marginTop: 5,
+  },
+  ticketCard: {
+    flex: 1,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(20,18,31,0.05)',
-    borderLeftWidth: 4,
+    borderColor: 'rgba(20,18,31,0.06)',
     padding: 14,
-  },
-  decisionTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     gap: 8,
   },
-  decisionDate: {
-    fontSize: 12.5,
-    color: '#6E7280',
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-  decisionTypeRow: {
+  ticketTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  decisionClock: {
+  clockChip: {
+    backgroundColor: '#1E1B33',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  clockText: {
+    color: '#FFFFFF',
+    fontSize: 11.5,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
+  ticketSpacer: {
+    flex: 1,
+  },
+  ticketMeta: {
     fontSize: 12,
     color: '#9AA0B5',
     fontWeight: '600',
   },
-  decisionSituation: {
+  ticketSituation: {
     fontSize: 14,
     color: '#14121F',
     lineHeight: 20,
     fontWeight: '600',
   },
   evBox: {
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    backgroundColor: '#F6F6FA',
     borderRadius: 12,
     padding: 10,
     gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(20,18,31,0.06)',
   },
   evRow: {
     flexDirection: 'row',
@@ -791,7 +839,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   evLabel: {
-    width: 48,
+    width: 42,
     fontSize: 11,
     fontWeight: '800',
     color: '#9AA0B5',
@@ -812,30 +860,39 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   evTrack: {
-    width: 64,
-    height: 6,
-    borderRadius: 3,
+    width: 72,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: '#E9EAF1',
     overflow: 'hidden',
   },
   evFill: {
-    height: 6,
-    borderRadius: 3,
+    height: 7,
+    borderRadius: 4,
   },
-  gapRow: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(20,18,31,0.07)',
-    paddingTop: 8,
+  verdictRow: {
+    flexDirection: 'row',
   },
-  gapText: {
+  verdictChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
+  },
+  verdictText: {
     fontSize: 11.5,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   outcomeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,
-    paddingTop: 2,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(20,18,31,0.07)',
+    paddingTop: 8,
   },
   outcomeText: {
     flex: 1,
