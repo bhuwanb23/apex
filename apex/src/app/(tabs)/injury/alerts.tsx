@@ -13,6 +13,8 @@ import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
 import { useLeagueAlerts } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
+import { SkeletonRow } from '@/components/ui/skeleton';
 import { DataFreshness } from '@/components/ui/data-freshness';
 
 type ZoneFilter = 'all' | 'red' | 'yellow';
@@ -24,6 +26,7 @@ export default function LeagueAlertsScreen() {
   const router = useRouter();
   const { sport: sportParam } = useLocalSearchParams<{ sport?: string }>();
   const { activeSport } = useOnboarding();
+  const { status } = useBackend();
   // Follow the user's stored sport (the plan's rule) — the old hardcoded
   // 'NBA' fallback meant an NFL user opening Alerts saw NBA players.
   const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? activeSport);
@@ -76,6 +79,10 @@ export default function LeagueAlertsScreen() {
         ? `${visible.length} player${visible.length === 1 ? '' : 's'} currently in the elevated zone`
         : `${visible.length} player${visible.length === 1 ? '' : 's'} currently flagged (red or elevated)`;
 
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showSkeleton = alerts.loading && !backendOffline;
+
   return (
     <Screen
       refreshControl={
@@ -121,7 +128,7 @@ export default function LeagueAlertsScreen() {
 
       {/* Count banner + sort */}
       <View style={styles.countBanner}>
-        <Text style={styles.countText}>{refreshing ? 'Refreshing…' : bannerText}</Text>
+        <Text style={styles.countText}>{refreshing ? 'Refreshing…' : showSkeleton ? 'Loading alerts…' : bannerText}</Text>
         <Pressable
           style={styles.sortBtn}
           onPress={() => setSort(prev => (prev === 'risk' ? 'team' : prev === 'team' ? 'position' : 'risk'))}>
@@ -143,7 +150,14 @@ export default function LeagueAlertsScreen() {
         </View>
       ) : null}
 
-      {visible.length === 0 ? (
+      {showSkeleton ? (
+        <View style={styles.listGap}>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </View>
+      ) : visible.length === 0 ? (
         <EmptyState
           icon="checkmark"
           title="No players in this zone right now"

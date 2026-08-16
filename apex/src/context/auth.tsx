@@ -14,8 +14,8 @@ import { storage } from '@/lib/storage';
 
 /** Demo account — shown on the login screen with a one-tap fill. */
 export const DEMO_CREDENTIALS = {
-  email: 'demo@aqx.app',
-  password: 'aqx1234',
+  email: 'demo@apex.app',
+  password: 'apex1234',
   name: 'Demo User',
 };
 
