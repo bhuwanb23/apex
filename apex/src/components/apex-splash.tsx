@@ -4,12 +4,12 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { AqxOrb } from '@/components/aqx-logo';
+import { ApexOrb } from '@/components/apex-logo';
 
 const DURATION = 650;
 
 /** Full-screen brand overlay that fades out shortly after mount. */
-export function AqxSplashOverlay() {
+export function ApexSplashOverlay() {
   const [animate, setAnimate] = useState(false);
   const [visible, setVisible] = useState(true);
 
@@ -29,7 +29,7 @@ export function AqxSplashOverlay() {
 
   const content = (
     <Animated.View entering={orbKeyframe.duration(DURATION + 150)} style={styles.orbWrap}>
-      <AqxOrb size={92} />
+      <ApexOrb size={92} />
     </Animated.View>
   );
 

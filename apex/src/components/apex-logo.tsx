@@ -2,12 +2,12 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { GradientView } from '@/components/ui/gradient';
 
-interface AqxOrbProps {
+interface ApexOrbProps {
   size?: number;
 }
 
-/** Gradient orb (pink → purple → orange) — the AQX brand mark. */
-export function AqxOrb({ size = 64 }: AqxOrbProps) {
+/** Gradient orb (pink → purple → orange) — the Apex brand mark. */
+export function ApexOrb({ size = 64 }: ApexOrbProps) {
   return (
     <GradientView colors={['#FF5C8A', '#5856D6', '#FFA058']} style={[styles.orb, { width: size, height: size, borderRadius: size / 2 }]}>
       <View style={styles.monogram}>
@@ -17,21 +17,21 @@ export function AqxOrb({ size = 64 }: AqxOrbProps) {
   );
 }
 
-interface AqxLogoProps {
+interface ApexLogoProps {
   size?: number;
   showTagline?: boolean;
   dark?: boolean;
 }
 
 /** Full logo: orb + wordmark + optional tagline. */
-export function AqxLogo({ size = 44, showTagline = false, dark = false }: AqxLogoProps) {
+export function ApexLogo({ size = 44, showTagline = false, dark = false }: ApexLogoProps) {
   const textColor = dark ? '#FFFFFF' : '#14121F';
   return (
     <View style={styles.row}>
-      <AqxOrb size={size} />
+      <ApexOrb size={size} />
       <View>
         <Text style={[styles.wordmark, { color: textColor }]}>
-          AQX<Text style={styles.dot}>.</Text>
+          Apex<Text style={styles.dot}>.</Text>
         </Text>
         {showTagline ? (
           <Text style={[styles.tagline, { color: dark ? 'rgba(255,255,255,0.8)' : '#6E7280' }]}>
