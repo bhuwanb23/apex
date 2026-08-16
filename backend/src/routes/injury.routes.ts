@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getInjuryCounts,
   getLeagueAlerts,
+  getPlayerReport,
   getPlayerRisk,
   getPlayerRiskHistory,
   getTeamReport,
@@ -257,6 +258,36 @@ injuryRouter.get(
   createValidator(playerIdParamsSchema, 'params'),
   createValidator(historyQuerySchema, 'query'),
   getPlayerRiskHistory
+);
+
+/**
+ * @openapi
+ * /api/injury/player/{playerId}/report:
+ *   get:
+ *     summary: Player risk report (PDF)
+ *     description: Generates and returns a PDF report of a single player's risk profile with workload z-scores and recent trend.
+ *     tags: [Injury]
+ *     parameters:
+ *       - in: path
+ *         name: playerId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: PDF file
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Player not found
+ */
+injuryRouter.get(
+  '/player/:playerId/report',
+  createValidator(playerIdParamsSchema, 'params'),
+  getPlayerReport
 );
 
 /**

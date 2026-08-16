@@ -17,7 +17,7 @@ import {
   teamIdParamsSchema,
 } from '../middleware/validation.middleware.js';
 import * as injuryService from '../services/injury.service.js';
-import { generateTeamReportPdf } from '../services/report.service.js';
+import { generatePlayerReportPdf, generateTeamReportPdf } from '../services/report.service.js';
 import { sendSuccess } from '../utils/response.util.js';
 
 /** GET /api/injury/player/:playerId — full risk profile + context + trend. */
@@ -70,6 +70,16 @@ export async function getTeamRiskHistory(req: Request, res: Response): Promise<v
 export async function getTeamReport(req: Request, res: Response): Promise<void> {
   const { teamId } = req.validatedParams as z.infer<typeof teamIdParamsSchema>;
   const { buffer, filename } = await generateTeamReportPdf(teamId);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Length', String(buffer.length));
+  res.send(buffer);
+}
+
+/** GET /api/injury/player/:playerId/report — player PDF report (streamed). */
+export async function getPlayerReport(req: Request, res: Response): Promise<void> {
+  const { playerId } = req.validatedParams as z.infer<typeof playerIdParamsSchema>;
+  const { buffer, filename } = await generatePlayerReportPdf(playerId);
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Length', String(buffer.length));
