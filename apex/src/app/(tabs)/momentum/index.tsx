@@ -67,12 +67,7 @@ export default function MomentumOverviewScreen() {
 
   return (
     <Screen refreshControl={refreshControl}>
-      <AppHeader
-        title="Momentum"
-        subtitle="Is momentum real?"
-        activeSport={sport}
-        onSelectSport={setSport}
-      />
+      <AppHeader title="Momentum" activeSport={sport} onSelectSport={setSport} />
 
       {error != null && !backendOffline ? (
         <ErrorState message={`Could not load momentum analysis for ${sport}`} onRetry={refetchMomentum} />

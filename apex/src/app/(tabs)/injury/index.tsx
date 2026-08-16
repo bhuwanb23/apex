@@ -87,7 +87,6 @@ export default function InjuryDashboardScreen() {
       }>
       <AppHeader
         title="Injury Risk"
-        subtitle="Workload & recovery risk"
         activeSport={sport}
         onSelectSport={selectSport}
         right={

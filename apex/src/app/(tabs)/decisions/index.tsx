@@ -148,12 +148,7 @@ export default function CoachLeaderboardScreen() {
 
   return (
     <Screen refreshControl={refreshControl}>
-      <AppHeader
-        title="Decisions"
-        subtitle="Coach leaderboard · EV Rate"
-        activeSport={sport}
-        onSelectSport={pickSport}
-      />
+      <AppHeader title="Decisions" activeSport={sport} onSelectSport={pickSport} />
 
       {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
       {generatedAt ? <DataFreshness timestamp={generatedAt} onRefresh={refetchLeaderboard} /> : null}
