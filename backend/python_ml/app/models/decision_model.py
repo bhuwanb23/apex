@@ -170,7 +170,10 @@ class WinProbabilityModel:
             self._model = cached
             return self._model
 
-        path = Path(self.model_path)
+        # Re-read WP_MODEL_PATH at load time (not just construction) so a
+        # runtime env change takes effect — mirrors timeout_model, and lets
+        # tests pin the heuristic path deterministically.
+        path = Path(os.getenv("WP_MODEL_PATH") or self.model_path)
         if path.exists():
             try:
                 import joblib

@@ -95,10 +95,23 @@ def test_fetch_rosters_and_schedule(fake):
 
 
 def test_unavailable_raises_clean_error(monkeypatch):
+    """Unavailable only when BOTH nfl_data_py AND the local dataset are gone."""
     monkeypatch.setattr(bridge, "_nfl_data_py", False)
+    monkeypatch.setattr(bridge, "_local_dataset", lambda name: None)
     assert bridge.is_available() is False
     with pytest.raises(NflDataUnavailableError):
         fetch_season_plays(2024)
+
+
+def test_local_dataset_fallback_when_library_missing(monkeypatch):
+    """With nfl_data_py missing but the local dataset present, data is served."""
+    monkeypatch.setattr(bridge, "_nfl_data_py", False)
+    assert bridge.is_available() is True  # local fallback keeps the bridge live
+    plays = fetch_season_plays(2025)
+    assert isinstance(plays, list)
+    assert plays, "local dataset should contain plays"
+    for field in ("game_id", "desc", "play_type"):
+        assert field in plays[0]
 
 
 def test_get_plays_endpoint(fake):
@@ -127,8 +140,10 @@ def test_post_plays_endpoint_single_game_filter(fake):
     assert len(res.json()["plays"]) == 3  # all rows match the fake's game_id
 
 
-def test_endpoints_return_503_when_library_missing(monkeypatch):
+def test_endpoints_return_503_when_all_sources_missing(monkeypatch):
+    """503 only when nfl_data_py AND the local dataset are both unavailable."""
     monkeypatch.setattr(bridge, "_nfl_data_py", False)
+    monkeypatch.setattr(bridge, "_local_dataset", lambda name: None)
     for method, url, kwargs in [
         ("get", "/nfl/plays", {"params": {"season": 2024}}),
         ("get", "/nfl/rosters", {"params": {"season": 2024}}),
