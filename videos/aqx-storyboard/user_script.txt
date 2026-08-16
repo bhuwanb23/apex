@@ -1,0 +1,17 @@
+Sports teams make million dollar decisions every single day. On gut feeling.
+
+Every coach, every trainer, every front office asks these three questions. Nobody has been able to answer them. Until now.
+
+Meet Apex.
+
+Apex compares every player to themselves — not the league average. When a player's workload spikes beyond their personal baseline, we catch it before it becomes an injury.
+
+Every coaching decision is graded on expected value — not outcome. The right call on fourth and one is still right, even if the play fails.
+
+And momentum? We tested it. With a Cox proportional hazard model across thousands of games. Hockey — real. Baseball — myth. Now you know.
+
+Real data. Real math. Free APIs covering NBA, NFL, and MLB. Z-score deviation models. Win probability engines. Statistical significance — explained in plain English for everyone in the room.
+
+From athletic trainers to coaches to fans — everyone gets the same intelligence, in the language they understand.
+
+Apex. Because the best decision was always the one backed by evidence.

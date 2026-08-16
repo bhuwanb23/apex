@@ -1,56 +1,63 @@
-# SCRIPT — Apex-storyboard
+# SCRIPT — Apex storyboard promo
 
 **Voice:** Kokoro `am_michael` (offline — HeyGen not signed in)
-**Voice settings:** clear · medium pace · premium explainer
-**Voice direction:** Confident, calm, descriptive — teach the idea, never shout. Let phrases breathe.
+**Voice settings:** clear · medium-firm pace · confident product promo
+**Voice direction:** Confident, clean, no fluff. Punch questions. Pause half a second before and after the fourth-and-one line. Land the closer warm and certain.
 
 ---
 
-## Line 1 — Brand + thesis (Frame 1)
+## Line 1 — Hook (Frame 1)
 
 **Time:** 0.0 – 8.0s
-**Delivery:** Soft open; land Personalized.
+**Delivery:** Deliberate; land “gut feeling.”
 
-    This is Apex. Sports intelligence — made personal for how you work.
+    Sports teams make million dollar decisions every single day. On gut feeling.
 
-## Line 2 — Sports noise (Frame 2)
+## Line 2 — Three questions (Frame 2)
 
-**Time:** 8.0 – 18.0s
-**Delivery:** Slight pressure on noise words.
+**Time:** 8.0 – 20.0s
+**Delivery:** Sharp and punchy; lift on “Until now.”
 
-    Every game dumps noise — box scores, play-by-play, gut feel, and endless highlight takes.
+    Every coach, every trainer, every front office asks these three questions. Nobody has been able to answer them. Until now.
 
-## Line 3 — One clear brief (Frame 3)
+## Line 3 — Meet Apex (Frame 3)
 
-**Time:** 18.0 – 28.0s
-**Delivery:** Release into clarity; roll-call roles.
+**Time:** 20.0 – 24.0s
+**Delivery:** Clean product entrance.
 
-    Apex turns that chaos into a brief you can act on — shaped for trainers, coaches, analysts, and fans.
+    Meet Apex.
 
 ## Line 4 — Injury (Frame 4)
 
-**Time:** 28.0 – 38.0s
-**Delivery:** Protective, precise.
+**Time:** 24.0 – 32.0s
+**Delivery:** Precise, protective.
 
-    First pillar: injury risk. Traffic-light thinking so you know who's at risk — before they get hurt.
+    Apex compares every player to themselves — not the league average. When a player's workload spikes beyond their personal baseline, we catch it before it becomes an injury.
 
 ## Line 5 — Decisions (Frame 5)
 
-**Time:** 38.0 – 48.0s
-**Delivery:** Crisp on pure logic.
+**Time:** 32.0 – 41.0s
+**Delivery:** Crisp; half-second pause before and after the fourth-and-one sentence.
 
-    Second: decisions. Grade every coaching call on pure logic and expected value — not just the final score.
+    Every coaching decision is graded on expected value — not outcome. The right call on fourth and one is still right, even if the play fails.
 
 ## Line 6 — Momentum (Frame 6)
 
-**Time:** 48.0 – 56.0s
-**Delivery:** Curious question energy.
+**Time:** 41.0 – 49.0s
+**Delivery:** Curious then conclusive on hockey vs baseball.
 
-    Third: momentum. Scrub the run and ask — is it statistically real, or just a story?
+    And momentum? We tested it. With a Cox proportional hazard model across thousands of games. Hockey — real. Baseball — myth. Now you know.
 
-## Line 7 — Close (Frame 7)
+## Line 7 — Technology (Frame 7)
 
-**Time:** 56.0 – 65.0s
-**Delivery:** Warm lockup.
+**Time:** 49.0 – 59.0s
+**Delivery:** Fast credibility; soften into Story Mode.
 
-    Then plain-English insight you can share. Apex Sports Intelligence. Clear. Personalized.
+    Real data. Real math. Free APIs covering NBA, NFL, and MLB. Z-score deviation models. Win probability engines. Statistical significance — explained in plain English for everyone in the room. From athletic trainers to coaches to fans — everyone gets the same intelligence, in the language they understand.
+
+## Line 8 — Closer (Frame 8)
+
+**Time:** 59.0 – 65.0s
+**Delivery:** Warm lockup; certain.
+
+    Apex. Because the best decision was always the one backed by evidence.

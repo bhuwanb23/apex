@@ -1,126 +1,133 @@
 ---
 format: 1920x1080
-duration: 45s
-message: "Raw sports chaos becomes clear, personalized intelligence"
-arc: "Narrative — noise → brief → three pillars → story payoff → lockup"
-audience: "trainers, coaches, analysts, and sports fans learning what Apex is"
+duration: 76s
+message: "Million-dollar sports decisions should be backed by evidence, not gut feel"
+arc: "Hook → Three questions → Product demo → Technology → Lockup"
+audience: "hackathon judges, trainers, coaches, analysts, and sports fans"
 mode: autonomous
-music: cinematic ambient · confident · clean · premium explainer
+music: cinematic tension build · confident peak · clean resolve · silent open
 captions: on
 ---
 
 ## Video direction
 
-Light `#F0F1F5` canvas, Apex purple `#5856D6` accent, pink→purple→orange orb as brand mark. No devices, no UI screenshots — only kinetic type, abstract pillar cards, and diagrams. Crossfades between beats; still holds on payoffs. Premium calm pacing timed to VO.
+Outer canvas is near-black `#0A0A0C` with bold white kinetic type for hook and questions. Product beats use a centered light Apex phone (`#F0F1F5` canvas, white cards, purple `#5856D6`, risk red `#E5484D`, success `#2FA36B`) rendered as live HTML — never blurry PNGs. Hard cuts through 0:25; smoother crossfades through the product demo. Hold half a second before and after the fourth-and-one line. Music starts silent, builds from the questions, peaks at Meet Apex, resolves on the closer.
 
-## Frame 1 — Brand + thesis
+## Frame 1 — Hook
 - status: animated
-- duration: 4.949s
+- duration: 5.227s
+- transition_in: cut
+- type: hook
+- blueprint: kinetic-type-beats
+- scene: Black canvas; 68% stat; flash sports metaphors
+- voiceover: Sports teams make million dollar decisions every single day. On gut feeling.
+- poster: 2
+- src: compositions/frames/01-hook.html
+- sfx: soft-impact
+
+Scene 1 (0.0–3.5s): Giant white **68%** + short injury-spike line on black.
+Scene 2 (3.5–6.5s): Two–three hard flash cuts — coach / athlete / momentum graphic metaphors (silhouettes).
+Scene 3 (6.5–end): Hold last flash dimmed under VO landing “gut feeling.”
+
+## Frame 2 — Three questions
+- status: animated
+- duration: 8.021s
+- transition_in: cut
+- type: problem
+- blueprint: kinetic-type-beats
+- scene: Three questions punch one by one on black
+- voiceover: Every coach, every trainer, every front office asks these three questions. Nobody has been able to answer them. Until now.
+- poster: 4
+- src: compositions/frames/02-questions.html
+- sfx: tick
+
+Scene 1: “Who is about to get injured?”
+Scene 2: “Did the coach actually make the right call?”
+Scene 3: “Is momentum even real?”
+Scene 4: “Until now.” accent in purple.
+
+## Frame 3 — Meet Apex
+- status: animated
+- duration: 3.5s
+- transition_in: crossfade
+- type: branding
+- blueprint: device-surface-showcase
+- scene: Phone rises; Meet Apex wordmark
+- voiceover: Meet Apex.
+- poster: 2
+- src: compositions/frames/03-meet.html
+- sfx: whoosh-soft
+
+Scene 1: Dark ground; phone scales up from below with welcome/home chrome.
+Scene 2: Orb + Apex. lock beside/above phone; “Meet Apex.” holds after VO.
+
+## Frame 4 — Injury risk
+- status: animated
+- duration: 11.371s
+- transition_in: crossfade
+- type: feature
+- blueprint: device-surface-showcase
+- scene: Phone injury screen — risk 84 red circle
+- voiceover: Apex compares every player to themselves — not the league average. When a player's workload spikes beyond their personal baseline, we catch it before it becomes an injury.
+- poster: 3
+- src: compositions/frames/04-injury.html
+
+Scene 1: Risk ring animates to 84; red zone badge.
+Scene 2: Plain-English explanation card fades in.
+
+## Frame 5 — Decisions
+- status: animated
+- duration: 9.557s
+- transition_in: crossfade
+- type: feature
+- blueprint: device-surface-showcase
+- scene: Coach EV decisions; fourth-and-one line
+- voiceover: Every coaching decision is graded on expected value — not outcome. The right call on fourth and one is still right, even if the play fails.
+- poster: 4
+- src: compositions/frames/05-decisions.html
+
+Scene 1: Leaderboard / decision rows scroll; green and red borders.
+Scene 2: Hold on fourth-and-one pull-quote with half-second pause before and after.
+
+## Frame 6 — Momentum
+- status: animated
+- duration: 9.579s
+- transition_in: crossfade
+- type: feature
+- blueprint: device-surface-showcase
+- scene: Momentum verdict + sport bars
+- voiceover: And momentum? We tested it. With a Cox proportional hazard model across thousands of games. Hockey — real. Baseball — myth. Now you know.
+- poster: 3
+- src: compositions/frames/06-momentum.html
+
+Scene 1: “Momentum is Real” green verdict card.
+Scene 2: Horizontal bars animate — hockey longest, baseball near zero.
+
+## Frame 7 — Technology
+- status: animated
+- duration: 23.765s
+- transition_in: crossfade
+- type: proof
+- blueprint: split-evidence
+- scene: Split phone + floating stats + Story Mode
+- voiceover: Real data. Real math. Free APIs covering NBA, NFL, and MLB. Z-score deviation models. Win probability engines. Statistical significance — explained in plain English for everyone in the room. From athletic trainers to coaches to fans — everyone gets the same intelligence, in the language they understand.
+- poster: 4
+- src: compositions/frames/07-tech.html
+
+Scene 1: Phone left; floating stats right (847 games, 3 models, p=0.03, 450+ players).
+Scene 2: Story Mode paragraph card readable, plain English.
+
+## Frame 8 — Closer
+- status: animated
+- duration: 4.629s
 - transition_in: cut
 - type: branding
 - blueprint: logo-assemble-lockup
-- scene: Orb assembles; Apex. locks; thesis line
-- voiceover: This is Apex. Sports intelligence — personalized.
+- scene: Apex lockup and tagline on black
+- voiceover: Apex. Because the best decision was always the one backed by evidence.
 - poster: 3
-- src: compositions/frames/01-brand.html
+- src: compositions/frames/08-close.html
 - sfx: whoosh-soft
 
-Scene 1 (0.0–1.5s): canvas; orb scales in center.
-Scene 2 (1.5–4.0s): Apex. wordmark locks as VO names Apex.
-Scene 3 (4.0–end): short thesis PERSONALIZED holds.
-
-## Frame 2 — Sports noise
-- status: animated
-- duration: 5.888s
-- transition_in: crossfade
-- type: pain_point
-- blueprint: kinetic-type-beats
-- scene: Kinetic tokens of sports noise swap and overwhelm
-- voiceover: Every game dumps noise — box scores, play-by-play, gut feel.
-- poster: 4
-- src: compositions/frames/02-noise.html
-- sfx: tick
-
-Scene 1 (0.0–2.5s): NOISE enters large.
-Scene 2 (2.5–6.5s): BOX SCORES / PLAY-BY-PLAY / GUT FEEL hard-swap on cues.
-Scene 3 (6.5–end): hold last token slightly dimmed.
-
-## Frame 3 — One clear brief
-- status: animated
-- duration: 7.488s
-- transition_in: crossfade
-- type: product_intro
-- blueprint: kinetic-type-beats
-- scene: Chaos resolves into ONE CLEAR BRIEF; roles appear
-- voiceover: Apex turns it into a brief you can act on — for trainers, coaches, analysts, and fans.
-- poster: 4
-- src: compositions/frames/03-brief.html
-- sfx: ui-pop
-
-Scene 1 (0.0–2.0s): ONE CLEAR BRIEF springs center.
-Scene 2 (2.0–7.0s): four role chips stagger with VO.
-Scene 3 (7.0–end): hold.
-
-## Frame 4 — Injury Risk idea
-- status: animated
-- duration: 6.123s
-- transition_in: crossfade
-- type: feature_showcase
-- blueprint: grid-card-assemble
-- scene: Abstract injury pillar card + traffic-light idea
-- voiceover: Injury risk — know who's at risk before they get hurt.
-- poster: 3
-- src: compositions/frames/04-injury.html
-- sfx: alert-soft
-
-Scene 1 (0.0–1.5s): pillar card Injury Risk assembles.
-Scene 2 (1.5–5.0s): red/yellow/green dots + BEFORE THEY GET HURT line.
-Scene 3 (5.0–end): hold.
-
-## Frame 5 — Decisions idea
-- status: animated
-- duration: 7.488s
-- transition_in: crossfade
-- type: feature_showcase
-- blueprint: grid-card-assemble
-- scene: Decisions pillar — pure logic / EV idea
-- voiceover: Decisions — grade every call on pure logic, not just the score.
-- poster: 3
-- src: compositions/frames/05-decisions.html
-- sfx: click
-
-Scene 1 (0.0–1.5s): Decisions card assembles.
-Scene 2 (1.5–5.0s): PURE LOGIC badge + EV bar metaphor.
-Scene 3 (5.0–end): hold.
-
-## Frame 6 — Momentum idea
-- status: animated
-- duration: 5.739s
-- transition_in: crossfade
-- type: benefit_highlight
-- blueprint: dataviz-countup
-- scene: Momentum — Real or Myth abstract verdict
-- voiceover: Momentum — is the run real, or just a story?
-- poster: 3
-- src: compositions/frames/06-momentum.html
-- sfx: whoosh
-
-Scene 1 (0.0–1.5s): MOMENTUM title.
-Scene 2 (1.5–5.0s): REAL vs MYTH flip to REAL.
-Scene 3 (5.0–end): hold REAL.
-
-## Frame 7 — Story payoff + lockup
-- status: animated
-- duration: 6.613s
-- transition_in: crossfade
-- type: cta
-- blueprint: logo-assemble-lockup
-- scene: Plain-English payoff line then Apex lockup
-- voiceover: Plain-English insight. Apex Sports Intelligence. Personalized.
-- poster: 4
-- src: compositions/frames/07-close.html
-- sfx: chime
-
-Scene 1 (0.0–3.0s): PLAIN-ENGLISH INSIGHT line.
-Scene 2 (3.0–6.0s): orb + Apex. assemble.
-Scene 3 (6.0–end): PERSONALIZED tagline holds (final frame settle).
+Scene 1: Orb + Apex. center.
+Scene 2: Tagline under logo; fade to black.

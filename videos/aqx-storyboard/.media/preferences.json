@@ -6,35 +6,35 @@
       "confirmed_in": [
         "aqx-storyboard"
       ],
-      "updated_at": "2026-08-15T14:14:51.264Z"
+      "updated_at": "2026-08-16T05:26:38.130Z"
     },
     "aspect": {
       "value": "1920x1080",
       "confirmed_in": [
         "aqx-storyboard"
       ],
-      "updated_at": "2026-08-15T14:14:51.306Z"
+      "updated_at": "2026-08-16T05:26:38.170Z"
     },
     "language": {
       "value": "en",
       "confirmed_in": [
         "aqx-storyboard"
       ],
-      "updated_at": "2026-08-15T14:14:51.352Z"
+      "updated_at": "2026-08-16T05:26:38.211Z"
     },
     "flow": {
       "value": "automation",
       "confirmed_in": [
         "aqx-storyboard"
       ],
-      "updated_at": "2026-08-15T14:14:51.394Z"
+      "updated_at": "2026-08-16T05:26:38.254Z"
     },
     "storyboard": {
       "value": "no",
       "confirmed_in": [
         "aqx-storyboard"
       ],
-      "updated_at": "2026-08-15T14:14:51.433Z"
+      "updated_at": "2026-08-16T05:26:38.294Z"
     },
     "style_preset.faceless-explainer": {
       "value": "blue-professional",
@@ -42,6 +42,13 @@
         "aqx-storyboard"
       ],
       "updated_at": "2026-08-15T14:14:51.511Z"
+    },
+    "style_preset.product-launch-video": {
+      "value": "blue-professional",
+      "confirmed_in": [
+        "aqx-storyboard"
+      ],
+      "updated_at": "2026-08-16T05:26:38.089Z"
     }
   },
   "sightings": {}
