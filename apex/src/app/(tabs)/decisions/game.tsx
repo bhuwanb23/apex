@@ -11,6 +11,8 @@ import { type Game } from '@/data/mock/games';
 import { type Decision } from '@/data/mock/coaches';
 import { useGameDecisions } from '@/data/live/decisions';
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 
 const PERIOD_BASE: Record<string, number> = { Q1: 0, Q2: 0.25, Q3: 0.5, Q4: 0.75, OT: 1 };
 
@@ -102,10 +104,15 @@ export default function GameDecisionsScreen() {
   const router = useRouter();
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
   const { activeSport } = useOnboarding();
+  const { status } = useBackend();
   // The game carries its sport; the screen follows the stored sport filter
   // (previously hardcoded 'NFL' — an NBA game review always fell back to demo).
-  const { game, decisions: gameDecisions } = useGameDecisions(gameId, activeSport);
+  const { game, decisions: gameDecisions, loading } = useGameDecisions(gameId, activeSport);
   const decisions = gameDecisions.slice().sort((a, b) => decisionX(a) - decisionX(b));
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showSkeleton = loading && !backendOffline;
 
   const biggestMistake =
     decisions.find(d => !d.isOptimal && !d.outcomeSuccess) ??
@@ -116,49 +123,92 @@ export default function GameDecisionsScreen() {
     <Screen>
       <StackHeader title="Game Decisions" subtitle={`${game.date} · Regular season`} />
 
-      {/* Game header */}
-      <Card style={styles.gameCard}>
-        <View style={styles.scoreRow}>
-          <TeamBlock name={game.homeTeam} score={game.homeScore} winner={game.homeScore > game.awayScore} />
-          <View style={styles.finalWrap}>
-            <Text style={styles.finalLabel}>FINAL</Text>
-            <Text style={styles.gameType}>Regular season</Text>
+      {showSkeleton ? (
+        <>
+          {/* Game header skeleton */}
+          <Card style={styles.gameCard}>
+            <View style={styles.scoreRow}>
+              <View style={styles.teamBlock}>
+                <Skeleton width="70%" height={15} radius={6} />
+                <Skeleton width={44} height={26} radius={6} />
+              </View>
+              <View style={styles.finalWrap}>
+                <Skeleton width={40} height={10} radius={5} />
+              </View>
+              <View style={[styles.teamBlock, styles.teamBlockRight]}>
+                <Skeleton width="70%" height={15} radius={6} />
+                <Skeleton width={44} height={26} radius={6} />
+              </View>
+            </View>
+            <Skeleton width="55%" height={12} radius={6} style={{ alignSelf: 'center' }} />
+          </Card>
+          <View>
+            <Text style={styles.sectionTitle}>Score progression</Text>
+            <Card style={styles.stripCard}>
+              <Skeleton width="100%" height={64} radius={10} />
+            </Card>
           </View>
-          <TeamBlock name={game.awayTeam} score={game.awayScore} winner={game.awayScore > game.homeScore} alignRight />
-        </View>
-        <Text style={styles.coaches}>
-          {game.homeCoach} vs {game.awayCoach} · {game.season}
-        </Text>
-      </Card>
+          <View style={styles.summaryRow}>
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+          </View>
+          <View>
+            <Text style={styles.sectionTitle}>Decision timeline</Text>
+            <Card style={styles.timelineCard} padded={false}>
+              <SkeletonCard lines={3} />
+              <SkeletonCard lines={3} />
+              <SkeletonCard lines={3} />
+            </Card>
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Game header */}
+          <Card style={styles.gameCard}>
+            <View style={styles.scoreRow}>
+              <TeamBlock name={game.homeTeam} score={game.homeScore} winner={game.homeScore > game.awayScore} />
+              <View style={styles.finalWrap}>
+                <Text style={styles.finalLabel}>FINAL</Text>
+                <Text style={styles.gameType}>Regular season</Text>
+              </View>
+              <TeamBlock name={game.awayTeam} score={game.awayScore} winner={game.awayScore > game.homeScore} alignRight />
+            </View>
+            <Text style={styles.coaches}>
+              {game.homeCoach} vs {game.awayCoach} · {game.season}
+            </Text>
+          </Card>
 
-      {/* Score progression */}
-      <View>
-        <Text style={styles.sectionTitle}>Score progression</Text>
-        <Card style={styles.stripCard}>
-          <ScoreStrip game={game} decisions={decisions} />
-        </Card>
-      </View>
+          {/* Score progression */}
+          <View>
+            <Text style={styles.sectionTitle}>Score progression</Text>
+            <Card style={styles.stripCard}>
+              <ScoreStrip game={game} decisions={decisions} />
+            </Card>
+          </View>
 
-      {/* Summary */}
-      <View style={styles.summaryRow}>
-        <Card style={styles.summaryBox}>
-          <Text style={styles.summaryLabel}>Home EV rate</Text>
-          <Text style={[styles.summaryValue, { color: evColor(game.homeEvRate) }]}>{game.homeEvRate}%</Text>
-          <Text style={styles.summaryName}>{game.homeCoach}</Text>
-        </Card>
-        <Card style={styles.summaryBox}>
-          <Text style={styles.summaryLabel}>Away EV rate</Text>
-          <Text style={[styles.summaryValue, { color: evColor(game.awayEvRate) }]}>{game.awayEvRate}%</Text>
-          <Text style={styles.summaryName}>{game.awayCoach}</Text>
-        </Card>
-        <Card style={styles.summaryBox}>
-          <Text style={styles.summaryLabel}>Decisions</Text>
-          <Text style={styles.summaryValue}>{Math.max(decisions.length, 6)}</Text>
-          <Text style={styles.summaryName}>total graded</Text>
-        </Card>
-      </View>
+          {/* Summary */}
+          <View style={styles.summaryRow}>
+            <Card style={styles.summaryBox}>
+              <Text style={styles.summaryLabel}>Home EV rate</Text>
+              <Text style={[styles.summaryValue, { color: evColor(game.homeEvRate) }]}>{game.homeEvRate}%</Text>
+              <Text style={styles.summaryName}>{game.homeCoach}</Text>
+            </Card>
+            <Card style={styles.summaryBox}>
+              <Text style={styles.summaryLabel}>Away EV rate</Text>
+              <Text style={[styles.summaryValue, { color: evColor(game.awayEvRate) }]}>{game.awayEvRate}%</Text>
+              <Text style={styles.summaryName}>{game.awayCoach}</Text>
+            </Card>
+            <Card style={styles.summaryBox}>
+              <Text style={styles.summaryLabel}>Decisions</Text>
+              <Text style={styles.summaryValue}>{Math.max(decisions.length, 6)}</Text>
+              <Text style={styles.summaryName}>total graded</Text>
+            </Card>
+          </View>
+        </>
+      )}
 
-      {biggestMistake ? (
+      {showSkeleton ? null : biggestMistake ? (
         <Card style={styles.mistakeCard}>
           <View style={styles.mistakeHeader}>
             <AppIcon name="exclamationmark.triangle.fill" size={15} color="#E5484D" />
@@ -171,25 +221,27 @@ export default function GameDecisionsScreen() {
       ) : null}
 
       {/* Timeline */}
-      <View>
-        <Text style={styles.sectionTitle}>Decision timeline</Text>
-        <Card style={styles.timelineCard} padded={false}>
-          {decisions.map((decision, i) => (
-            <View key={decision.id} style={styles.timelineItem}>
-              <View style={styles.timelineRail}>
-                <View style={[styles.timelineDot, { backgroundColor: decision.isOptimal ? '#2FA36B' : '#E5484D' }]} />
-                {i !== decisions.length - 1 ? <View style={styles.timelineLine} /> : null}
+      {showSkeleton ? null : (
+        <View>
+          <Text style={styles.sectionTitle}>Decision timeline</Text>
+          <Card style={styles.timelineCard} padded={false}>
+            {decisions.map((decision, i) => (
+              <View key={decision.id} style={styles.timelineItem}>
+                <View style={styles.timelineRail}>
+                  <View style={[styles.timelineDot, { backgroundColor: decision.isOptimal ? '#2FA36B' : '#E5484D' }]} />
+                  {i !== decisions.length - 1 ? <View style={styles.timelineLine} /> : null}
+                </View>
+                <TimelineBody decision={decision} onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id, decision: JSON.stringify(decision) } })} />
               </View>
-              <TimelineBody decision={decision} onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id, decision: JSON.stringify(decision) } })} />
-            </View>
-          ))}
-          {decisions.length === 0 ? (
-            <View style={styles.emptyTimeline}>
-              <Text style={styles.emptyTimelineText}>No graded decisions for this game yet</Text>
-            </View>
-          ) : null}
-        </Card>
-      </View>
+            ))}
+            {decisions.length === 0 ? (
+              <View style={styles.emptyTimeline}>
+                <Text style={styles.emptyTimelineText}>No graded decisions for this game yet</Text>
+              </View>
+            ) : null}
+          </Card>
+        </View>
+      )}
     </Screen>
   );
 }
