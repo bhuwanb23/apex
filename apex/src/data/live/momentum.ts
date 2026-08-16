@@ -155,10 +155,15 @@ export function useGameMomentum(gameId: string | undefined, sport: SportId) {
     return game;
   }, [gameId]);
 
+  // Only real backend games have numeric ids. Mock ids ('g1') and missing
+  // params must NOT hit the API — Number('g1') is NaN and the backend 400s.
+  const numericId = Number(gameId);
+  const validId = gameId != null && gameId !== '' && Number.isFinite(numericId) && numericId > 0;
+
   const result = useApiData<Game>(
     async () => {
-      if (!gameId) return null;
-      const g = await api.gameMomentum(Number(gameId));
+      if (!validId) return null;
+      const g = await api.gameMomentum(numericId);
       const events = g.timeline?.events ?? [];
       if (events.length === 0) return null;
       return momentumToGame(g, sport);

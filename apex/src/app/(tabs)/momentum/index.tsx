@@ -17,6 +17,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { DataFreshness } from '@/components/ui/data-freshness';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { useMomentumAnalysis } from '@/data/live/momentum';
+import { useRecentGames } from '@/data/live/games';
 
 const PLAIN_EXPLANATION: Record<string, string> = {
   real: 'Momentum is real here — after a scoring run, that team is measurably more likely to score again. The numbers back it up.',
@@ -40,6 +41,10 @@ export default function MomentumOverviewScreen() {
   const backendOffline = status === 'offline';
   const showSkeleton = loading && !backendOffline;
   const { refreshControl } = usePullRefresh(refetchMomentum);
+  // Game replay opens on a real recent game (numeric backend id) so the
+  // timeline loads; with no games yet it falls back to the replay picker.
+  const recentGames = useRecentGames(sport, 5);
+  const firstGame = recentGames.data[0];
 
   const stats = [
     { label: 'Hazard Coefficient', value: verdict.hazardCoefficient.toFixed(2), note: '> 1 means scoring increases opponent hazard' },
@@ -144,7 +149,18 @@ export default function MomentumOverviewScreen() {
       <View>
         <Text style={styles.sectionTitle}>Dive deeper</Text>
         <View style={styles.quickGrid}>
-          <QuickLink icon="play.fill" label="Game replay" color="#5856D6" onPress={() => router.push('/momentum/replay')} />
+          <QuickLink
+            icon="play.fill"
+            label="Game replay"
+            color="#5856D6"
+            onPress={() =>
+              router.push(
+                firstGame
+                  ? { pathname: '/momentum/replay', params: { gameId: firstGame.id } }
+                  : '/momentum/replay'
+              )
+            }
+          />
           <QuickLink icon="chart.bar.fill" label="Compare sports" color="#FF5C8A" onPress={() => router.push('/momentum/comparison')} />
           <QuickLink icon="timer" label="Timeout optimizer" color="#FFA058" onPress={() => router.push('/momentum/timeout')} />
         </View>

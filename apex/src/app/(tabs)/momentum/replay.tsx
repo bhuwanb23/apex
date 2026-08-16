@@ -45,6 +45,17 @@ export default function GameReplayScreen() {
     (g.homeTeam + ' ' + g.awayTeam).toLowerCase().includes(gameQuery.toLowerCase())
   );
 
+  // Arrived without a gameId (e.g. the Momentum tab quick link): once the real
+  // recent games load, hop onto the first one so a live timeline shows instead
+  // of the mock fallback. Only auto-picks once per visit.
+  const [autoPicked, setAutoPicked] = useState(false);
+  useEffect(() => {
+    if (!gameId && pickerGames.length > 0 && !autoPicked) {
+      setSelectedId(pickerGames[0].id);
+      setAutoPicked(true);
+    }
+  }, [gameId, pickerGames, autoPicked]);
+
   const interpAt = (key: 'home' | 'away', time: number): number => {
     const pts = game.timeline;
     if (time <= pts[0].time) return pts[0][key];
