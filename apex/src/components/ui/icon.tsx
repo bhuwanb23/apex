@@ -62,6 +62,7 @@ export type IconName =
   | 'mappin.and.ellipse'
   | 'person.crop.circle.fill'
   | 'checkmark'
+  | 'questionmark.circle'
   | 'exclamationmark.triangle.fill'
   | 'info.circle.fill'
   | 'timer'
@@ -118,6 +119,7 @@ const SF_NAMES: Record<IconName, string> = {
   'mappin.and.ellipse': 'mappin.and.ellipse',
   'person.crop.circle.fill': 'person.crop.circle.fill',
   checkmark: 'checkmark',
+  'questionmark.circle': 'questionmark.circle',
   'exclamationmark.triangle.fill': 'exclamationmark.triangle.fill',
   'info.circle.fill': 'info.circle.fill',
   timer: 'timer',
@@ -175,6 +177,7 @@ const MATERIAL_NAMES: Record<IconName, string> = {
   'mappin.and.ellipse': 'location_searching',
   'person.crop.circle.fill': 'account_circle',
   checkmark: 'check',
+  'questionmark.circle': 'help',
   'exclamationmark.triangle.fill': 'warning',
   'info.circle.fill': 'info',
   timer: 'timer',
