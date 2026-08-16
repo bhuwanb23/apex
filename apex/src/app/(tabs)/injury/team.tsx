@@ -14,6 +14,8 @@ import { type Player } from '@/data/mock/players';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useTeamRoster } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DataFreshness } from '@/components/ui/data-freshness';
 
 type ZoneFilter = 'all' | 'red' | 'yellow' | 'green';
@@ -29,9 +31,14 @@ export default function TeamRiskScreen() {
   const [sort, setSort] = useState<SortKey>('risk');
   const [chartOpen, setChartOpen] = useState(true);
   const { activeSport } = useOnboarding();
+  const { status } = useBackend();
 
-  const { players: roster, lastUpdated, refetch: refetchRoster } = useTeamRoster(teamName, activeSport);
+  const { players: roster, loading, lastUpdated, refetch: refetchRoster } = useTeamRoster(teamName, activeSport);
   const sport = SPORT_BY_ID[roster[0]?.sport ?? activeSport];
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showSkeleton = loading && !backendOffline;
 
   const counts = {
     red: roster.filter(p => p.zone === 'red').length,
@@ -100,16 +107,31 @@ export default function TeamRiskScreen() {
 
       {/* Roster */}
       <Card style={styles.rosterCard} padded={false}>
-        {visible.map((p, i) => (
-          <Pressable key={p.id} onPress={() => router.push({ pathname: '/injury/player', params: { playerId: p.id } })}>
-            <RosterRow player={p} last={i === visible.length - 1} />
-          </Pressable>
-        ))}
-        {visible.length === 0 ? (
+        {showSkeleton ? (
+          <View style={styles.rosterSkeleton}>
+            {[0, 1, 2, 3, 4].map(i => (
+              <View key={i} style={[styles.rosterRow, i !== 4 && styles.rosterRowBorder]}>
+                <Skeleton width={9} height={9} radius={5} />
+                <Skeleton width={20} height={12} radius={4} />
+                <View style={styles.rosterBody}>
+                  <Skeleton width="75%" height={13} radius={6} />
+                  <Skeleton width={46} height={16} radius={7} />
+                </View>
+                <Skeleton width={52} height={14} radius={7} />
+              </View>
+            ))}
+          </View>
+        ) : visible.length === 0 ? (
           <View style={styles.emptyRoster}>
             <Text style={styles.emptyRosterText}>No players in this zone</Text>
           </View>
-        ) : null}
+        ) : (
+          visible.map((p, i) => (
+            <Pressable key={p.id} onPress={() => router.push({ pathname: '/injury/player', params: { playerId: p.id } })}>
+              <RosterRow player={p} last={i === visible.length - 1} />
+            </Pressable>
+          ))
+        )}
       </Card>
 
       {/* Team chart (collapsible) */}
@@ -329,6 +351,9 @@ const styles = StyleSheet.create({
   emptyRoster: {
     padding: 28,
     alignItems: 'center',
+  },
+  rosterSkeleton: {
+    paddingHorizontal: 16,
   },
   emptyRosterText: {
     fontSize: 13,

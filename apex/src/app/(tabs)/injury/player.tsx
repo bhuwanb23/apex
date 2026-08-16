@@ -12,8 +12,10 @@ import { AppIcon } from '@/components/ui/icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PillButton } from '@/components/ui/button';
 import { DataFreshness } from '@/components/ui/data-freshness';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { usePlayerRisk } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
 
 type MetricKey = 'minutes' | 'distance' | 'intensity';
 
@@ -67,10 +69,15 @@ export default function PlayerRiskScreen() {
   const router = useRouter();
   const { playerId } = useLocalSearchParams<{ playerId: string }>();
   const { activeSport, role } = useOnboarding();
+  const { status } = useBackend();
   // Display-only (the plan's role rules): fans get plain English without the
   // statistics sections; the backend request never changes.
   const isFan = role === 'fan';
-  const { data: player, refetch: refetchPlayer } = usePlayerRisk(playerId, activeSport);
+  const { data: player, loading, refetch: refetchPlayer } = usePlayerRisk(playerId, activeSport);
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showSkeleton = loading && !backendOffline;
   const [metric, setMetric] = useState<MetricKey>('minutes');
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
 
@@ -128,153 +135,184 @@ export default function PlayerRiskScreen() {
     <Screen>
       <StackHeader title={player.name} subtitle={`${player.team} · ${player.position}`} />
 
-      {/* Header card */}
-      <Card style={styles.headerCard}>
-        <RiskCircle score={player.riskScore} zone={zone} size={128} />
-        <View style={styles.headerInfo}>
-          <ZoneBadge zone={zone} />
-          <Text style={styles.headerName}>{player.name}</Text>
-          <Text style={styles.headerMeta}>
-            {player.team} · {player.position} · #{player.jersey}
-          </Text>
-          {/* Real backend timestamp → freshness note/banner (plan: data age tiers) */}
-          {player.computedAt ? <DataFreshness timestamp={player.computedAt} onRefresh={refetchPlayer} /> : null}
-        </View>
-      </Card>
-
-      {/* Explanation */}
-      <Card style={styles.explainCard}>
-        <View style={styles.explainHeader}>
-          <AppIcon name="info.circle.fill" size={16} color="#5856D6" />
-          <Text style={styles.explainTitle}>Why the flag</Text>
-        </View>
-        <Text style={styles.explainText}>{player.explanation}</Text>
-      </Card>
-
-      {/* What triggered this — statistics, hidden for fans */}
-      {!isFan ? (
-        <View>
-          <Text style={styles.sectionTitle}>What triggered this</Text>
-          <View style={styles.listGap}>
-            {METRICS.map(m => {
-              const mRecent = player[`${m.key}Recent` as const];
-              const mBaseline = player[`${m.key}Baseline` as const];
-              const mZ = player[`${m.key}Z` as const];
-              const triggered = mZ > 1.5;
-              return (
-                <Card key={m.key} style={styles.metricCard}>
-                  <View style={styles.metricTop}>
-                    <Text style={styles.metricName}>{m.label}</Text>
-                    <View style={[styles.zChip, { backgroundColor: triggered ? '#FDEBEC' : '#F0F1F5' }]}>
-                      <Text style={[styles.zText, { color: triggered ? '#E5484D' : '#6E7280' }]}>
-                        z {mZ >= 0 ? '+' : ''}
-                        {mZ.toFixed(1)}
-                        {triggered ? ' ▲' : ''}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.barRow}>
-                    <View style={styles.barTrack}>
-                      <View
-                        style={[
-                          styles.barFill,
-                          { width: `${Math.min(100, (mRecent / (Math.max(mRecent, mBaseline) * 1.15)) * 100)}%`, backgroundColor: m.color },
-                        ]}
-                      />
-                      <View
-                        style={[
-                          styles.barBaseline,
-                          { left: `${Math.min(96, (mBaseline / (Math.max(mRecent, mBaseline) * 1.15)) * 100)}%` },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.barLegend}>▍ baseline</Text>
-                  </View>
-                  <Text style={styles.metricCompare}>
-                    {mRecent.toFixed(1)} {m.unit} recent vs {mBaseline.toFixed(1)} {m.unit} baseline
-                  </Text>
-                </Card>
-              );
-            })}
-          </View>
-        </View>
-      ) : null}
-
-      {/* Season workload — statistics, hidden for fans */}
-      {!isFan ? (
-        <View>
-          <Text style={styles.sectionTitle}>Season Workload</Text>
-          <Card style={styles.chartCard}>
-            <View style={styles.chartTabs}>
-              {METRICS.map(m => (
-                <Pressable
-                  key={m.key}
-                  style={[styles.chartTab, metric === m.key && styles.chartTabActive]}
-                  onPress={() => {
-                    setMetric(m.key);
-                    setSelectedGame(null);
-                  }}>
-                  <Text style={[styles.chartTabText, metric === m.key && styles.chartTabTextActive]}>
-                    {m.label.split(' ')[0]}
-                  </Text>
-                </Pressable>
-              ))}
+      {showSkeleton ? (
+        <>
+          {/* Header card skeleton */}
+          <Card style={styles.headerCard}>
+            <Skeleton width={128} height={128} radius={64} />
+            <View style={styles.headerInfo}>
+              <Skeleton width={92} height={22} radius={6} />
+              <Skeleton width={160} height={17} radius={6} />
+              <Skeleton width={210} height={13} radius={6} />
             </View>
-
-            {selectedGame != null ? (
-              <View style={styles.tooltipChip}>
-                <AppIcon name="location.fill" size={12} color="#5856D6" />
-                <Text style={styles.tooltipText}>
-                  {realLogs && selectedGameDate
-                    ? `${selectedGameDate} · ${selectedGameMinutes.toFixed(1)} min`
-                    : `Game ${selectedGame + 1} · ${selectedGameMinutes.toFixed(1)} ${metricDef.unit}`}
-                </Text>
+          </Card>
+          <SkeletonCard lines={3} />
+          {!isFan ? (
+            <>
+              <Text style={styles.sectionTitle}>What triggered this</Text>
+              <View style={styles.listGap}>
+                <SkeletonCard lines={3} />
+                <SkeletonCard lines={3} />
+                <SkeletonCard lines={3} />
               </View>
-            ) : null}
-
-            <LineChart
-              series={[{ name: metricDef.label, color: metricDef.color, points: workload(metric) }]}
-              height={170}
-              gridLabels={workloadLabels}
-              showDots
-              markers={spikeMarkers}
-              bands={[
-                { y0: 0, y1: 0.3, color: '#E5484D' },
-                { y0: 0.3, y1: 0.5, color: '#F5A623' },
-              ]}
-              selectedPoint={selectedGame != null ? { series: 0, point: selectedGame } : null}
-              onPointPress={(_si, pi) => setSelectedGame(pi === selectedGame ? null : pi)}
-            />
-            <Text style={styles.chartCaption}>
-              {realLogs
-                ? `${metricDef.label} per game — red dots mark backend-detected workload spikes. Tap a dot for details.`
-                : `${metricDef.label} per game — red/yellow bands mark elevated workload zones. Tap a dot for details.`}
-            </Text>
+              <Text style={styles.sectionTitle}>Season Workload</Text>
+              <SkeletonCard lines={5} />
+              <Text style={styles.sectionTitle}>Risk Trend</Text>
+              <SkeletonCard lines={3} />
+            </>
+          ) : null}
+        </>
+      ) : (
+        <>
+          {/* Header card */}
+          <Card style={styles.headerCard}>
+            <RiskCircle score={player.riskScore} zone={zone} size={128} />
+            <View style={styles.headerInfo}>
+              <ZoneBadge zone={zone} />
+              <Text style={styles.headerName}>{player.name}</Text>
+              <Text style={styles.headerMeta}>
+                {player.team} · {player.position} · #{player.jersey}
+              </Text>
+              {/* Real backend timestamp → freshness note/banner (plan: data age tiers) */}
+              {player.computedAt ? <DataFreshness timestamp={player.computedAt} onRefresh={refetchPlayer} /> : null}
+            </View>
           </Card>
-        </View>
-      ) : null}
 
-      {/* Risk trend — statistics, hidden for fans */}
-      {!isFan ? (
-        <View>
-          <Text style={styles.sectionTitle}>Risk Trend</Text>
-          <Card style={styles.chartCard}>
-            <LineChart
-              series={[{ name: 'Risk', color: '#E5484D', points: riskTrend }]}
-              height={110}
-              gridLabels={realTrend ? ['60d', '45d', '30d', '15d', 'Now'] : ['60d', '45d', '30d', '15d', 'Now']}
-              showDots
-            />
-            <Text style={styles.chartCaption}>
-              {realTrend
-                ? `Real backend scores over the last 60 days — ${player.riskHistory!.length} snapshots${player.zone === 'red' ? `, flagged by ${player.triggerMetric}` : ''}`
-                : player.daysInZone > 0
-                  ? `Entered the red zone ${player.daysInZone} day(s) ago — flagged by ${player.triggerMetric}`
-                  : 'Risk score trending within the normal range over the last 60 days'}
-            </Text>
+          {/* Explanation */}
+          <Card style={styles.explainCard}>
+            <View style={styles.explainHeader}>
+              <AppIcon name="info.circle.fill" size={16} color="#5856D6" />
+              <Text style={styles.explainTitle}>Why the flag</Text>
+            </View>
+            <Text style={styles.explainText}>{player.explanation}</Text>
           </Card>
-        </View>
-      ) : null}
+
+          {/* What triggered this — statistics, hidden for fans */}
+          {!isFan ? (
+            <View>
+              <Text style={styles.sectionTitle}>What triggered this</Text>
+              <View style={styles.listGap}>
+                {METRICS.map(m => {
+                  const mRecent = player[`${m.key}Recent` as const];
+                  const mBaseline = player[`${m.key}Baseline` as const];
+                  const mZ = player[`${m.key}Z` as const];
+                  const triggered = mZ > 1.5;
+                  return (
+                    <Card key={m.key} style={styles.metricCard}>
+                      <View style={styles.metricTop}>
+                        <Text style={styles.metricName}>{m.label}</Text>
+                        <View style={[styles.zChip, { backgroundColor: triggered ? '#FDEBEC' : '#F0F1F5' }]}>
+                          <Text style={[styles.zText, { color: triggered ? '#E5484D' : '#6E7280' }]}>
+                            z {mZ >= 0 ? '+' : ''}
+                            {mZ.toFixed(1)}
+                            {triggered ? ' ▲' : ''}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.barRow}>
+                        <View style={styles.barTrack}>
+                          <View
+                            style={[
+                              styles.barFill,
+                              { width: `${Math.min(100, (mRecent / (Math.max(mRecent, mBaseline) * 1.15)) * 100)}%`, backgroundColor: m.color },
+                            ]}
+                          />
+                          <View
+                            style={[
+                              styles.barBaseline,
+                              { left: `${Math.min(96, (mBaseline / (Math.max(mRecent, mBaseline) * 1.15)) * 100)}%` },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.barLegend}>▍ baseline</Text>
+                      </View>
+                      <Text style={styles.metricCompare}>
+                        {mRecent.toFixed(1)} {m.unit} recent vs {mBaseline.toFixed(1)} {m.unit} baseline
+                      </Text>
+                    </Card>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+
+          {/* Season workload — statistics, hidden for fans */}
+          {!isFan ? (
+            <View>
+              <Text style={styles.sectionTitle}>Season Workload</Text>
+              <Card style={styles.chartCard}>
+                <View style={styles.chartTabs}>
+                  {METRICS.map(m => (
+                    <Pressable
+                      key={m.key}
+                      style={[styles.chartTab, metric === m.key && styles.chartTabActive]}
+                      onPress={() => {
+                        setMetric(m.key);
+                        setSelectedGame(null);
+                      }}>
+                      <Text style={[styles.chartTabText, metric === m.key && styles.chartTabTextActive]}>
+                        {m.label.split(' ')[0]}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                {selectedGame != null ? (
+                  <View style={styles.tooltipChip}>
+                    <AppIcon name="location.fill" size={12} color="#5856D6" />
+                    <Text style={styles.tooltipText}>
+                      {realLogs && selectedGameDate
+                        ? `${selectedGameDate} · ${selectedGameMinutes.toFixed(1)} min`
+                        : `Game ${selectedGame + 1} · ${selectedGameMinutes.toFixed(1)} ${metricDef.unit}`}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <LineChart
+                  series={[{ name: metricDef.label, color: metricDef.color, points: workload(metric) }]}
+                  height={170}
+                  gridLabels={workloadLabels}
+                  showDots
+                  markers={spikeMarkers}
+                  bands={[
+                    { y0: 0, y1: 0.3, color: '#E5484D' },
+                    { y0: 0.3, y1: 0.5, color: '#F5A623' },
+                  ]}
+                  selectedPoint={selectedGame != null ? { series: 0, point: selectedGame } : null}
+                  onPointPress={(_si, pi) => setSelectedGame(pi === selectedGame ? null : pi)}
+                />
+                <Text style={styles.chartCaption}>
+                  {realLogs
+                    ? `${metricDef.label} per game — red dots mark backend-detected workload spikes. Tap a dot for details.`
+                    : `${metricDef.label} per game — red/yellow bands mark elevated workload zones. Tap a dot for details.`}
+                </Text>
+              </Card>
+            </View>
+          ) : null}
+
+          {/* Risk trend — statistics, hidden for fans */}
+          {!isFan ? (
+            <View>
+              <Text style={styles.sectionTitle}>Risk Trend</Text>
+              <Card style={styles.chartCard}>
+                <LineChart
+                  series={[{ name: 'Risk', color: '#E5484D', points: riskTrend }]}
+                  height={110}
+                  gridLabels={realTrend ? ['60d', '45d', '30d', '15d', 'Now'] : ['60d', '45d', '30d', '15d', 'Now']}
+                  showDots
+                />
+                <Text style={styles.chartCaption}>
+                  {realTrend
+                    ? `Real backend scores over the last 60 days — ${player.riskHistory!.length} snapshots${player.zone === 'red' ? `, flagged by ${player.triggerMetric}` : ''}`
+                    : player.daysInZone > 0
+                      ? `Entered the red zone ${player.daysInZone} day(s) ago — flagged by ${player.triggerMetric}`
+                      : 'Risk score trending within the normal range over the last 60 days'}
+                </Text>
+              </Card>
+            </View>
+          ) : null}
+        </>
+      )}
 
       {/* Schedule */}
       <View>
