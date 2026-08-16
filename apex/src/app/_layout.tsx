@@ -68,7 +68,11 @@ function RootNavigator() {
             // web. An array of Stack.Screen elements is flattened correctly.
             <Stack.Screen key="search" name="search" options={{ presentation: 'modal' }} />,
             <Stack.Screen key="settings" name="settings" options={{ presentation: 'modal' }} />,
-            <Stack.Screen key="story" name="story" options={{ presentation: 'modal' }} />,
+            // Story renders as a bottom sheet over the app: transparentModal keeps
+            // the screen behind it mounted and visible, so Home shows through the
+            // dim overlay instead of being replaced by an opaque card (the plan:
+            // "story mode overlaps the current screen, which is disabled behind it").
+            <Stack.Screen key="story" name="story" options={{ presentation: 'transparentModal' }} />,
           ]
         : null}
     </Stack>
