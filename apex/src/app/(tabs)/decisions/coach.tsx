@@ -9,7 +9,9 @@ import { Chip } from '@/components/ui/chip';
 import { QualityBadge, TypeChip } from '@/components/ui/badge';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
 import { type OutcomeCell } from '@/data/mock/coaches';
 import { useCoachDetail } from '@/data/live/decisions';
 
@@ -26,10 +28,15 @@ export default function CoachDetailScreen() {
   const router = useRouter();
   const { coachId } = useLocalSearchParams<{ coachId: string }>();
   const { activeSport, role } = useOnboarding();
-  const { coach, decisions: coachDecisions } = useCoachDetail(coachId, activeSport);
+  const { status } = useBackend();
+  const { coach, decisions: coachDecisions, loading } = useCoachDetail(coachId, activeSport);
   // Display-only (the plan's role rules): fans get the plain view without the
   // statistics sections; the backend request never changes.
   const isFan = role === 'fan';
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showSkeleton = loading && !backendOffline;
   const [filter, setFilter] = useState<DecisionFilter>('all');
   const [cellFilter, setCellFilter] = useState<OutcomeCell | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -62,114 +69,155 @@ export default function CoachDetailScreen() {
     <Screen>
       <StackHeader title={coach.name} subtitle={`${coach.team} · Rank #${coach.rank}`} />
 
-      {/* Header card */}
-      <Card style={styles.headerCard}>
-        <View style={styles.headerAvatar}>
-          <Text style={styles.headerInitials}>
-            {coach.name.split(' ').map(w => w[0]).join('')}
-          </Text>
-        </View>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>{coach.name}</Text>
-          <Text style={styles.headerMeta}>{coach.team} · {coach.sport}</Text>
-          <View style={styles.headerRank}>
-            <AppIcon name="trophy.fill" size={13} color="#D9A21B" />
-            <Text style={styles.headerRankText}>Rank #{coach.rank} · {coach.trend === 'up' ? '▲' : coach.trend === 'down' ? '▼' : '—'} vs last month</Text>
-          </View>
-        </View>
-        <Text style={styles.headerEv}>{coach.evRate}%</Text>
-      </Card>
-
-      {/* Stat boxes + process-vs-outcome matrix — statistics, hidden for fans */}
-      {!isFan ? (
+      {showSkeleton ? (
         <>
-          <View style={styles.statsGrid}>
-            {stats.map(stat => (
-              <Card key={stat.label} style={styles.statBox}>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </Card>
-            ))}
-          </View>
-
+          {/* Header card skeleton */}
+          <Card style={styles.headerCard}>
+            <Skeleton width={54} height={54} radius={27} />
+            <View style={styles.headerInfo}>
+              <Skeleton width="60%" height={18} radius={6} />
+              <Skeleton width="45%" height={12} radius={6} />
+              <Skeleton width="70%" height={12} radius={6} />
+            </View>
+            <Skeleton width={44} height={26} radius={6} />
+          </Card>
+          {!isFan ? (
+            <>
+              <View style={styles.statsGrid}>
+                {[0, 1, 2, 3].map(i => (
+                  <Card key={i} style={styles.statBox}>
+                    <Skeleton width="50%" height={20} radius={6} />
+                    <Skeleton width="70%" height={11} radius={6} />
+                  </Card>
+                ))}
+              </View>
+              <View>
+                <Text style={styles.sectionTitle}>Process vs Outcome</Text>
+                <SkeletonCard lines={4} />
+              </View>
+            </>
+          ) : null}
           <View>
-            <Text style={styles.sectionTitle}>Process vs Outcome</Text>
-            <Card style={styles.matrixCard}>
-              <View style={styles.matrixRow}>
-                {MATRIX_CELLS.slice(0, 2).map(cell => (
-                  <MatrixCell key={cell.key} cell={cell} count={coach.matrix[cell.key]} pct={Math.round((coach.matrix[cell.key] / total) * 100)} selected={cellFilter === cell.key} onPress={() => setCellFilter(cellFilter === cell.key ? null : cell.key)} />
-                ))}
-              </View>
-              <View style={styles.matrixRow}>
-                {MATRIX_CELLS.slice(2).map(cell => (
-                  <MatrixCell key={cell.key} cell={cell} count={coach.matrix[cell.key]} pct={Math.round((coach.matrix[cell.key] / total) * 100)} selected={cellFilter === cell.key} onPress={() => setCellFilter(cellFilter === cell.key ? null : cell.key)} />
-                ))}
-              </View>
-              <Text style={styles.matrixNote}>A good outcome does not mean a good decision — process is what matters</Text>
-            </Card>
+            <Text style={styles.sectionTitle}>Decisions</Text>
+            <View style={styles.listGap}>
+              <SkeletonCard lines={4} />
+              <SkeletonCard lines={4} />
+              <SkeletonCard lines={4} />
+            </View>
           </View>
         </>
-      ) : null}
+      ) : (
+        <>
+          {/* Header card */}
+          <Card style={styles.headerCard}>
+            <View style={styles.headerAvatar}>
+              <Text style={styles.headerInitials}>
+                {coach.name.split(' ').map(w => w[0]).join('')}
+              </Text>
+            </View>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerName}>{coach.name}</Text>
+              <Text style={styles.headerMeta}>{coach.team} · {coach.sport}</Text>
+              <View style={styles.headerRank}>
+                <AppIcon name="trophy.fill" size={13} color="#D9A21B" />
+                <Text style={styles.headerRankText}>Rank #{coach.rank} · {coach.trend === 'up' ? '▲' : coach.trend === 'down' ? '▼' : '—'} vs last month</Text>
+              </View>
+            </View>
+            <Text style={styles.headerEv}>{coach.evRate}%</Text>
+          </Card>
 
-      {/* Decisions */}
-      <View>
-        <View style={styles.decisionHeader}>
-          <Text style={styles.sectionTitle}>Decisions</Text>
-          <View style={styles.filterChips}>
-            {(['all', 'optimal', 'suboptimal'] as DecisionFilter[]).map(f => (
-              <Chip key={f} label={f} small selected={filter === f} onPress={() => setFilter(f)} />
-            ))}
-          </View>
-        </View>
-        {decisionTypes.length > 0 ? (
-          <View style={styles.filterRow}>
-            {decisionTypes.map(t => (
-              <Chip key={t} label={t.replace('_', ' ')} small selected={typeFilter === t} onPress={() => setTypeFilter(typeFilter === t ? null : t)} />
-            ))}
-          </View>
-        ) : null}
-        {opponents.length > 0 ? (
-          <View style={styles.filterRow}>
-            {opponents.map(opp => (
-              <Chip key={opp} label={`vs ${opp}`} small selected={opponentFilter === opp} onPress={() => setOpponentFilter(opponentFilter === opp ? null : opp)} />
-            ))}
-          </View>
-        ) : null}
-        <View style={styles.listGap}>
-          {decisions.map(decision => (
-            <Pressable
-              key={decision.id}
-              onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id, decision: JSON.stringify(decision) } })}>
-              <Card style={[styles.decisionCard, { borderLeftColor: decision.isOptimal ? '#2FA36B' : '#E5484D' }]}>
-                <View style={styles.decisionTop}>
-                  <Text style={styles.decisionDate}>
-                    {decision.date} · vs {decision.opponent}
-                  </Text>
-                  <QualityBadge optimal={decision.isOptimal} />
-                </View>
-                <View style={styles.decisionTypeRow}>
-                  <TypeChip label={decision.type.replace('_', ' ')} />
-                  <Text style={styles.decisionClock}>
-                    {decision.period} {decision.clock}
-                  </Text>
-                </View>
-                <Text style={styles.decisionSituation}>{decision.situation}</Text>
-                <View style={styles.decisionEvRow}>
-                  <Text style={styles.decisionChosen}>
-                    {decision.chosenAction} · EV {Math.round(decision.evChosen * 100)}%
-                  </Text>
-                  <Text style={styles.decisionBest}>best {Math.round(decision.evBest * 100)}%</Text>
-                </View>
-              </Card>
-            </Pressable>
-          ))}
-          {decisions.length === 0 ? (
-            <Card style={styles.noDecisions}>
-              <Text style={styles.noDecisionsText}>No decisions match this filter</Text>
-            </Card>
+          {/* Stat boxes + process-vs-outcome matrix — statistics, hidden for fans */}
+          {!isFan ? (
+            <>
+              <View style={styles.statsGrid}>
+                {stats.map(stat => (
+                  <Card key={stat.label} style={styles.statBox}>
+                    <Text style={styles.statValue}>{stat.value}</Text>
+                    <Text style={styles.statLabel}>{stat.label}</Text>
+                  </Card>
+                ))}
+              </View>
+
+              <View>
+                <Text style={styles.sectionTitle}>Process vs Outcome</Text>
+                <Card style={styles.matrixCard}>
+                  <View style={styles.matrixRow}>
+                    {MATRIX_CELLS.slice(0, 2).map(cell => (
+                      <MatrixCell key={cell.key} cell={cell} count={coach.matrix[cell.key]} pct={Math.round((coach.matrix[cell.key] / total) * 100)} selected={cellFilter === cell.key} onPress={() => setCellFilter(cellFilter === cell.key ? null : cell.key)} />
+                    ))}
+                  </View>
+                  <View style={styles.matrixRow}>
+                    {MATRIX_CELLS.slice(2).map(cell => (
+                      <MatrixCell key={cell.key} cell={cell} count={coach.matrix[cell.key]} pct={Math.round((coach.matrix[cell.key] / total) * 100)} selected={cellFilter === cell.key} onPress={() => setCellFilter(cellFilter === cell.key ? null : cell.key)} />
+                    ))}
+                  </View>
+                  <Text style={styles.matrixNote}>A good outcome does not mean a good decision — process is what matters</Text>
+                </Card>
+              </View>
+            </>
           ) : null}
-        </View>
-      </View>
+
+          {/* Decisions */}
+          <View>
+            <View style={styles.decisionHeader}>
+              <Text style={styles.sectionTitle}>Decisions</Text>
+              <View style={styles.filterChips}>
+                {(['all', 'optimal', 'suboptimal'] as DecisionFilter[]).map(f => (
+                  <Chip key={f} label={f} small selected={filter === f} onPress={() => setFilter(f)} />
+                ))}
+              </View>
+            </View>
+            {decisionTypes.length > 0 ? (
+              <View style={styles.filterRow}>
+                {decisionTypes.map(t => (
+                  <Chip key={t} label={t.replace('_', ' ')} small selected={typeFilter === t} onPress={() => setTypeFilter(typeFilter === t ? null : t)} />
+                ))}
+              </View>
+            ) : null}
+            {opponents.length > 0 ? (
+              <View style={styles.filterRow}>
+                {opponents.map(opp => (
+                  <Chip key={opp} label={`vs ${opp}`} small selected={opponentFilter === opp} onPress={() => setOpponentFilter(opponentFilter === opp ? null : opp)} />
+                ))}
+              </View>
+            ) : null}
+            <View style={styles.listGap}>
+              {decisions.map(decision => (
+                <Pressable
+                  key={decision.id}
+                  onPress={() => router.push({ pathname: '/decisions/decision', params: { decisionId: decision.id, decision: JSON.stringify(decision) } })}>
+                  <Card style={[styles.decisionCard, { borderLeftColor: decision.isOptimal ? '#2FA36B' : '#E5484D' }]}>
+                    <View style={styles.decisionTop}>
+                      <Text style={styles.decisionDate}>
+                        {decision.date} · vs {decision.opponent}
+                      </Text>
+                      <QualityBadge optimal={decision.isOptimal} />
+                    </View>
+                    <View style={styles.decisionTypeRow}>
+                      <TypeChip label={decision.type.replace('_', ' ')} />
+                      <Text style={styles.decisionClock}>
+                        {decision.period} {decision.clock}
+                      </Text>
+                    </View>
+                    <Text style={styles.decisionSituation}>{decision.situation}</Text>
+                    <View style={styles.decisionEvRow}>
+                      <Text style={styles.decisionChosen}>
+                        {decision.chosenAction} · EV {Math.round(decision.evChosen * 100)}%
+                      </Text>
+                      <Text style={styles.decisionBest}>best {Math.round(decision.evBest * 100)}%</Text>
+                    </View>
+                  </Card>
+                </Pressable>
+              ))}
+              {decisions.length === 0 ? (
+                <Card style={styles.noDecisions}>
+                  <Text style={styles.noDecisionsText}>No decisions match this filter</Text>
+                </Card>
+              ) : null}
+            </View>
+          </View>
+        </>
+      )}
 
       {/* Story mode — entity story for this coach */}
       <PillButton
