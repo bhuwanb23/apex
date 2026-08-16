@@ -129,8 +129,8 @@ export default function HomeScreen() {
 
       {/* Timeout optimizer — highlighted for the coach role, above the fold */}
       {role === 'coach' ? (
-        <Pressable onPress={() => router.push('/momentum/timeout')}>
-          <GradientView colors={['#FFA058', '#FF8A5C']} style={styles.timeoutCard}>
+        <Pressable onPress={() => router.push('/momentum/timeout')} accessibilityRole="button" accessibilityLabel="Open timeout optimizer">
+          <GradientView colors={['#F97316', '#EA580C']} style={styles.timeoutCard}>
             <View style={styles.timeoutIcon}>
               <AppIcon name="timer" size={18} color="#FFFFFF" />
             </View>
@@ -138,7 +138,9 @@ export default function HomeScreen() {
               <Text style={styles.timeoutTitle}>Timeout optimizer</Text>
               <Text style={styles.timeoutDesc}>Should you burn a timeout right now? Get an instant recommendation.</Text>
             </View>
-            <AppIcon name="chevron.right" size={16} color="rgba(255,255,255,0.85)" />
+            <View style={styles.timeoutArrow}>
+              <AppIcon name="chevron.right" size={16} color="#FFFFFF" />
+            </View>
           </GradientView>
         </Pressable>
       ) : null}
@@ -451,28 +453,42 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 20,
     padding: 16,
+    shadowColor: '#EA580C',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
   },
   timeoutIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   timeoutBody: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   timeoutTitle: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
+    letterSpacing: 0.2,
   },
   timeoutDesc: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
-    lineHeight: 17,
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+  timeoutArrow: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gamesRow: {
     gap: 12,
