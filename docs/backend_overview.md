@@ -1,4 +1,4 @@
-# AQX Sports Intelligence — Backend Development Phases
+# Apex Sports Intelligence — Backend Development Phases
 
 ---
 

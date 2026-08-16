@@ -658,7 +658,7 @@ Each log entry is one JSON object
   "timestamp": "2024-01-15T14:23:45.123Z",
   "level": "info",
   "message": "Server started",
-  "service": "aqx-backend",
+  "service": "Apex-backend",
   "environment": "production",
   "pid": 12345,
   "data": { any extra context }
@@ -1161,7 +1161,7 @@ Useful during demo
 Log level → info
 
 ═══════════════════════════════════════
-  AQX Sports Intelligence Backend
+  Apex Sports Intelligence Backend
   Version: 1.0.0
   Environment: development
   Port: 8000

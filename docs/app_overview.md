@@ -1,4 +1,4 @@
-# AQX Sports Intelligence — React Native App Pages Plan
+# Apex Sports Intelligence — React Native App Pages Plan
 
 ---
 
@@ -106,14 +106,14 @@ Total           → 22 screens
 ```
 First thing a new user sees
 Sets the tone and brand
-Explains what AQX does in 3 bullet points
+Explains what Apex does in 3 bullet points
 Gets user excited before they even log in
 ```
 
 **What lives on this screen:**
 ```
 Top section
-├── AQX logo animated fade in
+├── Apex logo animated fade in
 ├── Tagline → "Sports Intelligence. Personalized."
 └── Short description → 2 sentences max
 
@@ -190,7 +190,7 @@ Analyst sees everything
 **What lives on this screen:**
 ```
 Header
-└── "How will you use AQX?"
+└── "How will you use Apex?"
     Subtext → "This personalizes your dashboard"
 
 Role cards in a vertical list
@@ -236,7 +236,7 @@ No digging required
 **What lives on this screen:**
 ```
 Top bar
-├── AQX logo left
+├── Apex logo left
 ├── Current sport selector (tap to change)
 │   Shows active sport badge
 └── Notification bell right
@@ -1069,7 +1069,7 @@ App section
 └── View system health → Opens health detail modal
 
 About section
-├── What is AQX
+├── What is Apex
 ├── Data sources used
 └── Methodology explanation links
 ```
@@ -1133,7 +1133,7 @@ Modal slides up from bottom
 Semi-transparent overlay behind
 
 Header
-├── "📖 AQX Story Mode"
+├── "📖 Apex Story Mode"
 └── Close X button
 
 Headline text (bold, large)

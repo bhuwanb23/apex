@@ -1,4 +1,4 @@
-# AQX Sports Intelligence — Complete Integration Plan
+# Apex Sports Intelligence — Complete Integration Plan
 
 ---
 

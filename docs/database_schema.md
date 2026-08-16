@@ -1,4 +1,4 @@
-# AQX Sports Intelligence — Complete Database Schema 
+# Apex Sports Intelligence — Complete Database Schema 
 
 ---
 

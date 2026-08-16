@@ -32,14 +32,14 @@ which is the foundation of the entire project
 
 **Commands to run:**
 ```
-mkdir aqx-sports-backend
-cd aqx-sports-backend
+mkdir Apex-sports-backend
+cd Apex-sports-backend
 npm init -y
 ```
 
 **What you get after this:**
 ```
-aqx-sports-backend/
+Apex-sports-backend/
 └── package.json
 ```
 
@@ -95,7 +95,7 @@ start → node dist/app.js (runs compiled production code)
 
 **What you get after this:**
 ```
-aqx-sports-backend/
+Apex-sports-backend/
 ├── package.json
 ├── tsconfig.json
 └── nodemon.json
@@ -115,7 +115,7 @@ so every future phase knows exactly where to put things
 
 **Full folder structure to create:**
 ```
-aqx-sports-backend/
+Apex-sports-backend/
 │
 ├── src/
 │ ├── routes/
@@ -214,7 +214,7 @@ Add .env to .gitignore immediately so secrets never get pushed
 General
 ├── PORT → 8000
 ├── NODE_ENV → development
-└── APP_NAME → AQX Sports Intelligence
+└── APP_NAME → Apex Sports Intelligence
 
 Database
 └── DATABASE_URL → file:./prisma/aqx.db
@@ -553,7 +553,7 @@ Before moving to Phase 2
 ## Final Phase 1 File Structure
 
 ```
-aqx-sports-backend/
+Apex-sports-backend/
 │
 ├── src/
 │ ├── routes/

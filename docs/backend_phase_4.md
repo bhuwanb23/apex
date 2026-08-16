@@ -158,8 +158,8 @@ Starts the server
 
 **FastAPI app configuration:**
 ```
-Title           → AQX ML Microservice
-Description     → Statistical and ML models for AQX Sports Intelligence
+Title           → Apex ML Microservice
+Description     → Statistical and ML models for Apex Sports Intelligence
 Version         → 1.0.0
 Docs URL        → /docs (Swagger auto generated)
 Redoc URL       → /redoc (alternative docs)

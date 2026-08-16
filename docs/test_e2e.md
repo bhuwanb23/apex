@@ -1,4 +1,4 @@
-# AQX Sports Intelligence — Testing and What's Left To Do
+# Apex Sports Intelligence — Testing and What's Left To Do
 
 ---
 
@@ -425,7 +425,7 @@ Options
 │   Like 192.168.1.100:8000
 │
 ├── Deploy backend to Render or Railway (free)
-│   Get a public URL like aqx-backend.onrender.com
+│   Get a public URL like Apex-backend.onrender.com
 │   App points to that URL
 │   Works from anywhere
 │   Best option for hackathon
@@ -821,7 +821,7 @@ Small touches that feel native and polished
 
 Share screenshots
 User can share a screenshot of any screen
-With AQX branding overlaid automatically
+With Apex branding overlaid automatically
 Like a sports card format
 Very shareable and shows product thinking
 ```
