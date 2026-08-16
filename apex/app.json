@@ -8,9 +8,11 @@
     "scheme": "apex",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.apexsports.intelligence"
     },
     "android": {
+      "package": "com.apexsports.intelligence",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
