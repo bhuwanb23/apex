@@ -100,7 +100,7 @@ jobs:
             --exclude='__pycache__' \
             --exclude='.pytest_cache' \
             --exclude='logs/*' \
-            -C backend/python_ml .
+            -C . .
 
       - name: Verify models included
         run: tar -tzf apex-ml-${{ steps.tag.outputs.tag }}.tar.gz | grep -E 'models/' | head -5
