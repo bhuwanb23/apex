@@ -47,14 +47,14 @@ export default function GameReplayScreen() {
 
   // Arrived without a gameId (e.g. the Momentum tab quick link): once the real
   // recent games load, hop onto the first one so a live timeline shows instead
-  // of the mock fallback. Only auto-picks once per visit.
+  // of the mock fallback. Only auto-picks once per visit — the guarded
+  // render-time adjustment is the project's pattern for syncing state to
+  // changing data without an effect (see decisions/index.tsx).
   const [autoPicked, setAutoPicked] = useState(false);
-  useEffect(() => {
-    if (!gameId && pickerGames.length > 0 && !autoPicked) {
-      setSelectedId(pickerGames[0].id);
-      setAutoPicked(true);
-    }
-  }, [gameId, pickerGames, autoPicked]);
+  if (!gameId && !autoPicked && pickerGames.length > 0) {
+    setSelectedId(pickerGames[0].id);
+    setAutoPicked(true);
+  }
 
   const interpAt = (key: 'home' | 'away', time: number): number => {
     const pts = game.timeline;
@@ -183,20 +183,24 @@ export default function GameReplayScreen() {
         <ErrorState message="Could not load this game's momentum timeline" onRetry={refetchGameMomentum} />
       ) : showSkeleton ? (
         <>
-          {/* Game header skeleton */}
-          <Card style={styles.headerCard}>
+          {/* Scoreboard skeleton */}
+          <View style={styles.scoreboard}>
+            <View style={styles.scoreboardTop}>
+              <Skeleton width={90} height={10} radius={5} />
+              <Skeleton width={44} height={18} radius={9} />
+            </View>
             <View style={styles.scoreRow}>
               <View style={styles.team}>
-                <Skeleton width="70%" height={15} radius={6} />
-                <Skeleton width={44} height={26} radius={6} />
+                <Skeleton width="70%" height={14} radius={6} />
+                <Skeleton width={44} height={28} radius={6} />
               </View>
-              <Skeleton width={44} height={10} radius={5} />
-              <View style={[styles.team, styles.teamRight]}>
-                <Skeleton width="70%" height={15} radius={6} />
-                <Skeleton width={44} height={26} radius={6} />
+              <Skeleton width={20} height={20} radius={6} />
+              <View style={styles.team}>
+                <Skeleton width="70%" height={14} radius={6} />
+                <Skeleton width={44} height={28} radius={6} />
               </View>
             </View>
-          </Card>
+          </View>
           {/* Chart skeleton */}
           <Card style={styles.chartCard}>
             <View style={styles.legendRow}>
@@ -223,20 +227,38 @@ export default function GameReplayScreen() {
         </>
       ) : (
         <>
-          {/* Game header */}
-          <Card style={styles.headerCard}>
-            <View style={styles.scoreRow}>
-              <View style={styles.team}>
-                <Text style={styles.teamName}>{game.homeTeam}</Text>
-                <Text style={[styles.teamScore, homeMomentum > awayMomentum && styles.teamScoreLead]}>{game.homeScore}</Text>
-              </View>
-              <Text style={styles.final}>{game.date}</Text>
-              <View style={[styles.team, styles.teamRight]}>
-                <Text style={styles.teamName}>{game.awayTeam}</Text>
-                <Text style={[styles.teamScore, awayMomentum > homeMomentum && styles.teamScoreLead]}>{game.awayScore}</Text>
+          {/* Scoreboard header — dark board, leading team highlighted */}
+          <View style={styles.scoreboard}>
+            <View style={styles.scoreboardTop}>
+              <Text style={styles.scoreboardDate}>{game.date}</Text>
+              <View style={styles.finalChip}>
+                <Text style={styles.finalChipText}>FINAL</Text>
               </View>
             </View>
-          </Card>
+            <View style={styles.scoreRow}>
+              <View style={styles.team}>
+                <View style={[styles.teamDot, { backgroundColor: '#5856D6' }]} />
+                <Text style={styles.teamName} numberOfLines={1}>
+                  {game.homeTeam}
+                </Text>
+                <Text style={[styles.teamScore, homeMomentum >= awayMomentum && styles.teamScoreLead]}>
+                  {game.homeScore}
+                </Text>
+              </View>
+              <View style={styles.scoreDivider}>
+                <Text style={styles.scoreDash}>–</Text>
+              </View>
+              <View style={styles.team}>
+                <View style={[styles.teamDot, { backgroundColor: '#FF5C8A' }]} />
+                <Text style={styles.teamName} numberOfLines={1}>
+                  {game.awayTeam}
+                </Text>
+                <Text style={[styles.teamScore, awayMomentum >= homeMomentum && styles.teamScoreLead]}>
+                  {game.awayScore}
+                </Text>
+              </View>
+            </View>
+          </View>
 
           {/* Momentum chart */}
           <Card style={styles.chartCard}>
@@ -290,7 +312,7 @@ export default function GameReplayScreen() {
           </Card>
 
           {/* Peak moments (collapsible) */}
-          <View>
+          <View style={styles.section}>
             <Pressable style={styles.collapseHeader} onPress={() => setPeaksOpen(prev => !prev)}>
               <Text style={styles.sectionTitle}>Peak Moments</Text>
               <AppIcon name={peaksOpen ? 'chevron.down' : 'chevron.right'} size={16} color="#6E7280" />
@@ -298,16 +320,17 @@ export default function GameReplayScreen() {
             {peaksOpen ? (
               <View style={styles.listGap}>
                 {[...game.events].sort((a, b) => b.swing - a.swing).map(event => (
-                  <Pressable key={event.label} onPress={() => jumpTo(event.time)}>
+                  <Pressable key={event.label} onPress={() => jumpTo(event.time)} style={({ pressed }) => pressed && { opacity: 0.85 }}>
                     <Card style={styles.peakCard}>
-                      <View style={styles.peakLeft}>
-                        <View style={[styles.peakIcon, { backgroundColor: event.team === 'home' ? '#EFEEFB' : '#FDEBEC' }]}>
-                          <AppIcon name="bolt.fill" size={14} color={event.team === 'home' ? '#5856D6' : '#FF5C8A'} />
-                        </View>
-                        <View style={styles.peakBody}>
+                      <View style={[styles.peakIcon, { backgroundColor: event.team === 'home' ? '#EFEEFB' : '#FDEBEC' }]}>
+                        <AppIcon name="bolt.fill" size={14} color={event.team === 'home' ? '#5856D6' : '#FF5C8A'} />
+                      </View>
+                      <View style={styles.peakBody}>
+                        <View style={styles.peakTimeRow}>
+                          <Text style={[styles.peakTimeDot, { backgroundColor: event.team === 'home' ? '#5856D6' : '#FF5C8A' }]} />
                           <Text style={styles.peakTime}>{event.label}</Text>
-                          <Text style={styles.peakDesc}>{event.description}</Text>
                         </View>
+                        <Text style={styles.peakDesc}>{event.description}</Text>
                       </View>
                       <View style={styles.peakSwing}>
                         <Text style={[styles.peakSwingValue, { color: event.team === 'home' ? '#5856D6' : '#FF5C8A' }]}>
@@ -323,7 +346,7 @@ export default function GameReplayScreen() {
           </View>
 
           {/* Summary stats */}
-          <View>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Momentum summary</Text>
             <View style={styles.summaryRow}>
               <SummaryBox value={`${game.momentumShifts}`} label="Momentum shifts" />
@@ -342,8 +365,10 @@ function ChipLabel({ label, date, selected, onPress }: { label: string; date: st
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.gameChip, selected && styles.gameChipSelected]}>
-      <Text style={[styles.gameChipText, selected && styles.gameChipTextSelected]}>{label}</Text>
+      style={({ pressed }) => [styles.gameChip, selected && styles.gameChipSelected, pressed && { opacity: 0.8 }]}>
+      <Text style={[styles.gameChipText, selected && styles.gameChipTextSelected]} numberOfLines={1}>
+        {label}
+      </Text>
       <Text style={[styles.gameChipDate, selected && styles.gameChipDateSelected]}>{date}</Text>
     </Pressable>
   );
@@ -433,12 +458,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 1,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
+    maxWidth: 170,
   },
   gameChipSelected: {
-    backgroundColor: '#EFEEFB',
-    borderColor: '#5856D6',
+    backgroundColor: '#5856D6',
   },
   gameChipText: {
     fontSize: 12.5,
@@ -446,17 +469,43 @@ const styles = StyleSheet.create({
     color: '#14121F',
   },
   gameChipTextSelected: {
-    color: '#5856D6',
+    color: '#FFFFFF',
   },
   gameChipDate: {
     fontSize: 10,
     color: '#9AA0B5',
   },
   gameChipDateSelected: {
-    color: '#8E84E8',
+    color: 'rgba(255,255,255,0.75)',
   },
-  headerCard: {
+  // --- Dark scoreboard ---
+  scoreboard: {
+    backgroundColor: '#1E1B33',
+    borderRadius: 18,
+    padding: 16,
+    gap: 14,
+  },
+  scoreboardTop: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  scoreboardDate: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '600',
+  },
+  finalChip: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  finalChipText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   scoreRow: {
     flexDirection: 'row',
@@ -466,30 +515,37 @@ const styles = StyleSheet.create({
   team: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    gap: 3,
   },
-  teamRight: {
-    alignItems: 'center',
+  teamDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 2,
   },
   teamName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#14121F',
+    color: 'rgba(255,255,255,0.85)',
+    maxWidth: '90%',
   },
   teamScore: {
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '800',
-    color: '#6E7280',
+    color: 'rgba(255,255,255,0.4)',
+    fontVariant: ['tabular-nums'],
   },
   teamScoreLead: {
-    color: '#14121F',
+    color: '#FFFFFF',
   },
-  final: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#9AA0B5',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+  scoreDivider: {
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  scoreDash: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 22,
+    fontWeight: '700',
   },
   chartCard: {
     gap: 14,
@@ -593,6 +649,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#14121F',
   },
+  section: {
+    gap: 12,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -609,25 +668,29 @@ const styles = StyleSheet.create({
   peakCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     padding: 14,
   },
-  peakLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
   peakIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   peakBody: {
     flex: 1,
-    gap: 2,
+    gap: 3,
+  },
+  peakTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  peakTimeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   peakTime: {
     fontSize: 12.5,
@@ -641,7 +704,7 @@ const styles = StyleSheet.create({
   },
   peakSwing: {
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 4,
   },
   peakSwingValue: {
     fontSize: 16,
