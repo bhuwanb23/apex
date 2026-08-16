@@ -50,12 +50,15 @@ function useBackendSeasons(sport: SportId): string[] {
         if (cancelled) return;
         // Each sport knows its current season; the chip list is that sport's
         // season plus any other seasons the backend has scorecards for.
+        // Multiple sports share season labels (e.g. '2026'), so dedupe — the
+        // chips are keyed by the season string and duplicates would collide.
         const current = res.sports.find((s: SportInfo) => s.name === sport)?.season;
         if (!current) return;
         const others = res.sports
           .map((s: SportInfo) => s.season)
           .filter((s: string): s is string => Boolean(s) && s !== current);
-        setResult({ sport, seasons: [current, ...others.slice(0, 2)] });
+        const unique = [...new Set([current, ...others])];
+        setResult({ sport, seasons: unique.slice(0, 3) });
       })
       .catch(() => {});
     return () => {
