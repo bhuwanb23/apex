@@ -1,4 +1,4 @@
-import { View, StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
 export interface ChartPoint {
@@ -50,6 +50,24 @@ function toPath(points: ChartPoint[]): string {
     d += ` L ${p.x * 100} ${p.y * 100}`;
   }
   return d;
+}
+
+/**
+ * Press handler for SVG shapes. On native, `onPress` works as expected. On
+ * web, react-native-svg wraps `onPress` in PanResponder props
+ * (onStartShouldSetResponder / onResponder*) that react-native-web logs as
+ * unknown event handlers — using the DOM `onClick` there keeps the tap
+ * working with zero warnings.
+ */
+function pointPressProps(
+  handler: ((...args: number[]) => void) | undefined,
+  a: number,
+  b: number,
+  marker = false
+): Record<string, unknown> {
+  if (!handler) return {};
+  const fn = marker ? () => handler(a) : () => handler(a, b);
+  return Platform.OS === 'web' ? { onClick: fn } : { onPress: fn };
 }
 
 /** Lightweight multi-series line chart. Values are normalized 0..1. */
@@ -121,7 +139,7 @@ export function LineChart({
                     fill={isSelected ? '#14121F' : s.color}
                     stroke="#FFFFFF"
                     strokeWidth={1.5}
-                    onPress={onPointPress ? () => onPointPress(si, pi) : undefined}
+                    {...pointPressProps(onPointPress, si, pi)}
                   />
                 );
               })
@@ -136,7 +154,7 @@ export function LineChart({
             fill={m.color}
             stroke={m.selected ? '#14121F' : '#FFFFFF'}
             strokeWidth={1.5}
-            onPress={onMarkerPress ? () => onMarkerPress(i) : undefined}
+            {...pointPressProps(onMarkerPress, i, 0, true)}
           />
         ))}
         {scrubber != null ? (
@@ -145,8 +163,8 @@ export function LineChart({
       </Svg>
       {yLabels.length > 0 ? (
         <View style={styles.yLabels}>
-          {yLabels.map(label => (
-            <Text key={label} style={styles.yLabel}>
+          {yLabels.map((label, i) => (
+            <Text key={`yl-${i}`} style={styles.yLabel}>
               {label}
             </Text>
           ))}
@@ -154,8 +172,8 @@ export function LineChart({
       ) : null}
       {gridLabels.length > 0 ? (
         <View style={styles.labelsRow}>
-          {gridLabels.map(label => (
-            <Text key={label} style={styles.label}>
+          {gridLabels.map((label, i) => (
+            <Text key={`gl-${i}`} style={styles.label}>
               {label}
             </Text>
           ))}
