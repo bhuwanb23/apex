@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
 import { useLeagueAlerts } from '@/data/live/injury';
+import { formatRiskScore } from '@/lib/format';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { SkeletonRow } from '@/components/ui/skeleton';
@@ -202,7 +203,7 @@ function AlertCard({ player }: { player: Player }) {
           </Text>
         </View>
         <View style={styles.alertScoreWrap}>
-          <Text style={[styles.alertScore, { color: player.zone === 'red' ? '#E5484D' : '#B7791F' }]}>{player.riskScore}</Text>
+          <Text style={[styles.alertScore, { color: player.zone === 'red' ? '#E5484D' : '#B7791F' }]}>{formatRiskScore(player.riskScore)}</Text>
           <Text style={styles.alertScoreLabel}>risk</Text>
         </View>
       </View>

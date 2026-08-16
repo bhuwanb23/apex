@@ -6,6 +6,7 @@ import { AppIcon } from '@/components/ui/icon';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { useRecentSearches } from '@/hooks/use-recent-searches';
+import { formatRiskScore } from '@/lib/format';
 import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
 
@@ -86,7 +87,7 @@ export default function SearchScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.popularScore, { color: player.zone === 'red' ? '#E5484D' : player.zone === 'yellow' ? '#B7791F' : '#1F8A52' }]}>
-                  {player.riskScore}
+                  {formatRiskScore(player.riskScore)}
                 </Text>
               </Card>
             </Pressable>

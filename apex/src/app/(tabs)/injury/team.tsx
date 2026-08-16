@@ -13,6 +13,7 @@ import { GradientView } from '@/components/ui/gradient';
 import { type Player } from '@/data/mock/players';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useTeamRoster } from '@/data/live/injury';
+import { formatRiskScore } from '@/lib/format';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
@@ -196,7 +197,7 @@ function RosterRow({ player, last }: { player: Player; last: boolean }) {
           <Text style={[styles.triggerChipText, { color }]}>{player.triggerMetric}</Text>
         </View>
       ) : null}
-      <Text style={[styles.rosterScore, { color }]}>{player.riskScore}</Text>
+      <Text style={[styles.rosterScore, { color }]}>{formatRiskScore(player.riskScore)}</Text>
       <AppIcon name="chevron.right" size={13} color="#D5D7E0" />
     </View>
   );

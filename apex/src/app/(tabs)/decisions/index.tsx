@@ -13,6 +13,7 @@ import { Skeleton, SkeletonGames } from '@/components/ui/skeleton';
 import { SPORTS, type SportId } from '@/data/mock/sports';
 import { type Coach } from '@/data/mock/coaches';
 import { useRecentGames } from '@/data/live/games';
+import { formatPercent } from '@/lib/format';
 import { useCoachLeaderboard } from '@/data/live/decisions';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
@@ -197,7 +198,7 @@ export default function CoachLeaderboardScreen() {
                     </Text>
                   </View>
                   <Text style={styles.decisions}>{coach.totalDecisions} dec.</Text>
-                  <Text style={[styles.evRate, { color: evColor(coach.evRate) }]}>{coach.evRate}%</Text>
+                  <Text style={[styles.evRate, { color: evColor(coach.evRate) }]}>{formatPercent(coach.evRate)}</Text>
                   <TrendArrow trend={coach.trend} />
                 </View>
               </Pressable>
@@ -272,7 +273,7 @@ function PodiumSpot({ coach, rank, onPress }: { coach: Coach; rank: 1 | 2 | 3; o
       </Text>
       <Text style={styles.podiumTeam}>{coach.team}</Text>
       <View style={[styles.podiumBar, { height, backgroundColor: rank === 1 ? '#5856D6' : '#B9B4F0' }]}>
-        <Text style={styles.podiumRate}>{coach.evRate}%</Text>
+        <Text style={styles.podiumRate}>{formatPercent(coach.evRate)}</Text>
       </View>
     </Pressable>
   );

@@ -18,6 +18,7 @@ import { Skeleton, SkeletonCard, SkeletonRow } from '@/components/ui/skeleton';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { type Player } from '@/data/mock/players';
 import { useLeaguePlayers, useTeamRoster, useTeams } from '@/data/live/injury';
+import { formatRiskScore } from '@/lib/format';
 import { DataFreshness } from '@/components/ui/data-freshness';
 
 export default function InjuryDashboardScreen() {
@@ -296,7 +297,7 @@ function LeagueRow({ player }: { player: Player }) {
           </View>
         </View>
       </View>
-      <Text style={[styles.score, { color: zoneColor }]}>{player.riskScore}</Text>
+      <Text style={[styles.score, { color: zoneColor }]}>{formatRiskScore(player.riskScore)}</Text>
     </Card>
   );
 }
@@ -318,7 +319,7 @@ function RosterRow({ player }: { player: Player }) {
           <Text style={[styles.triggerText, { color }]}>{player.triggerMetric}</Text>
         </View>
       ) : null}
-      <Text style={[styles.rosterScore, { color }]}>{player.riskScore}</Text>
+      <Text style={[styles.rosterScore, { color }]}>{formatRiskScore(player.riskScore)}</Text>
     </View>
   );
 }

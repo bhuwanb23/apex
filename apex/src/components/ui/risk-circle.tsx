@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ZoneColors } from '@/constants/theme';
+import { formatRiskScore } from '@/lib/format';
 import type { Zone } from '@/components/ui/badge';
 
 interface RiskCircleProps {
@@ -50,7 +51,7 @@ export function RiskCircle({ score, zone, size = 120 }: RiskCircleProps) {
           },
         ]}>
         <Text style={[styles.score, { color: zone === 'insufficient_data' ? '#9AA0B5' : color }]}>
-          {score ?? '—'}
+          {formatRiskScore(score)}
         </Text>
         <Text style={styles.caption}>RISK</Text>
       </View>

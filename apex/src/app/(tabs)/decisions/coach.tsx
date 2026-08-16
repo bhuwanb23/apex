@@ -17,6 +17,7 @@ import { useBackend } from '@/context/backend';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { type OutcomeCell } from '@/data/mock/coaches';
 import { useCoachDetail } from '@/data/live/decisions';
+import { formatPercent } from '@/lib/format';
 
 const MATRIX_CELLS: { key: OutcomeCell; label: string; color: string; soft: string }[] = [
   { key: 'good-good', label: 'Good process · Good outcome', color: '#1F8A52', soft: '#E3F6EC' },
@@ -65,8 +66,8 @@ export default function CoachDetailScreen() {
   const stats = [
     { label: 'Total decisions', value: String(coach.totalDecisions) },
     { label: 'Optimal decisions', value: String(coach.optimalDecisions) },
-    { label: 'EV rate', value: `${coach.evRate}%` },
-    { label: 'Avg EV left', value: `${coach.avgEvLeft}%` },
+    { label: 'EV rate', value: formatPercent(coach.evRate) },
+    { label: 'Avg EV left', value: formatPercent(coach.avgEvLeft) },
   ];
 
   return (
@@ -129,7 +130,7 @@ export default function CoachDetailScreen() {
                 <Text style={styles.headerRankText}>Rank #{coach.rank} · {coach.trend === 'up' ? '▲' : coach.trend === 'down' ? '▼' : '—'} vs last month</Text>
               </View>
             </View>
-            <Text style={styles.headerEv}>{coach.evRate}%</Text>
+            <Text style={styles.headerEv}>{formatPercent(coach.evRate)}</Text>
           </Card>
 
           {/* Stat boxes + process-vs-outcome matrix — statistics, hidden for fans */}

@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingView } from '@/components/ui/loading';
 import { useRecentSearches } from '@/hooks/use-recent-searches';
+import { formatPercent } from '@/lib/format';
 import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
 import { GAMES } from '@/data/mock/games';
@@ -162,7 +163,7 @@ export default function SearchResultsScreen() {
                     <View style={styles.rowBody}>
                       <Text style={styles.rowTitle}>{coach.name}</Text>
                       <Text style={styles.rowMeta}>
-                        {coach.team} · {coach.evRate > 0 ? `${coach.evRate}% EV rate` : 'Coach'}
+                        {coach.team} · {coach.evRate > 0 ? `${formatPercent(coach.evRate)} EV rate` : 'Coach'}
                       </Text>
                     </View>
                     <AppIcon name="chevron.right" size={14} color="#9AA0B5" />

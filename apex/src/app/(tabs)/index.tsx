@@ -18,6 +18,7 @@ import { useBackend } from '@/context/backend';
 import { SPORT_BY_ID } from '@/data/mock/sports';
 import { useHomeData } from '@/data/live/home';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { formatRiskScore } from '@/lib/format';
 
 function relativeNightLabel(nightsAgo: number): string {
   if (nightsAgo <= 1) return 'Last night';
@@ -126,6 +127,22 @@ export default function HomeScreen() {
         <StatTile icon="chart.bar.fill" value={`${momentum.verdict.gamesAnalyzed || 24}`} label="Games analyzed today" accent="#3C87F7" />
       </ScrollView>
 
+      {/* Timeout optimizer — highlighted for the coach role, above the fold */}
+      {role === 'coach' ? (
+        <Pressable onPress={() => router.push('/momentum/timeout')}>
+          <GradientView colors={['#FFA058', '#FF8A5C']} style={styles.timeoutCard}>
+            <View style={styles.timeoutIcon}>
+              <AppIcon name="timer" size={18} color="#FFFFFF" />
+            </View>
+            <View style={styles.timeoutBody}>
+              <Text style={styles.timeoutTitle}>Timeout optimizer</Text>
+              <Text style={styles.timeoutDesc}>Should you burn a timeout right now? Get an instant recommendation.</Text>
+            </View>
+            <AppIcon name="chevron.right" size={16} color="rgba(255,255,255,0.85)" />
+          </GradientView>
+        </Pressable>
+      ) : null}
+
       {/* Injury watch */}
       <View>
         <SectionHeader
@@ -160,7 +177,7 @@ export default function HomeScreen() {
                     <Text style={styles.alertTrigger}>{player.triggerMetric}</Text>
                   </View>
                   <View style={styles.alertScoreBadge}>
-                    <Text style={styles.alertScoreText}>{player.riskScore}</Text>
+                    <Text style={styles.alertScoreText}>{formatRiskScore(player.riskScore)}</Text>
                   </View>
                 </Card>
               </Pressable>
@@ -207,22 +224,6 @@ export default function HomeScreen() {
           </Card>
         )}
       </View>
-
-      {/* Timeout optimizer — highlighted for the coach role */}
-      {role === 'coach' ? (
-        <Pressable onPress={() => router.push('/momentum/timeout')}>
-          <GradientView colors={['#FFA058', '#FF8A5C']} style={styles.timeoutCard}>
-            <View style={styles.timeoutIcon}>
-              <AppIcon name="timer" size={18} color="#FFFFFF" />
-            </View>
-            <View style={styles.timeoutBody}>
-              <Text style={styles.timeoutTitle}>Timeout optimizer</Text>
-              <Text style={styles.timeoutDesc}>Should you burn a timeout right now? Get an instant recommendation.</Text>
-            </View>
-            <AppIcon name="chevron.right" size={16} color="rgba(255,255,255,0.85)" />
-          </GradientView>
-        </Pressable>
-      ) : null}
 
       {/* Last night's games */}
       <View>
@@ -391,16 +392,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   alertScoreBadge: {
-    minWidth: 44,
+    minWidth: 52,
     height: 34,
     borderRadius: 12,
     backgroundColor: '#FDEBEC',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
   },
   alertScoreText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#E5484D',
   },

@@ -10,6 +10,7 @@ import { PLAYERS } from '@/data/mock/players';
 import { COACHES } from '@/data/mock/coaches';
 import { useOnboarding, type RoleId } from '@/context/onboarding';
 import { api } from '@/lib/api';
+import { formatPercent, formatRiskScore } from '@/lib/format';
 
 type DetailRoute =
   | { pathname: '/injury/player'; params: { playerId: string } }
@@ -37,10 +38,10 @@ function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'te
       ? `${top.name} is at high injury risk this week`
       : `No ${sport} players are in the red zone right now`;
     const paragraph = top
-      ? `${top.name} (${top.team}) is flagged at a ${top.riskScore}/100 risk score after ${top.triggerMetric.toLowerCase().replace('↑ ', '')} spiked over the last week. ${top.explanation} Trainers may want to manage ${top.firstName}'s workload and watch for fatigue in the next back-to-back.`
+      ? `${top.name} (${top.team}) is flagged at a ${formatRiskScore(top.riskScore)}/100 risk score after ${top.triggerMetric.toLowerCase().replace('↑ ', '')} spiked over the last week. ${top.explanation} Trainers may want to manage ${top.firstName}'s workload and watch for fatigue in the next back-to-back.`
       : `Workload across the ${sport} league is within normal ranges. ${red.length} players are in the elevated zone — a step away from red.`;
     const metrics = top
-      ? [`${top.riskScore}/100 risk score`, top.triggerMetric, `${top.daysInZone}d in red zone`]
+      ? [`${formatRiskScore(top.riskScore)}/100 risk score`, top.triggerMetric, `${top.daysInZone}d in red zone`]
       : ['0 red zone players', 'All metrics normal'];
     return {
       headline,
@@ -55,11 +56,11 @@ function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'te
   if (module === 'decisions') {
     const best = COACHES.find(c => c.sport === sport) ?? COACHES[0];
     const headline = `${best.name} leads ${sport} coaches on decision quality`;
-    const paragraph = `${best.name} of the ${best.team} has made the statistically optimal call ${best.evRate}% of the time this season — ${best.optimalDecisions} of ${best.totalDecisions} decisions. On average he leaves just ${best.avgEvLeft}% of expected value on the table, the lowest among all ${sport} coaches.`;
+    const paragraph = `${best.name} of the ${best.team} has made the statistically optimal call ${formatPercent(best.evRate)} of the time this season — ${best.optimalDecisions} of ${best.totalDecisions} decisions. On average he leaves just ${formatPercent(best.avgEvLeft)} of expected value on the table, the lowest among all ${sport} coaches.`;
     return {
       headline,
       paragraph,
-      metrics: [`${best.evRate}% EV rate`, `${best.optimalDecisions} optimal calls`, `#${best.rank} ranked`],
+      metrics: [`${formatPercent(best.evRate)} EV rate`, `${best.optimalDecisions} optimal calls`, `#${best.rank} ranked`],
       detailRoute: { pathname: '/decisions/coach', params: { coachId: best.id } },
     };
   }
@@ -86,7 +87,7 @@ function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'te
   // home / default
   const top = red[0];
   const headline = top ? `${top.name} tops today's injury watch` : 'A quiet day across the league';
-  const paragraph = `Good ${new Date().getHours() < 12 ? 'morning' : 'evening'} — here's the day in ${sport}. ${top ? `${top.name} is the highest-risk player at ${top.riskScore}/100, driven by ${top.triggerMetric.toLowerCase().replace('↑ ', '')}. ` : 'No players entered the red zone overnight. '}${COACHES.find(c => c.sport === sport)?.name ?? COACHES[0].name} keeps the best decision record in the league, and momentum analysis says ${verdict?.verdict === 'real' ? `it's real in ${sport}` : `${sport} shows no momentum effect`}.`;
+  const paragraph = `Good ${new Date().getHours() < 12 ? 'morning' : 'evening'} — here's the day in ${sport}. ${top ? `${top.name} is the highest-risk player at ${formatRiskScore(top.riskScore)}/100, driven by ${top.triggerMetric.toLowerCase().replace('↑ ', '')}. ` : 'No players entered the red zone overnight. '}${COACHES.find(c => c.sport === sport)?.name ?? COACHES[0].name} keeps the best decision record in the league, and momentum analysis says ${verdict?.verdict === 'real' ? `it's real in ${sport}` : `${sport} shows no momentum effect`}.`;
   return {
     headline,
     paragraph,

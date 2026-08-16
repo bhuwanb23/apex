@@ -18,6 +18,7 @@ import { usePlayerRisk } from '@/data/live/injury';
 import { useOnboarding } from '@/context/onboarding';
 import { useBackend } from '@/context/backend';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { formatRiskScore } from '@/lib/format';
 
 type MetricKey = 'minutes' | 'distance' | 'intensity';
 
@@ -128,7 +129,7 @@ export default function PlayerRiskScreen() {
 
   const share = () => {
     Share.share({
-      message: `${player.name} (${player.team}) — Apex risk score ${player.riskScore}/100. ${player.explanation}`,
+      message: `${player.name} (${player.team}) — Apex risk score ${formatRiskScore(player.riskScore)}/100. ${player.explanation}`,
     }).catch(() => {});
   };
 
