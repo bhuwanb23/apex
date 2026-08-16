@@ -1,5 +1,5 @@
 /**
- * AQX design system — inspired by the Dribbble reference: light gray canvas,
+ * Apex design system — inspired by the Dribbble reference: light gray canvas,
  * white rounded cards with soft shadows, purple (#5856D6) primary, and
  * pink/purple/orange gradient accents.
  */
@@ -19,7 +19,7 @@ export const Colors = {
     border: '#E4E5EC', // hairline borders on white surfaces
 
     // Brand
-    primary: '#5856D6', // AQX purple
+    primary: '#5856D6', // Apex purple
     primaryDark: '#4643C4',
     primarySoft: '#EFEEFB', // pale purple fill
     onPrimary: '#FFFFFF',

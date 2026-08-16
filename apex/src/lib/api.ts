@@ -1,5 +1,5 @@
 /**
- * AQX API client — the ONLY place the app talks to the backend.
+ * Apex API client — the ONLY place the app talks to the backend.
  *
  * Every screen fetches through here; the app never calls the sports APIs or
  * runs calculations itself (integration plan: "app is purely the presentation
