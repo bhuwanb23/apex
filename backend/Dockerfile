@@ -9,12 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
+COPY scripts ./scripts
+COPY prisma ./prisma
 # prisma.config.ts resolves DATABASE_URL via env() even for generate/validate
 ENV DATABASE_URL="file:/app/data/aqx.db"
 RUN npm ci
 
-COPY prisma ./prisma
-COPY scripts ./scripts
 COPY src ./src
 COPY tsconfig.json eslint.config.js ./
 
