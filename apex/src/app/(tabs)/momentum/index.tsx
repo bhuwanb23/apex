@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useOnboarding } from '@/context/onboarding';
+import { useBackend } from '@/context/backend';
 import { StackHeader } from '@/components/stack-header';
 import { Screen } from '@/components/ui/screen';
 import { Card } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { Chip } from '@/components/ui/chip';
 import { AppIcon } from '@/components/ui/icon';
 import { PillButton } from '@/components/ui/button';
 import { GradientView } from '@/components/ui/gradient';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { DataFreshness } from '@/components/ui/data-freshness';
 import { SPORTS, SPORT_BY_ID, type SportId } from '@/data/mock/sports';
 import { useMomentumAnalysis } from '@/data/live/momentum';
@@ -24,12 +26,17 @@ export default function MomentumOverviewScreen() {
   const router = useRouter();
   const { sport: sportParam } = useLocalSearchParams<{ sport?: string }>();
   const { activeSport, role, storyLanguage } = useOnboarding();
+  const { status } = useBackend();
   const [sport, setSport] = useState<SportId>((sportParam as SportId) ?? activeSport);
   const [statsOpen, setStatsOpen] = useState(role === 'analyst');
-  const { data: verdictData, refetch: refetchMomentum } = useMomentumAnalysis(sport);
+  const { data: verdictData, loading, refetch: refetchMomentum } = useMomentumAnalysis(sport);
   const verdict = verdictData as unknown as (typeof import('@/data/mock/sports').MOMENTUM_VERDICTS)[number];
   const isReal = verdict.verdict === 'real';
   const isAnalystDepth = role === 'analyst' || storyLanguage === 'technical';
+
+  // Backend confirmed offline → skip skeletons, show fallback data immediately.
+  const backendOffline = status === 'offline';
+  const showSkeleton = loading && !backendOffline;
 
   const stats = [
     { label: 'Hazard Coefficient', value: verdict.hazardCoefficient.toFixed(2), note: '> 1 means scoring increases opponent hazard' },
@@ -49,58 +56,84 @@ export default function MomentumOverviewScreen() {
         ))}
       </View>
 
-      {/* Verdict banner */}
-      <GradientView
-        colors={isReal ? ['#2FA36B', '#4CC38A'] : verdict.verdict === 'inconclusive' ? ['#F5A623', '#FFB86C'] : ['#8A8FA3', '#B0B5C6']}
-        style={styles.verdictBanner}>
-        <Text style={styles.verdictSport}>{SPORT_BY_ID[sport].name}</Text>
-        <Text style={styles.verdictText}>
-          {isReal ? 'Momentum is Real' : verdict.verdict === 'inconclusive' ? 'Momentum is Inconclusive' : 'Momentum is a Myth'}
-        </Text>
-        <Text style={styles.verdictMeta}>
-          p = {verdict.pValue < 0.001 ? '< 0.001' : verdict.pValue.toFixed(3)} · {Math.round(verdict.effectSize * 100)}% effect size
-        </Text>
-      </GradientView>
-
-      {/* Explanation */}
-      <Card style={styles.explainCard}>
-        <View style={styles.explainHeader}>
-          <AppIcon name="sparkles" size={15} color="#5856D6" />
-          <Text style={styles.explainTitle}>In plain English</Text>
-        </View>
-        <Text style={styles.explainText}>
-          {isAnalystDepth ? verdict.explanation : PLAIN_EXPLANATION[verdict.verdict]}
-        </Text>
-        <Text style={styles.explainDepth}>
-          {isAnalystDepth
-            ? 'Full statistical depth shown — switch to Simple in Settings for a plainer read.'
-            : 'Simplified for your role — switch to Technical in Settings for the full numbers.'}
-        </Text>
-      </Card>
-
-      {/* Statistics (collapsible for non-analysts) */}
-      <View>
-        <Pressable style={styles.collapseHeader} onPress={() => setStatsOpen(prev => !prev)}>
-          <Text style={styles.sectionTitle}>The Numbers</Text>
-          <AppIcon name={statsOpen ? 'chevron.down' : 'chevron.right'} size={16} color="#6E7280" />
-        </Pressable>
-        {statsOpen ? (
-          <View style={styles.statsGrid}>
-            {stats.map(stat => (
-              <Card key={stat.label} style={styles.statCard}>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-                <Text style={styles.statNote}>{stat.note}</Text>
-              </Card>
-            ))}
+      {showSkeleton ? (
+        <>
+          {/* Verdict banner skeleton */}
+          <View style={[styles.verdictBanner, styles.verdictSkeleton]}>
+            <Skeleton width={84} height={12} radius={6} />
+            <Skeleton width={220} height={26} radius={8} />
+            <Skeleton width={150} height={13} radius={6} />
           </View>
-        ) : null}
-        <Text style={styles.gamesContext}>
-          Based on analysis of {verdict.gamesAnalyzed.toLocaleString()} games from the {verdict.season} {verdict.sport} season
-        </Text>
-        {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
-        {verdictData.computedAt ? <DataFreshness timestamp={verdictData.computedAt} onRefresh={refetchMomentum} /> : null}
-      </View>
+          <SkeletonCard lines={3} />
+          <View>
+            <Skeleton width={110} height={16} radius={6} />
+            <View style={styles.statsGrid}>
+              {[0, 1, 2, 3].map(i => (
+                <Card key={i} style={styles.statCard}>
+                  <Skeleton width="50%" height={18} radius={6} />
+                  <Skeleton width="70%" height={11} radius={6} />
+                  <Skeleton width="90%" height={10} radius={5} />
+                </Card>
+              ))}
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Verdict banner */}
+          <GradientView
+            colors={isReal ? ['#2FA36B', '#4CC38A'] : verdict.verdict === 'inconclusive' ? ['#F5A623', '#FFB86C'] : ['#8A8FA3', '#B0B5C6']}
+            style={styles.verdictBanner}>
+            <Text style={styles.verdictSport}>{SPORT_BY_ID[sport].name}</Text>
+            <Text style={styles.verdictText}>
+              {isReal ? 'Momentum is Real' : verdict.verdict === 'inconclusive' ? 'Momentum is Inconclusive' : 'Momentum is a Myth'}
+            </Text>
+            <Text style={styles.verdictMeta}>
+              p = {verdict.pValue < 0.001 ? '< 0.001' : verdict.pValue.toFixed(3)} · {Math.round(verdict.effectSize * 100)}% effect size
+            </Text>
+          </GradientView>
+
+          {/* Explanation */}
+          <Card style={styles.explainCard}>
+            <View style={styles.explainHeader}>
+              <AppIcon name="sparkles" size={15} color="#5856D6" />
+              <Text style={styles.explainTitle}>In plain English</Text>
+            </View>
+            <Text style={styles.explainText}>
+              {isAnalystDepth ? verdict.explanation : PLAIN_EXPLANATION[verdict.verdict]}
+            </Text>
+            <Text style={styles.explainDepth}>
+              {isAnalystDepth
+                ? 'Full statistical depth shown — switch to Simple in Settings for a plainer read.'
+                : 'Simplified for your role — switch to Technical in Settings for the full numbers.'}
+            </Text>
+          </Card>
+
+          {/* Statistics (collapsible for non-analysts) */}
+          <View>
+            <Pressable style={styles.collapseHeader} onPress={() => setStatsOpen(prev => !prev)}>
+              <Text style={styles.sectionTitle}>The Numbers</Text>
+              <AppIcon name={statsOpen ? 'chevron.down' : 'chevron.right'} size={16} color="#6E7280" />
+            </Pressable>
+            {statsOpen ? (
+              <View style={styles.statsGrid}>
+                {stats.map(stat => (
+                  <Card key={stat.label} style={styles.statCard}>
+                    <Text style={styles.statValue}>{stat.value}</Text>
+                    <Text style={styles.statLabel}>{stat.label}</Text>
+                    <Text style={styles.statNote}>{stat.note}</Text>
+                  </Card>
+                ))}
+              </View>
+            ) : null}
+            <Text style={styles.gamesContext}>
+              Based on analysis of {verdict.gamesAnalyzed.toLocaleString()} games from the {verdict.season} {verdict.sport} season
+            </Text>
+            {/* Data freshness — the plan's tiers (note for 1-6h, banner for 6h+) */}
+            {verdictData.computedAt ? <DataFreshness timestamp={verdictData.computedAt} onRefresh={refetchMomentum} /> : null}
+          </View>
+        </>
+      )}
 
       {/* Quick access */}
       <View>
@@ -145,6 +178,9 @@ const styles = StyleSheet.create({
     padding: 22,
     alignItems: 'center',
     gap: 6,
+  },
+  verdictSkeleton: {
+    backgroundColor: '#E8E9F0',
   },
   verdictSport: {
     color: 'rgba(255,255,255,0.85)',
