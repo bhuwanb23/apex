@@ -49,9 +49,14 @@ function isEmpty(result: unknown): boolean {
     // meaningful even when their list is empty — e.g. an all-green league
     // returns real counts with zero alerts; falling back to demo would lie.
     if (obj['counts'] != null || obj['summary'] != null) return false;
-    // Objects that carry a list — treat missing/empty lists as empty.
-    for (const key of ['coaches', 'alerts', 'players', 'games', 'sports', 'teams', 'history', 'timeline', 'decisions']) {
-      if (Array.isArray(obj[key]) && (obj[key] as unknown[]).length === 0) return true;
+    // Objects that carry lists — only treat them as empty when EVERY list
+    // field is empty. A Game payload has a populated `timeline` plus an
+    // unused empty `decisions` list; flagging it on any empty list would
+    // replace every real game with the demo fallback.
+    const listKeys = ['coaches', 'alerts', 'players', 'games', 'sports', 'teams', 'history', 'timeline', 'decisions'] as const;
+    const presentLists = listKeys.filter(key => Array.isArray(obj[key]));
+    if (presentLists.length > 0) {
+      return presentLists.every(key => (obj[key] as unknown[]).length === 0);
     }
     return false;
   }
