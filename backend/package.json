@@ -19,6 +19,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:teams": "tsx scripts/seed-teams.ts",
     "db:seed:coaches": "tsx scripts/seed-nfl-coaches.ts",
     "db:seed:demo": "tsx scripts/seed-demo-data.ts",
     "postinstall": "node scripts/postinstall.mjs"

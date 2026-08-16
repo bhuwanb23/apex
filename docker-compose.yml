@@ -1,0 +1,83 @@
+# Apex Sports Intelligence — full stack in one command.
+#
+#   docker compose up --build
+#
+# Services:
+#   ml       — Python FastAPI (injury risk, decision EV, momentum Cox, timeout)  :8001
+#   backend  — Node.js Express + Prisma/SQLite (API + cached data)               :8000
+#   app      — Expo web (the app)                                                :8081
+#
+# Volumes keep the SQLite DB and trained ML models across restarts.
+
+name: apex
+
+services:
+  ml:
+    build:
+      context: ./backend/python_ml
+    container_name: apex-ml
+    environment:
+      PORT: 8001
+      ENVIRONMENT: development
+      ALLOWED_ORIGINS: http://localhost:8000,http://localhost:8081
+      WP_TRAINING_DATA: app/data/training/wp_training.json
+      TIMEOUT_TRAINING_DATA: app/data/training/timeout_training.json
+    volumes:
+      - ml_models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: apex-backend
+    depends_on:
+      ml:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      DATABASE_URL: "file:/app/data/aqx.db"
+      PYTHON_ML_URL: "http://ml:8001"
+      ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:3000"
+      # Seed + serve demo data; leave the sports sync disabled so nothing
+      # depends on external API keys at demo time.
+      JOBS_ENABLED: "false"
+      RUN_JOBS_ON_STARTUP: "false"
+    volumes:
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ./apex
+    container_name: apex-app
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      EXPO_PUBLIC_API_URL: http://localhost:8000
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+volumes:
+  ml_models:
+  backend_data:

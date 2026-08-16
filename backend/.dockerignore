@@ -1,0 +1,11 @@
+node_modules
+dist
+logs
+cache
+.env
+.env.*
+!.env.example
+prisma/aqx.db
+prisma/*.db
+python_ml
+*.log
