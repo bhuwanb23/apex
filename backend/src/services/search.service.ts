@@ -207,6 +207,20 @@ export async function searchGames(
     }),
   ]);
 
+  // How many decisions each returned game has — lets the app surface games
+  // with real reviews first (a date-desc list is mostly future/scheduled
+  // games that have nothing to review yet). One batched query, no N+1.
+  const gameIds = games.map(g => g.id);
+  const decisionCounts =
+    gameIds.length > 0
+      ? await prisma.coachDecisions.groupBy({
+          by: ['gameId'],
+          where: { gameId: { in: gameIds } },
+          _count: true,
+        })
+      : [];
+  const countByGame = new Map(decisionCounts.map(d => [d.gameId, d._count]));
+
   const results: SearchGameResult[] = games.map(g => ({
     gameId: g.id,
     date: g.date.toISOString(),
@@ -220,6 +234,7 @@ export async function searchGames(
     finalScore:
       g.homeScore != null && g.awayScore != null ? `${g.homeScore}-${g.awayScore}` : null,
     sport: g.sport.name as SportAbbreviation,
+    decisionCount: countByGame.get(g.id) ?? 0,
   }));
 
   logger.debug({ total, page: filters.page }, 'searchGames complete');
