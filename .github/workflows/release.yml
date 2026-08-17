@@ -53,7 +53,7 @@ jobs:
       - name: Package backend
         run: |
           mkdir -p release/apex-backend
-          cp -r dist prisma package.json package-lock.json .env.example README.md release/apex-backend/
+          cp -r dist prisma package.json package-lock.json .env.example README.md prisma.config.ts release/apex-backend/
           tar -czf apex-backend-${{ steps.tag.outputs.tag }}.tar.gz -C release apex-backend
 
       - name: Upload backend artifact
@@ -94,7 +94,13 @@ jobs:
 
       # Train the models from the committed training data (the same warmup the
       # service runs on startup) so the release ships ready-to-serve models.
+      # WP_TRAINING_DATA / TIMEOUT_TRAINING_DATA must be set (as docker-compose
+      # does at runtime) — otherwise warmup falls back to heuristics and the
+      # release ships no trained artifacts.
       - name: Train models
+        env:
+          WP_TRAINING_DATA: app/data/training/wp_training.json
+          TIMEOUT_TRAINING_DATA: app/data/training/timeout_training.json
         run: python -c "from app.main import _warm_up_models; _warm_up_models(); print('models trained')"
 
       - name: Package ML service + models
