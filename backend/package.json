@@ -21,6 +21,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:teams": "tsx scripts/seed-teams.ts",
     "db:seed:coaches": "tsx scripts/seed-nfl-coaches.ts",
+    "db:seed:nba-coaches": "tsx scripts/seed-nba-coaches.ts",
     "db:seed:demo": "tsx scripts/seed-demo-data.ts",
     "postinstall": "node scripts/postinstall.mjs"
   },

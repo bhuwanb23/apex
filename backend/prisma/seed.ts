@@ -98,16 +98,15 @@ const SPORTS: SportSeed[] = [
   },
   {
     // Seeded so the momentum comparison panel shows all four sports the app
-    // supports (the frontend SportId includes NHL). No sync adapter exists
-    // yet, so the sync coordinator skips it and momentum reports
-    // insufficient_data until a data source is wired in.
+    // supports (the frontend SportId includes NHL). Now with a working sync
+    // adapter using the public NHL API (api-web.nhle.com).
     name: 'NHL',
     abbreviation: 'nhl',
     season: '2024',
     isActive: true,
     config: {
       decisionTypes: ['timeout', 'challenge', 'line_change'],
-      dataSource: 'none',
+      dataSource: 'nhle',
       momentumMetric: 'goal',
       workloadMetrics: [
         'backToBack',
