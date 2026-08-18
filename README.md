@@ -131,7 +131,7 @@ npx expo start  # press "w" for web
 - **Email**: `demo@apex.app`
 - **Password**: `apex1234`
 
-> **Tip:** Use the demo account to explore the app. The dashboard loads with pre-loaded NBA data — 30 teams, 450 players, injury risk scores, coaching decisions, and momentum analysis. Switch between roles (Trainer, Coach, Analyst, Fan) in Settings to see how the interface adapts.
+> **Tip:** Use the demo account to explore the app. The dashboard loads with pre-loaded NBA data — 30 teams, 450 players, injury risk scores, coaching decisions, and momentum analysis. 
 
 ## API
 
