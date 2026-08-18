@@ -59,104 +59,70 @@ Data flows one way — **sports world → APIs → Node backend → Python ML �
 
 **Measured performance** (real browser + live services): app cold start → Home with data **≈1.7s**, warm open **≈0.5s**; leaderboard **2–9ms**, player risk **4–9ms**, game replay **4–16ms** (pre-computed). See [Testing](#testing) for how to reproduce.
 
-## Getting started
+## Quick Start
 
-You need **Node.js ≥ 20** and **Python 3.11+**. Three processes, in order.
+### Prerequisites
 
-### 1. Backend + ML service
+- **Node.js** ≥ 20
+- **Python** 3.11+
+- **Docker** (optional)
 
-```bash
-cd backend
-
-# 1. Install dependencies (also runs prisma generate)
-npm install
-
-# 2. Configure environment
-cp .env.example .env        # defaults work for local dev
-
-# 3. Create the SQLite database
-npm run db:push
-
-# 4. Pre-load realistic demo data (30 NBA teams, 450 players,
-#    8 red-zone stars, coach decisions, momentum verdicts, timelines)
-npm run db:seed:demo
-
-# 5a. Start the Python ML service (in a second terminal)
-cd python_ml
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8001
-
-# 5b. Start the backend (in the first terminal)
-cd ..
-npm run dev
-```
-
-Check everything is green:
-
-```bash
-curl http://localhost:8000/api/health
-# → {"status":"ok","services":{"database":"connected","cache":"connected","mlService":"connected"}}
-```
-
-### 2. The app
-
-```bash
-cd apex
-npm install
-npx expo start          # press "w" for web, or scan the QR for a device
-```
-
-The app connects to `http://localhost:8000` by default (configurable in Settings). On a phone, use your laptop's LAN IP — the URL is editable in-app, no rebuild needed.
-
-> **Demo tip:** the app opens on the login screen — use the **"Use demo account"** button (email `demo@apex.app`, password `apex1234`), then the app lands straight on the dashboard. The onboarding flow is wired for the future "new account → onboarding" path and is not shown yet.
-
-### 3. One-click: Docker (everything in one command)
-
-The full stack — **ML service (:8001) + backend (:8000) + app (:8081)** — runs in
-Docker with a single command. The backend container seeds the demo database on
-first boot (sports → teams → coaches → NBA demo data → NFL coach decisions), so
-judges see rich data immediately, no API keys or syncs required.
+### Option 1: Docker (Recommended)
 
 ```bash
 docker compose up --build
 ```
 
-Then open:
+| Service | URL |
+|:---|:---|
+| App | http://localhost:8081 |
+| Backend API / Swagger | http://localhost:8000/api/docs |
+| ML Health | http://localhost:8001/health |
 
-- **App:** <http://localhost:8081>
-- **Backend API / Swagger:** <http://localhost:8000/api/docs>
-- **ML health:** <http://localhost:8001/health>
+### Option 2: Manual Setup
 
-Stop everything (data is kept on volumes):
-
-```bash
-docker compose down
-```
-
-Reset to a clean demo state (wipes DB + retrains models on next boot):
+**Backend + ML Service:**
 
 ```bash
-docker compose down -v
+cd backend
+npm install
+cp .env.example .env
+npm run db:push
+npm run db:seed:demo
+
+# Terminal 2: ML Service
+cd python_ml
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8001
+
+# Terminal 1: Backend
+npm run dev
 ```
 
-### 4. No Docker? One-click scripts + Makefile
-
-Windows — double-click to open three terminals (app, backend, ML) automatically:
-
-- **`start-dev.cmd`** — starts all three in separate terminal windows (no Docker)
-- **`start-docker.cmd`** / **`stop-docker.cmd`** — start/stop the Docker stack
-
-macOS / Linux / Git Bash — `make`:
+**App:**
 
 ```bash
-make up          # docker compose up --build
-make down        # docker compose down
-make reset       # docker compose down -v
-make dev         # no Docker: opens 3 terminals (app, backend, ML)
-make app         # no Docker: run just the app
-make backend     # no Docker: run just the backend
-make ml          # no Docker: run just the ML service
+cd apex
+npm install
+npx expo start  # press "w" for web
 ```
+
+### Option 3: Make Commands
+
+```bash
+make up          # Docker: full stack
+make dev         # No Docker: 3 terminals
+make backend     # Backend only
+make ml          # ML service only
+make app         # App only
+```
+
+### Demo Credentials
+
+- **Email**: `demo@apex.app`
+- **Password**: `apex1234`
+
+> **Tip:** Use the demo account to explore the app. The dashboard loads with pre-loaded NBA data — 30 teams, 450 players, injury risk scores, coaching decisions, and momentum analysis. Switch between roles (Trainer, Coach, Analyst, Fan) in Settings to see how the interface adapts.
 
 ## API
 
