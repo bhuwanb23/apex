@@ -242,21 +242,6 @@ GitHub Actions pipelines run automatically on push and pull requests. The app, b
 - `apex-ml-<tag>.tar.gz` — the FastAPI service **with pre-trained models** (run with `pip install -r requirements.txt && uvicorn app.main:app --port 8001`)
 - `app-release.apk` — installable Android build (signed with the debug keystore)
 
-## Repository layout
-
-```
-.
-├── apex/                  # React Native app (Expo, TypeScript)
-│   ├── src/app/           #   file-based routes (tabs, screens)
-│   ├── src/data/live/     #   typed API client + fallback data
-│   └── src/components/    #   shared UI (skeletons, empty/error states)
-├── backend/
-│   ├── src/               # Node.js + Express (routes, services, jobs)
-│   ├── prisma/schema/     #   one .prisma file per table
-│   ├── python_ml/         # Python FastAPI ML service
-│   └── scripts/           # seed, refresh, validation scripts
-└── docs/                  # architecture + integration docs, images
-```
 
 ## License
 
