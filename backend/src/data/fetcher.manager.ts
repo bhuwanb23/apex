@@ -16,6 +16,7 @@ import {
 import { MlbFetcher } from './mlb/mlb.fetcher.js';
 import { NbaFetcher } from './nba/nba.fetcher.js';
 import { NflFetcher } from './nfl/nfl.fetcher.js';
+import { NhlFetcher } from './nhl/nhl.fetcher.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,6 +97,7 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
   balldontlie: { maxRequests: env.BALLDONTLIE_RATE_LIMIT, windowMs: 60_000 },
   espn: { maxRequests: 60, windowMs: 60_000 },
   mlb: { maxRequests: 120, windowMs: 60_000 },
+  nhl: { maxRequests: 60, windowMs: 60_000 },
   python_ml: { maxRequests: 60, windowMs: 60_000 },
 };
 
@@ -191,6 +193,7 @@ export class FetcherManager {
     this.register(new NbaFetcher());
     this.register(new NflFetcher());
     this.register(new MlbFetcher());
+    this.register(new NhlFetcher());
   }
 
   /** Protected so tests can subclass and swap in mock fetchers. */

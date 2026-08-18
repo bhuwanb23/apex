@@ -159,3 +159,22 @@ export interface MlbGameLogSplit {
   game?: { gamePk?: number };
   stat: Record<string, string | number | null>;
 }
+
+/**
+ * MLB coach decision extracted from play-by-play.
+ * Represents a strategic decision made by the manager (e.g., intentional walk,
+ * pitching change, challenge).
+ */
+export interface MlbCoachDecision {
+  gameId: string;
+  team: string; // team abbreviation
+  decisionType: string; // 'intentional_walk', 'pitching_change', 'challenge'
+  period: number; // inning
+  clock: string | null; // halfInning + inning info
+  gameTimeSeconds: number | null;
+  scoreDiff: number | null;
+  context: string; // situation description
+  chosenAction: string; // action taken
+  outcome: string | null;
+  outcomeSuccess: boolean | null;
+}

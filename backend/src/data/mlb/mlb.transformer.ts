@@ -1,4 +1,5 @@
 import type {
+  CoachDecisionRecord,
   CoachRecord,
   GameRecord,
   PlayByPlayRecord,
@@ -8,6 +9,7 @@ import type {
 } from '../db.writer.js';
 import { computeWorkloads } from '../workload.util.js';
 import type {
+  MlbCoachDecision,
   MlbCoachRosterEntry,
   MlbGameLogSplit,
   MlbPlay,
@@ -236,4 +238,121 @@ export function transformPlayerGameLogs(
       gamesLast21Days: workload?.gamesLast21Days ?? null,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// MLB Coach Decisions — extracted from play-by-play
+// ---------------------------------------------------------------------------
+
+/** Play types that represent manager decisions (not just game events). */
+const DECISION_PLAY_TYPES = new Set([
+  'Intentional Walk',
+  'Pitching Substitution',
+  'Offensive Substitution',
+  'Defensive Substitution',
+  'Defensive Switch',
+  'Catchers Interference',
+  'Replay Challenge',
+  'Manager Challenge',
+  'Mound Visit',
+]);
+
+/**
+ * Extracts coach decisions from MLB play-by-play data.
+ * These represent strategic choices by the manager, not just game events.
+ */
+export function extractMlbDecisions(
+  plays: MlbPlay[],
+  gameId: string,
+  homeTeamAbbr: string,
+  awayTeamAbbr: string
+): MlbCoachDecision[] {
+  const decisions: MlbCoachDecision[] = [];
+  const inningSeconds = 180; // Approximate seconds per at-bat for timeline
+
+  for (const play of plays) {
+    const event = play.result?.event ?? '';
+    if (!DECISION_PLAY_TYPES.has(event)) continue;
+
+    const inning = play.about?.inning ?? 0;
+    const isTop = play.about?.isTopInning ?? true;
+    const halfInning = isTop ? 'top' : 'bottom';
+    const atBatIndex = play.about?.atBatIndex ?? 0;
+
+    // Determine which team made the decision
+    // In MLB, the batting team makes offensive decisions, pitching team makes defensive
+    const teamAbbr = isTop ? awayTeamAbbr : homeTeamAbbr;
+
+    const homeScore = play.result?.homeScore ?? 0;
+    const awayScore = play.result?.awayScore ?? 0;
+    const scoreDiff = homeScore - awayScore;
+
+    let decisionType = 'other';
+    let chosenAction = event.toLowerCase().replace(/\s+/g, '_');
+
+    if (event === 'Intentional Walk') {
+      decisionType = 'intentional_walk';
+      chosenAction = 'intentional_walk';
+    } else if (event.includes('Pitching')) {
+      decisionType = 'pitching_change';
+      chosenAction = 'pitching_change';
+    } else if (event.includes('Substitution') || event.includes('Switch')) {
+      decisionType = 'lineup_change';
+      chosenAction = 'substitution';
+    } else if (event.includes('Challenge') || event.includes('Replay')) {
+      decisionType = 'challenge';
+      chosenAction = 'challenge';
+    } else if (event === 'Mound Visit') {
+      decisionType = 'mound_visit';
+      chosenAction = 'mound_visit';
+    }
+
+    const description = play.result?.description ?? event;
+    const gameTimeSeconds = atBatIndex * inningSeconds;
+
+    decisions.push({
+      gameId,
+      team: teamAbbr,
+      decisionType,
+      period: inning,
+      clock: `${halfInning} ${inning}`,
+      gameTimeSeconds,
+      scoreDiff,
+      context: description,
+      chosenAction,
+      outcome: description,
+      outcomeSuccess: null, // MLB decisions don't have clear success/failure like 4th downs
+    });
+  }
+
+  return decisions;
+}
+
+/**
+ * Transform MLB coach decisions into CoachDecisionRecord format.
+ */
+export function transformDecision(raw: MlbCoachDecision): CoachDecisionRecord {
+  const DECISION_TYPE_MAP: Record<string, string> = {
+    intentional_walk: 'intentional_walk',
+    pitching_change: 'pitching_change',
+    lineup_change: 'lineup_change',
+    challenge: 'challenge',
+    mound_visit: 'mound_visit',
+    other: 'other',
+  };
+
+  return {
+    sportId: MLB_SPORT_ID,
+    gameExternalId: raw.gameId,
+    teamExternalId: raw.team,
+    decisionType: DECISION_TYPE_MAP[raw.decisionType] ?? raw.decisionType,
+    period: raw.period,
+    clock: raw.clock,
+    gameTimeSeconds: raw.gameTimeSeconds,
+    scoreDiff: raw.scoreDiff ?? 0,
+    gameContext: { description: raw.context, event: raw.chosenAction },
+    chosenAction: raw.chosenAction,
+    outcome: raw.outcome,
+    outcomeSuccess: raw.outcomeSuccess,
+  };
 }

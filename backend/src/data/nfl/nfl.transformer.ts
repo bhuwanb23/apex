@@ -2,11 +2,14 @@ import type {
   CoachDecisionRecord,
   GameRecord,
   PlayByPlayRecord,
+  PlayerGameLogRecord,
+  PlayerRecord,
   TeamRecord,
 } from '../db.writer.js';
+import { computeWorkloads } from '../workload.util.js';
 import type { NflCoachDecision } from './nfl.decisions.js';
 import { formatClock } from './nfl.decisions.js';
-import type { EspnEvent, EspnTeam, NflPlay, NflSchedule } from './nfl.types.js';
+import type { EspnAthlete, EspnEvent, EspnTeam, NflPlay, NflSchedule } from './nfl.types.js';
 
 /**
  * Cleans and normalizes raw NFL payloads (ESPN + nfl-data-py) into the
@@ -29,11 +32,25 @@ export function transformTeam(raw: EspnTeam): TeamRecord {
   };
 }
 
-// NFL rosters arrive later via the Python microservice (nfl_data_py) — the
-// ESPN roster endpoint returns players but the full player pipeline is wired
-// once the Python service is ready. Reserved for parity.
-export function transformPlayer(_raw: unknown): never {
-  throw new Error('Not implemented: NFL player transformation (Python microservice planned)');
+// NFL rosters arrive via ESPN or the Python microservice (nfl_data_py).
+export function transformPlayer(raw: EspnAthlete, externalTeamId?: string | null): PlayerRecord {
+  const fullName = raw.displayName ?? '';
+  const nameParts = fullName.trim().split(/\s+/);
+  const firstName = nameParts[0] ?? raw.firstName ?? '';
+  const lastName = nameParts.slice(1).join(' ') || raw.lastName || firstName;
+  return {
+    sportId: NFL_SPORT_ID,
+    name: fullName || firstName,
+    firstName,
+    lastName,
+    position: raw.position?.abbreviation ?? 'UNK',
+    jerseyNumber: raw.jersey ?? null,
+    age: null,
+    heightInches: null,
+    weightLbs: null,
+    externalId: raw.id ?? '',
+    externalTeamId: externalTeamId ?? null,
+  };
 }
 
 // NFL head coaches arrive later via the Python microservice (nfl_data_py).
@@ -211,4 +228,78 @@ export function transformDecision(raw: NflCoachDecision): CoachDecisionRecord {
     outcome: raw.outcome,
     outcomeSuccess: raw.outcomeSuccess,
   };
+}
+
+/**
+ * Transform NFL game logs from nfl_data_py.
+ * The Python bridge provides per-player game stats as a list of records.
+ */
+export function transformPlayerGameLogs(
+  logs: Array<{
+    player_id?: string;
+    game_id?: string;
+    team?: string;
+    week?: number;
+    season?: number;
+    completions?: number;
+    attempts?: number;
+    passing_yards?: number;
+    passing_tds?: number;
+    interceptions?: number;
+    carries?: number;
+    rushing_yards?: number;
+    rushing_tds?: number;
+    targets?: number;
+    receptions?: number;
+    receiving_yards?: number;
+    receiving_tds?: number;
+    fumbles_lost?: number;
+    fantasy_points?: number;
+    game_date?: string;
+  }>,
+  playerExternalId: string
+): PlayerGameLogRecord[] {
+  if (!Array.isArray(logs) || logs.length === 0) return [];
+
+  const sorted = [...logs].sort((a, b) => (a.game_date ?? '').localeCompare(b.game_date ?? ''));
+  const dates = sorted.map(l => new Date(l.game_date ?? Date.now()));
+  const workloads = computeWorkloads(dates);
+
+  return sorted.map((log, i) => {
+    const workload = workloads[i];
+    return {
+      sportId: NFL_SPORT_ID,
+      playerExternalId,
+      gameExternalId: log.game_id ?? '',
+      teamExternalId: log.team ?? null,
+      date: new Date(log.game_date ?? Date.now()),
+      minutesPlayed: null, // NFL doesn't track minutes played per game
+      distanceCovered: null,
+      highIntensityEvents: null,
+      backToBack: workload?.backToBack ?? false,
+      daysRestBefore: workload?.daysRestBefore ?? null,
+      gamesLast7Days: workload?.gamesLast7Days ?? null,
+      gamesLast14Days: workload?.gamesLast14Days ?? null,
+      gamesLast21Days: workload?.gamesLast21Days ?? null,
+      // NFL-shaped columns
+      points: log.fantasy_points ?? null,
+      assists: log.completions ?? null,
+      rebounds: null,
+      rawBoxScore: {
+        completions: log.completions,
+        attempts: log.attempts,
+        passing_yards: log.passing_yards,
+        passing_tds: log.passing_tds,
+        interceptions: log.interceptions,
+        carries: log.carries,
+        rushing_yards: log.rushing_yards,
+        rushing_tds: log.rushing_tds,
+        targets: log.targets,
+        receptions: log.receptions,
+        receiving_yards: log.receiving_yards,
+        receiving_tds: log.receiving_tds,
+        fumbles_lost: log.fumbles_lost,
+      },
+    };
+  });
 }

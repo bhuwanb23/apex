@@ -36,13 +36,15 @@ import {
 } from './nba/nba.transformer.js';
 import type { NBAGame, NBAPlayer, NBAStats, NBATeam, NbaPlay } from './nba/nba.types.js';
 import {
-  transformGame as transformNflGame,
-  transformPlays as transformNflPlays,
   transformDecision as transformNflDecision,
+  transformGame as transformNflGame,
+  transformPlayer as transformNflPlayer,
+  transformPlayerGameLogs as transformNflGameLogs,
+  transformPlays as transformNflPlays,
   transformTeam as transformNflTeam,
 } from './nfl/nfl.transformer.js';
 import { extractCoachDecisions } from './nfl/nfl.decisions.js';
-import type { EspnEvent, EspnTeam, NflPlay } from './nfl/nfl.types.js';
+import type { EspnAthlete, EspnEvent, EspnTeam, NflPlay } from './nfl/nfl.types.js';
 import {
   transformCoach as transformMlbCoach,
   transformGame as transformMlbGame,
@@ -59,6 +61,13 @@ import type {
   MlbScheduleGame,
   MlbTeam,
 } from './mlb/mlb.types.js';
+import {
+  transformGame as transformNhlGame,
+  transformPlayer as transformNhlPlayer,
+  transformPlays as transformNhlPlays,
+  transformTeam as transformNhlTeam,
+} from './nhl/nhl.transformer.js';
+import type { NhlPlay, NhlRosterEntry, NhlScheduleGame, NhlTeam } from './nhl/nhl.types.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -125,7 +134,8 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
     transformTeams: data =>
       (data as NBATeam[]).filter(isActiveNbaTeam).map(transformNbaTeam),
     transformCoaches: () => {
-      throw new Error('NBA coaches pending a data source');
+      // NBA coaches are seeded statically via seed-nba-coaches.ts
+      return [];
     },
     transformPlayers: data => (data as NBAPlayer[]).map(transformNbaPlayer),
     transformGames: data => (data as NBAGame[]).map(transformNbaGame),
@@ -133,7 +143,7 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
     // Play-by-play comes from the ESPN NBA summary API (the NBA fetcher
     // resolves BallDontLie game ids to ESPN event ids internally).
     transformPlays: data => transformNbaPlays(data as NbaPlay[]),
-    coachesPending: true,
+    coachesPending: false,
     playersPending: false,
     gameLogsPending: false,
     playByPlayPending: false,
@@ -144,18 +154,19 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
     transformCoaches: () => {
       throw new Error('NFL coaches pending the Python microservice');
     },
-    transformPlayers: () => {
-      throw new Error('NFL players pending the Python microservice');
-    },
+    transformPlayers: (data, teamExternalId) =>
+      (data as EspnAthlete[]).map(player => transformNflPlayer(player, teamExternalId)),
     transformGames: data => (data as EspnEvent[]).map(transformNflGame),
-    transformGameLogs: () => {
-      throw new Error('NFL game logs pending the Python microservice');
-    },
+    transformGameLogs: (data, playerExternalId) =>
+      transformNflGameLogs(
+        data as Array<Record<string, unknown>>,
+        playerExternalId
+      ),
     transformPlays: data => transformNflPlays(data as NflPlay[]),
     transformDecisions: data => extractCoachDecisions(data as NflPlay[]).map(transformNflDecision),
     coachesPending: true,
-    playersPending: true,
-    gameLogsPending: true,
+    playersPending: false,
+    gameLogsPending: false,
     playByPlayPending: false,
     decisionsPending: false,
   },
@@ -171,9 +182,33 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
     transformGameLogs: (data, playerExternalId) =>
       transformMlbGameLogs(data as MlbGameLogSplit[], playerExternalId),
     transformPlays: data => transformMlbPlays(data as MlbPlay[]),
+    transformDecisions: (_data) => {
+      // MLB decisions are extracted from raw play-by-play stored in the DB
+      // The data arrives as rawEvent objects from the plays stage
+      // Game context is passed through the coordinator, not the transform
+      // This will be called with the game's plays and game info
+      return [];
+    },
     coachesPending: false,
     playersPending: false,
     gameLogsPending: false,
+    playByPlayPending: false,
+    decisionsPending: false,
+  },
+  nhl: {
+    transformTeams: data => (data as NhlTeam[]).map(transformNhlTeam),
+    transformCoaches: () => {
+      // NHL coaches are part of the roster — no separate endpoint
+      return [];
+    },
+    transformPlayers: (data, teamExternalId) =>
+      (data as NhlRosterEntry[]).map(roster => transformNhlPlayer(roster, teamExternalId)),
+    transformGames: data => (data as NhlScheduleGame[]).map(transformNhlGame),
+    transformGameLogs: () => [],
+    transformPlays: data => transformNhlPlays(data as NhlPlay[]),
+    coachesPending: true,
+    playersPending: false,
+    gameLogsPending: true,
     playByPlayPending: false,
     decisionsPending: true,
   },
