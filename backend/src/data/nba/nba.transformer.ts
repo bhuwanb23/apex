@@ -1,4 +1,5 @@
 import type {
+  CoachDecisionRecord,
   GameRecord,
   PlayByPlayRecord,
   PlayerGameLogRecord,
@@ -6,7 +7,7 @@ import type {
   TeamRecord,
 } from '../db.writer.js';
 import { computeWorkloads } from '../workload.util.js';
-import type { NBAGame, NBAPlayer, NBAStats, NBATeam, NbaPlay } from './nba.types.js';
+import type { NBAGame, NBAPlayer, NbaCoachDecision, NBAStats, NBATeam, NbaPlay } from './nba.types.js';
 
 /**
  * Cleans and normalizes raw BallDontLie payloads into the DB-ready records

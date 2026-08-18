@@ -172,3 +172,21 @@ export interface NbaPlay {
   is_scoring: boolean;
   event_type: string;
 }
+
+/**
+ * NBA coach decision extracted from play-by-play.
+ * Represents a strategic choice by the coach (timeout, challenge, substitution, foul strategy).
+ */
+export interface NbaCoachDecision {
+  gameId: string;
+  team: string; // team abbreviation
+  decisionType: string; // 'timeout', 'challenge', 'lineup', 'foul_strategy'
+  period: number;
+  clock: string | null;
+  gameTimeSeconds: number | null;
+  scoreDiff: number | null;
+  context: Record<string, unknown>;
+  chosenAction: string;
+  outcome: string | null;
+  outcomeSuccess: boolean | null;
+}
