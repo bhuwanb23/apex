@@ -67,7 +67,8 @@ Data flows one way — **sports world → APIs → Node backend → Python ML �
 - **Python** 3.11+
 - **Docker** (optional)
 
-### Option 1: Docker (Recommended)
+<details open>
+<summary><strong>Docker</strong> (Recommended)</summary>
 
 ```bash
 docker compose up --build
@@ -79,7 +80,23 @@ docker compose up --build
 | Backend API / Swagger | http://localhost:8000/api/docs |
 | ML Health | http://localhost:8001/health |
 
-### Option 2: Manual Setup
+</details>
+
+<details>
+<summary><strong>Make Commands</strong></summary>
+
+```bash
+make up          # Docker: full stack
+make dev         # No Docker: 3 terminals
+make backend     # Backend only
+make ml          # ML service only
+make app         # App only
+```
+
+</details>
+
+<details>
+<summary><strong>Manual Setup</strong></summary>
 
 **Backend + ML Service:**
 
@@ -107,15 +124,7 @@ npm install
 npx expo start  # press "w" for web
 ```
 
-### Option 3: Make Commands
-
-```bash
-make up          # Docker: full stack
-make dev         # No Docker: 3 terminals
-make backend     # Backend only
-make ml          # ML service only
-make app         # App only
-```
+</details>
 
 ### Demo Credentials
 
