@@ -242,3 +242,127 @@ export function transformPlays(plays: NbaPlay[]): PlayByPlayRecord[] {
     return record;
   });
 }
+
+// ---------------------------------------------------------------------------
+// NBA Coach Decisions — extracted from play-by-play
+// ---------------------------------------------------------------------------
+
+/** Play types that represent coach decisions. */
+const TIMEOUT_PATTERNS = /timeout/i;
+const CHALLENGE_PATTERNS = /challenge|review/i;
+const SUBSTITUTION_PATTERNS = /substitution|subbed in|subbed out|replaced/i;
+const FOUL_PATTERNS = /foul|technical foul|flagrant/i;
+
+/**
+ * Extracts coach decisions from NBA play-by-play data.
+ * These represent strategic choices by the coach: timeouts, challenges,
+ * substitutions, and foul strategy.
+ */
+export function extractNbaDecisions(
+  plays: NbaPlay[],
+  gameId: string,
+  homeTeamAbbr: string,
+  awayTeamAbbr: string
+): NbaCoachDecision[] {
+  const decisions: NbaCoachDecision[] = [];
+  const periodSeconds = 12 * 60; // 12 minutes per quarter
+
+  for (const play of plays) {
+    const desc = play.desc ?? '';
+    const eventType = play.event_type ?? '';
+    const period = play.period ?? 0;
+    const clock = play.clock ?? '';
+
+    let decisionType: string | null = null;
+    let chosenAction = '';
+    let outcome: string | null = null;
+
+    // Timeout
+    if (TIMEOUT_PATTERNS.test(desc) || TIMEOUT_PATTERNS.test(eventType)) {
+      decisionType = 'timeout';
+      chosenAction = 'timeout';
+      // Determine which team called it from the description
+      const teamMatch = /(\w+)\s+timeout/i.exec(desc);
+      outcome = teamMatch ? teamMatch[1] : 'team';
+    }
+    // Challenge / Review
+    else if (CHALLENGE_PATTERNS.test(desc) || CHALLENGE_PATTERNS.test(eventType)) {
+      decisionType = 'challenge';
+      chosenAction = 'challenge';
+      outcome = /upheld|confirmed/i.test(desc) ? 'upheld' : /overturned/i.test(desc) ? 'overturned' : 'pending';
+    }
+    // Substitution
+    else if (SUBSTITUTION_PATTERNS.test(desc) || SUBSTITUTION_PATTERNS.test(eventType)) {
+      decisionType = 'lineup';
+      chosenAction = 'substitution';
+      outcome = desc;
+    }
+    // Foul strategy (technical, flagrant)
+    else if (FOUL_PATTERNS.test(desc) && (/technical|flagrant/i.test(desc))) {
+      decisionType = 'foul_strategy';
+      chosenAction = /technical/i.test(desc) ? 'technical_foul' : 'flagrant_foul';
+      outcome = /called/i.test(desc) ? 'called' : 'assessed';
+    }
+
+    if (!decisionType) continue;
+
+    // Determine which team made the decision
+    // The team that called the timeout/challenge is usually mentioned or inferred
+    let teamAbbr = play.team ?? null;
+    if (!teamAbbr) {
+      // Infer from possession or description
+      teamAbbr = desc.includes(homeTeamAbbr) ? homeTeamAbbr : desc.includes(awayTeamAbbr) ? awayTeamAbbr : null;
+    }
+
+    const homeScore = play.home_score ?? 0;
+    const awayScore = play.away_score ?? 0;
+    const scoreDiff = homeScore - awayScore;
+
+    // Convert period + clock to game seconds elapsed
+    const periodNum = period;
+    const clockMatch = /^(\d+):(\d{2})$/.exec(clock);
+    const clockSeconds = clockMatch ? Number(clockMatch[1]) * 60 + Number(clockMatch[2]) : 0;
+    const gameTimeSeconds = (periodNum - 1) * periodSeconds + (periodSeconds - clockSeconds);
+
+    decisions.push({
+      gameId,
+      team: teamAbbr ?? awayTeamAbbr,
+      decisionType,
+      period,
+      clock,
+      gameTimeSeconds,
+      scoreDiff,
+      context: { description: desc, eventType, period, clock },
+      chosenAction,
+      outcome,
+      outcomeSuccess: null,
+    });
+  }
+
+  return decisions;
+}
+
+/** Transform NBA coach decision into CoachDecisionRecord format. */
+export function transformDecision(raw: NbaCoachDecision): CoachDecisionRecord {
+  const DECISION_TYPE_MAP: Record<string, string> = {
+    timeout: 'timeout',
+    challenge: 'challenge',
+    lineup: 'lineup',
+    foul_strategy: 'foul_strategy',
+  };
+
+  return {
+    sportId: NBA_SPORT_ID,
+    gameExternalId: raw.gameId,
+    teamExternalId: raw.team,
+    decisionType: DECISION_TYPE_MAP[raw.decisionType] ?? raw.decisionType,
+    period: raw.period,
+    clock: raw.clock,
+    gameTimeSeconds: raw.gameTimeSeconds,
+    scoreDiff: raw.scoreDiff ?? 0,
+    gameContext: raw.context,
+    chosenAction: raw.chosenAction,
+    outcome: raw.outcome,
+    outcomeSuccess: raw.outcomeSuccess,
+  };
+}
