@@ -63,11 +63,12 @@ import type {
 } from './mlb/mlb.types.js';
 import {
   transformGame as transformNhlGame,
+  transformNhlPlayerGameLogs,
   transformPlayer as transformNhlPlayer,
   transformPlays as transformNhlPlays,
   transformTeam as transformNhlTeam,
 } from './nhl/nhl.transformer.js';
-import type { NhlPlay, NhlRosterEntry, NhlScheduleGame, NhlTeam } from './nhl/nhl.types.js';
+import type { NhlPlayerGameLogEntry, NhlPlay, NhlRosterEntry, NhlScheduleGame, NhlTeam } from './nhl/nhl.types.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -143,11 +144,16 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
     // Play-by-play comes from the ESPN NBA summary API (the NBA fetcher
     // resolves BallDontLie game ids to ESPN event ids internally).
     transformPlays: data => transformNbaPlays(data as NbaPlay[]),
+    transformDecisions: (_data) => {
+      // NBA decisions are extracted from raw play-by-play stored in the DB
+      // The data arrives as NbaPlay[] from the rawEvent
+      return [];
+    },
     coachesPending: false,
     playersPending: false,
     gameLogsPending: false,
     playByPlayPending: false,
-    decisionsPending: true,
+    decisionsPending: false,
   },
   nfl: {
     transformTeams: data => (data as EspnTeam[]).map(transformNflTeam),
@@ -204,13 +210,19 @@ const ADAPTERS: Record<string, SportSyncAdapter> = {
     transformPlayers: (data, teamExternalId) =>
       (data as NhlRosterEntry[]).map(roster => transformNhlPlayer(roster, teamExternalId)),
     transformGames: data => (data as NhlScheduleGame[]).map(transformNhlGame),
-    transformGameLogs: () => [],
+    transformGameLogs: (data, playerExternalId) =>
+      transformNhlPlayerGameLogs(data as NhlPlayerGameLogEntry[], playerExternalId),
     transformPlays: data => transformNhlPlays(data as NhlPlay[]),
-    coachesPending: true,
+    transformDecisions: (_data) => {
+      // NHL decisions are extracted from raw play-by-play stored in the DB
+      // The data arrives as NhlPlay[] from the rawEvent
+      return [];
+    },
+    coachesPending: false,
     playersPending: false,
-    gameLogsPending: true,
+    gameLogsPending: false,
     playByPlayPending: false,
-    decisionsPending: true,
+    decisionsPending: false,
   },
 };
 

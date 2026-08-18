@@ -4,6 +4,8 @@ import { toSeasonYear } from '../season.util.js';
 import type {
   NhlPlay,
   NhlPlayByPlayResponse,
+  NhlPlayerGameLogEntry,
+  NhlPlayerGameLogResponse,
   NhlRosterEntry,
   NhlRosterResponse,
   NhlScheduleGame,
@@ -87,11 +89,21 @@ export class NhlFetcher implements SportFetcher {
     }
   }
 
-  /** Fetch game logs for a player via game-by-game stats. */
-  async fetchPlayerGameLogs(_playerId: string, _season: string): Promise<unknown[]> {
-    // NHL public API doesn't have a direct per-player game log endpoint.
-    // Game logs are derived from team game data during sync.
-    return [];
+  /**
+   * Fetch game logs for a player via the NHL player game log endpoint.
+   * Returns game-by-game stats for the specified season.
+   */
+  async fetchPlayerGameLogs(playerId: string, season: string): Promise<NhlPlayerGameLogEntry[]> {
+    const year = toSeasonYear(season);
+    try {
+      const res = await this.client.get<NhlPlayerGameLogResponse>(
+        `/player/${playerId}/game-log/${year}`
+      );
+      return res.data.splits ?? [];
+    } catch {
+      // Some players may not have game logs (e.g., healthy scratches)
+      return [];
+    }
   }
 
   /** GET /gamecenter/{gameId}/play-by-play — full play-by-play. */

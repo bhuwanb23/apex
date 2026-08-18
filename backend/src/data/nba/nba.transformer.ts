@@ -283,7 +283,7 @@ export function extractNbaDecisions(
       chosenAction = 'timeout';
       // Determine which team called it from the description
       const teamMatch = /(\w+)\s+timeout/i.exec(desc);
-      outcome = teamMatch ? teamMatch[1] : 'team';
+      outcome = teamMatch?.[1] ?? 'team';
     }
     // Challenge / Review
     else if (CHALLENGE_PATTERNS.test(desc) || CHALLENGE_PATTERNS.test(eventType)) {

@@ -113,3 +113,49 @@ export interface NhlStandingEntry {
   points?: number;
   leagueRecord?: { wins?: number; losses?: number; otLosses?: number };
 }
+
+// Player game log response
+export interface NhlPlayerGameLogResponse {
+  splits?: NhlPlayerGameLogEntry[];
+}
+
+export interface NhlPlayerGameLogEntry {
+  gamePk?: number;
+  date?: string;
+  opponent?: string;
+  result?: { win?: boolean; loss?: boolean; otLoss?: boolean };
+  toi?: string; // time on ice "MM:SS"
+  goals?: number;
+  assists?: number;
+  points?: number;
+  plusMinus?: number;
+  penaltyMinutes?: number;
+  shots?: number;
+  hits?: number;
+  blocks?: number;
+  giveaways?: number;
+  takeaways?: number;
+  faceoffWins?: number;
+  faceoffLosses?: number;
+  powerPlayGoals?: number;
+  shortHandedGoals?: number;
+  gameWinningGoals?: number;
+}
+
+/**
+ * NHL coach decision extracted from play-by-play.
+ * Represents a strategic choice by the coach (timeout, line change, goalie pull, penalty strategy).
+ */
+export interface NhlCoachDecision {
+  gameId: string;
+  team: string; // team abbreviation
+  decisionType: string; // 'timeout', 'line_change', 'goalie_pull', 'penalty_strategy'
+  period: number;
+  clock: string | null;
+  gameTimeSeconds: number | null;
+  scoreDiff: number | null;
+  context: Record<string, unknown>;
+  chosenAction: string;
+  outcome: string | null;
+  outcomeSuccess: boolean | null;
+}
