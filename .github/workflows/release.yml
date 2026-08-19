@@ -68,6 +68,12 @@ jobs:
     defaults:
       run:
         working-directory: backend/python_ml
+    # Without these the model warmup silently falls back to heuristics — the
+    # models read them from .env locally, but CI has no .env. Point them at the
+    # committed training data so the release ships real trained artifacts.
+    env:
+      WP_TRAINING_DATA: app/data/training/wp_training.json
+      TIMEOUT_TRAINING_DATA: app/data/training/timeout_training.json
     outputs:
       asset: apex-ml-${{ steps.tag.outputs.tag }}.tar.gz
     steps:
@@ -103,17 +109,24 @@ jobs:
           TIMEOUT_TRAINING_DATA: app/data/training/timeout_training.json
         run: python -c "from app.main import _warm_up_models; _warm_up_models(); print('models trained')"
 
+      # Write the archive OUTSIDE the source tree (a tar inside its own input
+      # directory reads itself while growing -> truncated archive / exit 1),
+      # then move it back so the upload path stays backend/python_ml/.
       - name: Package ML service + models
         run: |
-          tar -czf apex-ml-${{ steps.tag.outputs.tag }}.tar.gz \
+          mkdir -p ../release-dist
+          tar -czf ../release-dist/apex-ml-${{ steps.tag.outputs.tag }}.tar.gz \
             --exclude='.venv' \
             --exclude='__pycache__' \
             --exclude='.pytest_cache' \
             --exclude='logs/*' \
             -C . .
+          mv ../release-dist/apex-ml-${{ steps.tag.outputs.tag }}.tar.gz .
 
+      # Must match the actual trained artifact, not app/models/*.py (the source
+      # dir also matches 'models/' and would pass even with no trained model).
       - name: Verify models included
-        run: tar -tzf apex-ml-${{ steps.tag.outputs.tag }}.tar.gz | grep -E 'models/' | head -5
+        run: tar -tzf apex-ml-${{ steps.tag.outputs.tag }}.tar.gz | grep -E '(^|/)models/wp_model\.joblib$'
 
       - name: Upload ML artifact
         uses: actions/upload-artifact@v4
