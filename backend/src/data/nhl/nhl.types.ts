@@ -116,30 +116,31 @@ export interface NhlStandingEntry {
 
 // Player game log response
 export interface NhlPlayerGameLogResponse {
-  splits?: NhlPlayerGameLogEntry[];
+  seasonId?: number;
+  gameTypeId?: number;
+  gameLog?: NhlPlayerGameLogEntry[];
 }
 
 export interface NhlPlayerGameLogEntry {
-  gamePk?: number;
-  date?: string;
-  opponent?: string;
-  result?: { win?: boolean; loss?: boolean; otLoss?: boolean };
-  toi?: string; // time on ice "MM:SS"
+  gameId?: number;
+  teamAbbrev?: string;
+  homeRoadFlag?: string;
+  gameDate?: string;
   goals?: number;
   assists?: number;
   points?: number;
   plusMinus?: number;
-  penaltyMinutes?: number;
-  shots?: number;
-  hits?: number;
-  blocks?: number;
-  giveaways?: number;
-  takeaways?: number;
-  faceoffWins?: number;
-  faceoffLosses?: number;
   powerPlayGoals?: number;
-  shortHandedGoals?: number;
+  powerPlayPoints?: number;
   gameWinningGoals?: number;
+  otGoals?: number;
+  shots?: number;
+  shifts?: number;
+  shorthandedGoals?: number;
+  shorthandedPoints?: number;
+  pim?: number;
+  toi?: string;
+  opponentAbbrev?: string;
 }
 
 /**
