@@ -20,7 +20,7 @@ import type {
  * defined in db.writer.ts (sportId: 4 = NHL).
  */
 
-const NHL_SPORT_ID = 4;
+const NHL_SPORT_ID = 7;
 
 /**
  * NHL has a game clock, so event times are derived from the period and
@@ -301,9 +301,9 @@ export function transformNhlPlayerGameLogs(
   return entries.map(entry => ({
     sportId: NHL_SPORT_ID,
     playerExternalId,
-    gameExternalId: entry.gamePk != null ? String(entry.gamePk) : '',
-    teamExternalId: null,
-    date: entry.date ? new Date(entry.date) : new Date(),
+    gameExternalId: entry.gameId != null ? String(entry.gameId) : '',
+    teamExternalId: entry.teamAbbrev ?? null,
+    date: entry.gameDate ? new Date(entry.gameDate) : new Date(),
     minutesPlayed: entry.toi ? parseTimeOnIce(entry.toi) : null,
     distanceCovered: null,
     highIntensityEvents: null,
