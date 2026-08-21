@@ -90,10 +90,8 @@ async function computeLeaderboard(
     where: {
       sportId,
       season,
-      ...(decisionType !== undefined
-        ? { decisionType }
-        : { decisionType: { not: 'all' } }),
-      ...(gameType !== undefined ? { gameType } : { gameType: { not: 'all' } }),
+      ...(decisionType !== undefined ? { decisionType } : {}),
+      ...(gameType !== undefined ? { gameType } : {}),
     },
     include: { coach: { include: { team: { select: { name: true } } } } },
   });
