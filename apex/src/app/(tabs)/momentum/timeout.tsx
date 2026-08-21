@@ -30,14 +30,16 @@ export default function TimeoutOptimizerScreen() {
   const { activeSport } = useOnboarding();
   // The optimizer's scenario grid only covers NFL and NBA — follow the
   // user's stored sport when it is one of them, default to NFL otherwise.
-  const [sport, setSport] = useState<'NFL' | 'NBA'>(activeSport === 'NBA' ? 'NBA' : 'NFL');
+  const [sport, setSport] = useState<'NFL' | 'NBA'>(
+    activeSport === 'NBA' || activeSport === 'NFL' ? activeSport : 'NFL'
+  );
 
   // Follow the stored sport when it changes — guarded render-time adjustment
   // (React's documented pattern), not setState-in-effect.
   const [prevActiveSport, setPrevActiveSport] = useState<SportId>(activeSport);
   if (prevActiveSport !== activeSport) {
     setPrevActiveSport(activeSport);
-    setSport(activeSport === 'NBA' ? 'NBA' : 'NFL');
+    setSport(activeSport === 'NBA' || activeSport === 'NFL' ? activeSport : 'NFL');
   }
   const [consecutive, setConsecutive] = useState(3);
   const [scoreDiff, setScoreDiff] = useState(-4);

@@ -99,7 +99,7 @@ function buildStory(module: string, sport: string, storyLanguage: 'simple' | 'te
 export default function StoryModal() {
   const router = useRouter();
   const { module, sport, entityId } = useLocalSearchParams<{ module?: string; sport?: string; entityId?: string }>();
-  const { storyLanguage, role } = useOnboarding();
+  const { storyLanguage, role, activeSport } = useOnboarding();
 
   const mod = module === 'home' ? 'momentum' : (module ?? 'momentum');
 
@@ -111,7 +111,7 @@ export default function StoryModal() {
   useEffect(() => {
     let cancelled = false;
     api
-      .story(mod, sport ?? 'NBA', { role: role ?? 'fan', entityId })
+      .story(mod, sport ?? activeSport, { role: role ?? 'fan', entityId })
       .then(res => {
         if (cancelled) return;
         setLiveStory({ headlineText: res.headlineText, storyText: res.storyText, generatedBy: res.generatedBy, keyMetrics: res.keyMetrics, generatedAt: res.generatedAt });
@@ -124,7 +124,7 @@ export default function StoryModal() {
     };
   }, [mod, sport, role, entityId]);
 
-  const localStory = buildStory(module ?? 'home', sport ?? 'NBA', storyLanguage, role ?? 'fan');
+  const localStory = buildStory(module ?? 'home', sport ?? activeSport, storyLanguage, role ?? 'fan');
   // Read-more target: an entity story always points back at that entity; the
   // module fallback covers league-level (momentum/home) stories.
   const detailRoute: DetailRoute | undefined =

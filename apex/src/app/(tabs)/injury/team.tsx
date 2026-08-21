@@ -54,14 +54,14 @@ function pointsFromTeamHistory(
 export default function TeamRiskScreen() {
   const router = useRouter();
   const { team } = useLocalSearchParams<{ team?: string }>();
-  const teamName = team ?? 'Lakers';
+  const { activeSport } = useOnboarding();
+  const teamName = team ?? SPORT_BY_ID[activeSport].teams[0];
   const [filter, setFilter] = useState<ZoneFilter>('all');
   const [sort, setSort] = useState<SortKey>('risk');
   const [chartOpen, setChartOpen] = useState(true);
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const { activeSport } = useOnboarding();
   const { status } = useBackend();
 
   const { players: roster, teamId, loading, error, lastUpdated, refetch: refetchRoster } = useTeamRoster(teamName, activeSport);

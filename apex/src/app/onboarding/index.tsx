@@ -31,7 +31,7 @@ export default function WelcomeScreen() {
   const { completeOnboarding } = useOnboarding();
 
   const skip = () => {
-    completeOnboarding(['NBA', 'NFL'], 'analyst');
+    completeOnboarding(['NBA', 'NFL', 'MLB', 'NHL'], 'analyst');
     router.replace('/(tabs)');
   };
 

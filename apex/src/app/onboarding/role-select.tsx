@@ -47,7 +47,7 @@ export default function RoleSelectScreen() {
   const { completeOnboarding } = useOnboarding();
   const [role, setRole] = useState<RoleId | null>(null);
 
-  const sportIds = (sportsParam ?? 'NBA,NFL').split(',') as SportId[];
+  const sportIds = (sportsParam ?? 'NBA,NFL,MLB,NHL').split(',') as SportId[];
   const roleLabel = ROLE_OPTIONS.find(r => r.id === role)?.title;
 
   const finish = () => {
