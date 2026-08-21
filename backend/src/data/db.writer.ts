@@ -376,18 +376,62 @@ export async function writeGames(games: GameRecord[], sportId: number): Promise<
  */
 export async function writePlayerGameLogs(logs: PlayerGameLogRecord[]): Promise<number> {
   if (logs.length === 0) return 0;
+  const sportId = logs[0]?.sportId ?? 0;
   const playerIds = await resolvePlayerIds(
-    logs[0]?.sportId ?? 0,
+    sportId,
     logs.map(l => l.playerExternalId)
   );
-  const gameIds = await resolveGameIds(
-    logs[0]?.sportId ?? 0,
+  let gameIds = await resolveGameIds(
+    sportId,
     logs.map(l => l.gameExternalId)
   );
   const teamIds = await resolveTeamIds(
-    logs[0]?.sportId ?? 0,
+    sportId,
     logs.map(l => l.teamExternalId)
   );
+
+  // Auto-create missing game records so game logs can reference them.
+  const missingGameExternalIds = [...new Set(
+    logs.map(l => l.gameExternalId).filter(id => id && !gameIds.has(id))
+  )];
+  logger.info({ count: missingGameExternalIds.length, sportId }, 'writePlayerGameLogs: missing games to auto-create');
+  if (missingGameExternalIds.length > 0) {
+    const sport = await prisma.sports.findUnique({ where: { id: sportId }, select: { season: true } });
+    const season = sport?.season ?? '2024-25';
+    let created = 0;
+    let failed = 0;
+    for (const extId of missingGameExternalIds) {
+      const sample = logs.find(l => l.gameExternalId === extId);
+      if (!sample) continue;
+      // Resolve the team ID from the game log entry
+      const teamId = sample.teamExternalId ? teamIds.get(sample.teamExternalId) : undefined;
+      if (teamId === undefined) { failed++; continue; }
+      try {
+        const game = await prisma.games.upsert({
+          where: { externalId_sportId: { externalId: extId, sportId } },
+          create: {
+            sportId,
+            externalId: extId,
+            date: sample.date,
+            season,
+            gameType: 'regular',
+            status: 'final',
+            homeTeamId: teamId,
+            awayTeamId: teamId,
+          },
+          update: {},
+        });
+        gameIds.set(extId, game.id);
+        created++;
+      } catch (err) {
+        failed++;
+        if (created === 0 && failed <= 3) {
+          logger.warn({ extId, error: err instanceof Error ? err.message : String(err) }, 'writePlayerGameLogs: game auto-create failed');
+        }
+      }
+    }
+    logger.info({ created, failed, total: missingGameExternalIds.length }, 'writePlayerGameLogs: game auto-create complete');
+  }
   const skipped: string[] = [];
   const written = await runChunked(
     logs,
