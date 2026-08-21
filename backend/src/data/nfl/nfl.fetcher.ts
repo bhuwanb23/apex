@@ -156,7 +156,8 @@ export class NflFetcher implements SportFetcher {
   /** GET /teams/{teamId}/roster — active roster with positions and jersey numbers. */
   async fetchRosters(teamId: string): Promise<EspnAthlete[]> {
     const res = await this.espn.get<EspnRosterResponse>(`/teams/${teamId}/roster`);
-    return res.data.athletes ?? [];
+    // ESPN nests athletes inside position groups: { position, items[] }
+    return (res.data.athletes ?? []).flatMap(group => group.items ?? []);
   }
 
   /**

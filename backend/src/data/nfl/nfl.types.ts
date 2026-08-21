@@ -117,8 +117,14 @@ export interface EspnScoringPlay {
   awayScore?: number;
 }
 
+/** ESPN nests athletes inside position groups: { position, items[] }. */
+export interface EspnRosterPositionGroup {
+  position?: { abbreviation?: string; name?: string };
+  items?: EspnAthlete[];
+}
+
 export interface EspnRosterResponse {
-  athletes?: EspnAthlete[];
+  athletes?: EspnRosterPositionGroup[];
 }
 
 export interface EspnAthlete {
