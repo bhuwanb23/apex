@@ -7,6 +7,7 @@ import type {
   EspnAthlete,
   EspnDrivePlay,
   EspnEvent,
+  EspnGameLogResponse,
   EspnRosterResponse,
   EspnScoreboardResponse,
   EspnSummaryResponse,
@@ -158,11 +159,30 @@ export class NflFetcher implements SportFetcher {
     return res.data.athletes ?? [];
   }
 
-  // TODO(phase-4): per-player game logs via the Python microservice (nfl_data_py)
-  async fetchPlayerGameLogs(_playerId: string, _season: string): Promise<unknown> {
-    throw new Error(
-      'Not implemented: NflFetcher.fetchPlayerGameLogs (Python microservice route planned)'
-    );
+  /**
+   * GET /athletes/{playerId}/gamelog — per-player game-by-game stats from ESPN.
+   * Falls back to Python microservice if ESPN endpoint unavailable.
+   */
+  async fetchPlayerGameLogs(playerId: string, season: string): Promise<unknown[]> {
+    const year = toSeasonYear(season);
+    try {
+      const res = await this.espn.get<EspnGameLogResponse>(`/athletes/${playerId}/gamelog`);
+      // ESPN returns seasons[] → types[] → events[] — flatten to the season we want
+      const seasons = res.data.seasons ?? [];
+      const target = seasons.find(s => String(s.year) === year);
+      const regularSeason = target?.types?.find(t => t.type === '02'); // 02 = regular season
+      return (regularSeason?.events ?? []).map(event => ({
+        ...event.stats,
+        gameId: event.id,
+        date: event.date,
+        opponent: event.opponent,
+        result: event.result,
+      }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn({ playerId, season, error: message }, 'ESPN game log unavailable');
+      return [];
+    }
   }
 
   // ESPN team pages don't expose coaching staff in the current API responses —

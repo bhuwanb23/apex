@@ -172,3 +172,54 @@ export interface NflSchedule {
   start_time: string | null;
   finished: boolean;
 }
+
+// ESPN athlete game log response
+export interface EspnGameLogResponse {
+  seasons?: EspnGameLogSeason[];
+}
+
+export interface EspnGameLogSeason {
+  year?: number;
+  types?: EspnGameLogType[];
+}
+
+export interface EspnGameLogType {
+  type?: string;
+  events?: EspnGameLogEvent[];
+}
+
+export interface EspnGameLogEvent {
+  id?: string;
+  date?: string;
+  name?: string;
+  shortName?: string;
+  opponent?: { id?: string; displayName?: string; abbreviation?: string };
+  result?: { winLoss?: string };
+  stats?: EspnGameLogStats;
+}
+
+export interface EspnGameLogStats {
+  gamesPlayed?: number;
+  gamesStarted?: number;
+  passingCompletions?: number;
+  passingAttempts?: number;
+  passingYards?: number;
+  passingTouchdowns?: number;
+  interceptions?: number;
+  rushingAttempts?: number;
+  rushingYards?: number;
+  rushingTouchdowns?: number;
+  receivingReceptions?: number;
+  receivingYards?: number;
+  receivingTouchdowns?: number;
+  receivingTargets?: number;
+  fumbles?: number;
+  fumblesLost?: number;
+  sacks?: number;
+  totalTackles?: number;
+  soloTackles?: number;
+  assistedTackles?: number;
+  tacklesForLoss?: number;
+  passesDefended?: number;
+  interceptionsCaught?: number;
+}

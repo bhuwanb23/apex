@@ -231,38 +231,37 @@ export function transformDecision(raw: NflCoachDecision): CoachDecisionRecord {
 }
 
 /**
- * Transform NFL game logs from nfl_data_py.
- * The Python bridge provides per-player game stats as a list of records.
+ * Transform NFL game logs from nfl_data_py or ESPN.
+ * Accepts both snake_case (nfl_data_py) and camelCase (ESPN) formats.
  */
 export function transformPlayerGameLogs(
-  logs: Array<{
-    player_id?: string;
-    game_id?: string;
-    team?: string;
-    week?: number;
-    season?: number;
-    completions?: number;
-    attempts?: number;
-    passing_yards?: number;
-    passing_tds?: number;
-    interceptions?: number;
-    carries?: number;
-    rushing_yards?: number;
-    rushing_tds?: number;
-    targets?: number;
-    receptions?: number;
-    receiving_yards?: number;
-    receiving_tds?: number;
-    fumbles_lost?: number;
-    fantasy_points?: number;
-    game_date?: string;
-  }>,
+  logs: Array<Record<string, unknown>>,
   playerExternalId: string
 ): PlayerGameLogRecord[] {
   if (!Array.isArray(logs) || logs.length === 0) return [];
 
-  const sorted = [...logs].sort((a, b) => (a.game_date ?? '').localeCompare(b.game_date ?? ''));
-  const dates = sorted.map(l => new Date(l.game_date ?? Date.now()));
+  // Normalize fields from either snake_case (nfl_data_py) or camelCase (ESPN)
+  const normalized = logs.map(log => ({
+    game_id: (log.game_id ?? log.gameId ?? '') as string,
+    game_date: (log.game_date ?? log.date ?? '') as string,
+    team: (log.team ?? null) as string | null,
+    completions: (log.completions ?? log.passingCompletions ?? 0) as number,
+    passing_yards: (log.passing_yards ?? log.passingYards ?? 0) as number,
+    passing_tds: (log.passing_tds ?? log.passingTouchdowns ?? 0) as number,
+    interceptions: (log.interceptions ?? log.interceptionsCaught ?? 0) as number,
+    carries: (log.carries ?? log.rushingAttempts ?? 0) as number,
+    rushing_yards: (log.rushing_yards ?? log.rushingYards ?? 0) as number,
+    rushing_tds: (log.rushing_tds ?? log.rushingTouchdowns ?? 0) as number,
+    targets: (log.targets ?? log.receivingTargets ?? 0) as number,
+    receptions: (log.receptions ?? log.passingCompletions ?? 0) as number,
+    receiving_yards: (log.receiving_yards ?? log.receivingYards ?? 0) as number,
+    receiving_tds: (log.receiving_tds ?? log.receivingTouchdowns ?? 0) as number,
+    fumbles_lost: (log.fumbles_lost ?? log.fumblesLost ?? 0) as number,
+    fantasy_points: (log.fantasy_points ?? 0) as number,
+  }));
+
+  const sorted = [...normalized].sort((a, b) => (a.game_date ?? '').localeCompare(b.game_date ?? ''));
+  const dates = sorted.map(l => new Date(l.game_date || Date.now()));
   const workloads = computeWorkloads(dates);
 
   return sorted.map((log, i) => {
@@ -270,10 +269,10 @@ export function transformPlayerGameLogs(
     return {
       sportId: NFL_SPORT_ID,
       playerExternalId,
-      gameExternalId: log.game_id ?? '',
-      teamExternalId: log.team ?? null,
-      date: new Date(log.game_date ?? Date.now()),
-      minutesPlayed: null, // NFL doesn't track minutes played per game
+      gameExternalId: log.game_id,
+      teamExternalId: log.team,
+      date: new Date(log.game_date || Date.now()),
+      minutesPlayed: null,
       distanceCovered: null,
       highIntensityEvents: null,
       backToBack: workload?.backToBack ?? false,
@@ -281,13 +280,11 @@ export function transformPlayerGameLogs(
       gamesLast7Days: workload?.gamesLast7Days ?? null,
       gamesLast14Days: workload?.gamesLast14Days ?? null,
       gamesLast21Days: workload?.gamesLast21Days ?? null,
-      // NFL-shaped columns
-      points: log.fantasy_points ?? null,
-      assists: log.completions ?? null,
+      points: log.fantasy_points || null,
+      assists: log.completions || null,
       rebounds: null,
       rawBoxScore: {
         completions: log.completions,
-        attempts: log.attempts,
         passing_yards: log.passing_yards,
         passing_tds: log.passing_tds,
         interceptions: log.interceptions,
