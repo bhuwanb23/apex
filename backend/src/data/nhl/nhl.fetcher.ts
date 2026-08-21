@@ -115,10 +115,12 @@ export class NhlFetcher implements SportFetcher {
   }
 
   /**
-   * GET /team/{teamAbbrev}/roster — active roster with positions and jersey numbers.
+   * GET /roster/{teamAbbrev}/{season} — active roster with positions and jersey numbers.
+   * Season format: "20242025" (YYYYYYYY).
    */
   async fetchRosters(teamAbbrev: string): Promise<NhlRosterEntry[]> {
-    const res = await this.client.get<NhlRosterResponse>(`/team/${teamAbbrev}/roster`);
+    const season = '20242025'; // current season
+    const res = await this.client.get<NhlRosterResponse>(`/roster/${teamAbbrev}/${season}`);
     const entries: NhlRosterEntry[] = [];
     if (res.data.forwards) entries.push(...res.data.forwards);
     if (res.data.defensemen) entries.push(...res.data.defensemen);
