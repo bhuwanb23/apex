@@ -94,12 +94,13 @@ export class NhlFetcher implements SportFetcher {
    * Returns game-by-game stats for the specified season.
    */
   async fetchPlayerGameLogs(playerId: string, season: string): Promise<NhlPlayerGameLogEntry[]> {
-    const year = toSeasonYear(season);
+    const startYear = toSeasonYear(season);
+    const nhlSeason = `${startYear}${Number(startYear) + 1}`;
     try {
       const res = await this.client.get<NhlPlayerGameLogResponse>(
-        `/player/${playerId}/game-log/${year}`
+        `/player/${playerId}/game-log/${nhlSeason}/2`
       );
-      return res.data.splits ?? [];
+      return res.data.gameLog ?? [];
     } catch {
       // Some players may not have game logs (e.g., healthy scratches)
       return [];
