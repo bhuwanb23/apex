@@ -115,10 +115,10 @@ export class NhlFetcher implements SportFetcher {
   }
 
   /**
-   * GET /roster/{teamAbbrev} — active roster with positions and jersey numbers.
+   * GET /team/{teamAbbrev}/roster — active roster with positions and jersey numbers.
    */
   async fetchRosters(teamAbbrev: string): Promise<NhlRosterEntry[]> {
-    const res = await this.client.get<NhlRosterResponse>(`/roster/${teamAbbrev}`);
+    const res = await this.client.get<NhlRosterResponse>(`/team/${teamAbbrev}/roster`);
     const entries: NhlRosterEntry[] = [];
     if (res.data.forwards) entries.push(...res.data.forwards);
     if (res.data.defensemen) entries.push(...res.data.defensemen);
