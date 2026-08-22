@@ -381,7 +381,7 @@ export async function writePlayerGameLogs(logs: PlayerGameLogRecord[]): Promise<
     sportId,
     logs.map(l => l.playerExternalId)
   );
-  let gameIds = await resolveGameIds(
+  const gameIds = await resolveGameIds(
     sportId,
     logs.map(l => l.gameExternalId)
   );
