@@ -86,13 +86,26 @@ async function computeLeaderboard(
   gameType: string | undefined,
   withTrends = true
 ): Promise<CoachScorecard[]> {
+  // Filter semantics (DecisionEVScores holds per-(type,gameType) rows plus a
+  // collapsed 'all'/'all' aggregate per coach):
+  //   - No filters → read only the collapsed rows. Mixing them with per-type
+  //     rows would double-count every decision in the aggregation below.
+  //   - Type given → exact type; merge game types unless one is requested
+  //     (no `type/all` collapse exists in the DB).
+  //   - Only gameType given → collapsed type for that gameType.
+  const resolvedType = decisionType ?? (gameType !== undefined ? 'all' : undefined);
+  const where = {
+    sportId,
+    season,
+    ...(resolvedType === 'all' && gameType === undefined
+      ? { decisionType: 'all', gameType: 'all' }
+      : {
+          ...(resolvedType !== undefined ? { decisionType: resolvedType } : {}),
+          ...(gameType !== undefined ? { gameType } : {}),
+        }),
+  };
   const rows = await prisma.decisionEVScores.findMany({
-    where: {
-      sportId,
-      season,
-      ...(decisionType !== undefined ? { decisionType } : {}),
-      ...(gameType !== undefined ? { gameType } : {}),
-    },
+    where,
     include: { coach: { include: { team: { select: { name: true } } } } },
   });
 
