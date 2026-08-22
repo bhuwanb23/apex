@@ -398,31 +398,49 @@ export async function writePlayerGameLogs(logs: PlayerGameLogRecord[]): Promise<
   if (missingGameExternalIds.length > 0) {
     const sport = await prisma.sports.findUnique({ where: { id: sportId }, select: { season: true } });
     const season = sport?.season ?? '2024-25';
+
+    // Group each missing game's log entries so we can find TWO distinct teams
+    // (game logs cover both sides' players). Setting home = away would corrupt
+    // isHome checks and momentum home/away splits downstream.
+    const teamsByGame = new Map<string, { teamIds: Set<number>; sample: PlayerGameLogRecord }>();
+    for (const extId of missingGameExternalIds) {
+      teamsByGame.set(extId, { teamIds: new Set<number>(), sample: logs.find(l => l.gameExternalId === extId)! });
+    }
+    for (const log of logs) {
+      const entry = teamsByGame.get(log.gameExternalId);
+      if (!entry || !log.teamExternalId) continue;
+      const tid = teamIds.get(log.teamExternalId);
+      if (tid !== undefined) entry.teamIds.add(tid);
+    }
+
     let created = 0;
     let failed = 0;
-    for (const extId of missingGameExternalIds) {
-      const sample = logs.find(l => l.gameExternalId === extId);
-      if (!sample) continue;
-      // Resolve the team ID from the game log entry
-      const teamId = sample.teamExternalId ? teamIds.get(sample.teamExternalId) : undefined;
-      if (teamId === undefined) { failed++; continue; }
+    let singleTeam = 0;
+    for (const [extId, info] of teamsByGame) {
+      const [homeTeamId, awayTeamId] = [...info.teamIds].sort((a, b) => a - b);
+      if (homeTeamId === undefined) { failed++; continue; }
       try {
         const game = await prisma.games.upsert({
           where: { externalId_sportId: { externalId: extId, sportId } },
           create: {
             sportId,
             externalId: extId,
-            date: sample.date,
+            date: info.sample.date,
             season,
             gameType: 'regular',
             status: 'final',
-            homeTeamId: teamId,
-            awayTeamId: teamId,
+            homeTeamId: awayTeamId ?? homeTeamId,
+            awayTeamId: awayTeamId ?? homeTeamId,
           },
           update: {},
         });
         gameIds.set(extId, game.id);
         created++;
+        if (awayTeamId === undefined) {
+          singleTeam++;
+          // Only one side's roster was in this batch — the opponent should
+          // appear when its players sync; backfill script can repair later.
+        }
       } catch (err) {
         failed++;
         if (created === 0 && failed <= 3) {
@@ -430,7 +448,7 @@ export async function writePlayerGameLogs(logs: PlayerGameLogRecord[]): Promise<
         }
       }
     }
-    logger.info({ created, failed, total: missingGameExternalIds.length }, 'writePlayerGameLogs: game auto-create complete');
+    logger.info({ created, failed, singleTeamOnly: singleTeam, total: missingGameExternalIds.length }, 'writePlayerGameLogs: game auto-create complete');
   }
   const skipped: string[] = [];
   const written = await runChunked(

@@ -447,11 +447,33 @@ export async function syncSport(
       if (adapter.playByPlayPending) return; // known gap (none today — NBA uses ESPN pbp)
       // Respect the sync window (syncRecentGames only touches the last N days).
       const dateFilter = options.dateRange ? { gte: options.dateRange.startDate } : undefined;
-      const games = await prisma.games.findMany({
+      let games = await prisma.games.findMany({
         where: { sportId, status: 'final', ...(dateFilter ? { date: dateFilter } : {}) },
         orderBy: { date: 'desc' },
         ...(options.maxPlayByPlayGames ? { take: options.maxPlayByPlayGames } : {}),
       });
+      // Backfill path: offseason/recent-window sports (e.g. NHL in August)
+      // match zero windowed games, so their historical games would NEVER get
+      // play-by-play. When the window is empty, gradually fill the oldest
+      // final games that still have no PlayByPlay rows — a few per run keeps
+      // the 6h job cheap while history converges.
+      if (games.length === 0) {
+        const withPbp = await prisma.playByPlay.findMany({
+          where: { game: { sportId } },
+          select: { gameId: true },
+          distinct: ['gameId'],
+        });
+        const covered = new Set(withPbp.map(r => r.gameId));
+        const missing = await prisma.games.findMany({
+          where: { sportId, status: 'final', id: { notIn: [...covered] } },
+          orderBy: { date: 'asc' },
+          take: options.maxPlayByPlayGames ?? 25,
+        });
+        if (missing.length > 0) {
+          logger.info({ sport, count: missing.length }, 'playByPlay: window empty — backfilling oldest games without pbp');
+        }
+        games = missing;
+      }
       let written = 0;
       for (const game of games) {
         const res = await manager.fetchPlayByPlay(sport, game.externalId);
