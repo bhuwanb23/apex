@@ -22,6 +22,11 @@
     "db:seed:teams": "tsx scripts/seed-teams.ts",
     "db:seed:coaches": "tsx scripts/seed-nfl-coaches.ts",
     "db:seed:nba-coaches": "tsx scripts/seed-nba-coaches.ts",
+    "db:seed:mlb-coaches": "tsx scripts/seed-mlb-coaches.ts",
+    "db:seed:nhl-coaches": "tsx scripts/seed-nhl-coaches.ts",
+    "db:seed:mock-decisions": "tsx scripts/seed-mock-decisions.ts",
+    "db:backfill-games": "tsx scripts/backfill-placeholder-games.ts",
+    "db:cleanup-stale-coaches": "tsx scripts/cleanup-stale-coaches.ts",
     "db:seed:demo": "tsx scripts/seed-demo-data.ts",
     "postinstall": "node scripts/postinstall.mjs"
   },
