@@ -22,6 +22,7 @@ const MLB_MANAGERS: CoachSeed[] = [
   { name: 'Pedro Grifol', firstName: 'Pedro', lastName: 'Grifol', teamAbbreviation: 'CWS', externalId: 'coach-cws-mlb-005' },
   { name: 'David Bell', firstName: 'David', lastName: 'Bell', teamAbbreviation: 'CIN', externalId: 'coach-cin-mlb-006' },
   { name: 'Stephen Vogt', firstName: 'Stephen', lastName: 'Vogt', teamAbbreviation: 'CLE', externalId: 'coach-cle-mlb-007' },
+  { name: 'Torey Lovullo', firstName: 'Torey', lastName: 'Lovullo', teamAbbreviation: 'AZ', externalId: 'coach-ari-mlb-030' },
   { name: 'Bud Black', firstName: 'Bud', lastName: 'Black', teamAbbreviation: 'COL', externalId: 'coach-col-mlb-008' },
   { name: 'AJ Hinch', firstName: 'AJ', lastName: 'Hinch', teamAbbreviation: 'DET', externalId: 'coach-det-mlb-009' },
   { name: 'Joe Espada', firstName: 'Joe', lastName: 'Espada', teamAbbreviation: 'HOU', externalId: 'coach-hou-mlb-010' },

@@ -16,7 +16,6 @@ interface CoachSeed {
 
 const NHL_HEAD_COACHES: CoachSeed[] = [
   { name: 'Greg Cronin', firstName: 'Greg', lastName: 'Cronin', teamAbbreviation: 'ANA', externalId: 'coach-ana-nhl-001' },
-  { name: 'Andre Tourigny', firstName: 'Andre', lastName: 'Tourigny', teamAbbreviation: 'ARI', externalId: 'coach-ari-nhl-002' },
   { name: 'Jim Montgomery', firstName: 'Jim', lastName: 'Montgomery', teamAbbreviation: 'BOS', externalId: 'coach-bos-nhl-003' },
   { name: 'Lindy Ruff', firstName: 'Lindy', lastName: 'Ruff', teamAbbreviation: 'BUF', externalId: 'coach-buf-nhl-004' },
   { name: 'Ryan Huska', firstName: 'Ryan', lastName: 'Huska', teamAbbreviation: 'CGY', externalId: 'coach-cgy-nhl-005' },

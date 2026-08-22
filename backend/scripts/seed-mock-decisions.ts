@@ -6,6 +6,7 @@
  * Run with: npx tsx scripts/seed-mock-decisions.ts
  */
 import { prisma } from '../src/db/client.js';
+import { invalidateLeaderboard } from '../src/services/cache.invalidation.js';
 import type { Prisma } from '../src/generated/prisma/client.js';
 
 // ---------------------------------------------------------------------------
@@ -144,6 +145,16 @@ async function main(): Promise<void> {
     const sampleGames = games.slice(0, Math.min(30, games.length));
     console.log(`  Games: ${games.length} (using ${sampleGames.length} for decisions)`);
 
+    // Index games by team so each coach's decisions land on their own games.
+    const gamesByTeam = new Map<number, typeof sampleGames>();
+    for (const g of sampleGames) {
+      for (const tid of [g.homeTeamId, g.awayTeamId]) {
+        const list = gamesByTeam.get(tid) ?? [];
+        list.push(g);
+        gamesByTeam.set(tid, list);
+      }
+    }
+
     // 3. Delete existing decisions for this sport+season (idempotent re-run)
     const deleted = await prisma.coachDecisions.deleteMany({
       where: { sportId: config.sportId, game: { season: config.season } },
@@ -153,9 +164,11 @@ async function main(): Promise<void> {
     // 4. Generate CoachDecisions
     const decisions: Array<Prisma.CoachDecisionsCreateManyInput> = [];
     for (const coach of coaches) {
+      const coachGames = gamesByTeam.get(coach.teamId);
+      const pool = coachGames && coachGames.length > 0 ? coachGames : sampleGames;
       const numDecisions = randInt(4, 8);
       for (let i = 0; i < numDecisions; i++) {
-        const game = pick(sampleGames);
+        const game = pick(pool);
         const decisionType = pick(config.decisionTypes);
         const actions = config.actionsForType[decisionType] ?? ['action_a', 'action_b'];
         const chosenAction = pick(actions);
@@ -287,6 +300,10 @@ async function main(): Promise<void> {
       });
     }
     console.log(`  Assigned ranks to ${allRows.length} coaches`);
+
+    // Fresh leaderboards on next request — the 24h cache would otherwise
+    // serve the pre-seed empty board.
+    await invalidateLeaderboard(config.code.toUpperCase(), config.season);
   }
 
   console.log('\nDone!');
