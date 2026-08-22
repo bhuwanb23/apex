@@ -90,20 +90,18 @@ async function computeLeaderboard(
   // collapsed 'all'/'all' aggregate per coach):
   //   - No filters → read only the collapsed rows. Mixing them with per-type
   //     rows would double-count every decision in the aggregation below.
-  //   - Type given → exact type; merge game types unless one is requested
-  //     (no `type/all` collapse exists in the DB).
-  //   - Only gameType given → collapsed type for that gameType.
-  const resolvedType = decisionType ?? (gameType !== undefined ? 'all' : undefined);
-  const where = {
-    sportId,
-    season,
-    ...(resolvedType === 'all' && gameType === undefined
-      ? { decisionType: 'all', gameType: 'all' }
+  //   - Type and/or gameType given → exact matches; summing across the missing
+  //     dimension is correct there (no `type/all` collapse exists, so per-type
+  //     rows are the finest data available).
+  const where =
+    decisionType === undefined && gameType === undefined
+      ? { sportId, season, decisionType: 'all', gameType: 'all' }
       : {
-          ...(resolvedType !== undefined ? { decisionType: resolvedType } : {}),
+          sportId,
+          season,
+          ...(decisionType !== undefined ? { decisionType } : {}),
           ...(gameType !== undefined ? { gameType } : {}),
-        }),
-  };
+        };
   const rows = await prisma.decisionEVScores.findMany({
     where,
     include: { coach: { include: { team: { select: { name: true } } } } },
