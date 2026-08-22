@@ -305,7 +305,10 @@ function writeBack(
   data: Record<string, unknown>,
   raw: unknown
 ): void {
-  const target = req[source] as Record<string, unknown>;
+  const target = req[source] as Record<string, unknown> | undefined;
+  // Body-less requests (e.g. POST /api/sync/refresh) have no req.body to
+  // write back to — Object.assign would throw on undefined.
+  if (target == null) return;
   if (source === 'query') {
     const rawQuery = raw as Record<string, unknown>;
     for (const [key, value] of Object.entries(data)) {
